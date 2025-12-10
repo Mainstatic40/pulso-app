@@ -423,6 +423,44 @@ export const reportService = {
         break;
       }
 
+      case 'productivity': {
+        const { data } = await this.getProductivity(query);
+        const sheet = workbook.addWorksheet('Productividad');
+
+        sheet.columns = [
+          { header: 'Usuario', key: 'userName', width: 30 },
+          { header: 'Email', key: 'userEmail', width: 35 },
+          { header: 'Horas Trabajadas', key: 'hoursWorked', width: 18 },
+          { header: 'Tareas Completadas', key: 'tasksCompleted', width: 20 },
+          { header: 'Tareas En Progreso', key: 'tasksInProgress', width: 20 },
+          { header: 'Prom. Horas/Tarea', key: 'avgHoursPerTask', width: 18 },
+        ];
+
+        sheet.getRow(1).font = { bold: true };
+        sheet.getRow(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFCC0000' },
+        };
+        sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+        data.forEach((row) => {
+          sheet.addRow(row);
+        });
+
+        // Add totals row
+        const totalsRow = sheet.addRow({
+          userName: 'TOTAL',
+          userEmail: '',
+          hoursWorked: data.reduce((sum, d) => sum + d.hoursWorked, 0),
+          tasksCompleted: data.reduce((sum, d) => sum + d.tasksCompleted, 0),
+          tasksInProgress: data.reduce((sum, d) => sum + d.tasksInProgress, 0),
+          avgHoursPerTask: '',
+        });
+        totalsRow.font = { bold: true };
+        break;
+      }
+
       default:
         throw new Error(`Invalid export type: ${type}`);
     }

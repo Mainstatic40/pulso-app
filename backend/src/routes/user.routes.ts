@@ -14,6 +14,10 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
+// GET /api/users/me - Get current user profile (all authenticated users)
+// Note: This must be before /:id to avoid conflict
+router.get('/me', userController.getMe);
+
 // GET /api/users - List users (admin and supervisor only)
 router.get(
   '/',

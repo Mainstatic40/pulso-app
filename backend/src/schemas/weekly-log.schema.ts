@@ -60,16 +60,18 @@ export const createWeeklyLogSchema = z.object({
       weekStart: z
         .string({ required_error: 'Week start is required' })
         .transform((val) => {
-          const date = new Date(val);
-          date.setHours(0, 0, 0, 0);
+          // Parse YYYY-MM-DD format explicitly to avoid timezone issues
+          const [year, month, day] = val.split('-').map(Number);
+          const date = new Date(year, month - 1, day, 0, 0, 0, 0);
           return date;
         })
         .pipe(z.date({ invalid_type_error: 'Invalid week start date' })),
       weekEnd: z
         .string({ required_error: 'Week end is required' })
         .transform((val) => {
-          const date = new Date(val);
-          date.setHours(23, 59, 59, 999);
+          // Parse YYYY-MM-DD format explicitly to avoid timezone issues
+          const [year, month, day] = val.split('-').map(Number);
+          const date = new Date(year, month - 1, day, 23, 59, 59, 999);
           return date;
         })
         .pipe(z.date({ invalid_type_error: 'Invalid week end date' })),

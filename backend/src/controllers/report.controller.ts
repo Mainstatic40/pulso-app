@@ -91,8 +91,8 @@ export const reportController = {
     try {
       const { type } = req.params;
 
-      if (!['hours', 'tasks', 'logs'].includes(type)) {
-        throw new ValidationError('Invalid export type. Must be: hours, tasks, or logs');
+      if (!['hours', 'tasks', 'logs', 'productivity'].includes(type)) {
+        throw new ValidationError('Invalid export type. Must be: hours, tasks, logs, or productivity');
       }
 
       const query = parseQuery(req.query as ReportQuery);

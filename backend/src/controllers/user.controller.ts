@@ -3,6 +3,20 @@ import { userService } from '../services/user.service';
 import type { CreateUserInput, UpdateUserInput, ListUsersQuery } from '../schemas/user.schema';
 
 export const userController = {
+  async getMe(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const user = await userService.findById(userId);
+
+      res.json({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
       const query = req.query as unknown as ListUsersQuery;
