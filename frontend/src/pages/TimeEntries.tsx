@@ -3,9 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, Users } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
-import { Tabs } from '../components/ui/Tabs';
+import { LegacyTabs } from '../components/ui/Tabs';
 import { Spinner } from '../components/ui/Spinner';
-import { ClockButton, TimeEntryList, TimeEntrySummary } from '../components/time-entries';
+import { ClockButton, TimeEntryList, TimeEntrySummary, TeamHoursOverview } from '../components/time-entries';
 import { timeEntryService, type TimeEntryWithEvent } from '../services/time-entry.service';
 import { userService } from '../services/user.service';
 import { useAuthContext } from '../stores/auth.store.tsx';
@@ -63,14 +63,11 @@ function getDateRange(period: Period): { dateFrom?: string; dateTo?: string } {
   }
 }
 
-export function TimeEntries() {
+// Becario view component (existing functionality)
+function BecarioTimeEntries() {
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const [activePeriod, setActivePeriod] = useState<Period>('daily');
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-
-  const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
-  const effectiveUserId = isAdminOrSupervisor && selectedUserId ? selectedUserId : undefined;
 
   // Fetch active session
   const { data: activeSession, isLoading: isLoadingActive } = useQuery({
@@ -82,34 +79,20 @@ export function TimeEntries() {
   // Fetch summary based on period
   const summaryPeriod = activePeriod === 'all' ? 'monthly' : activePeriod;
   const { data: summary, isLoading: isLoadingSummary } = useQuery({
-    queryKey: ['time-entries', 'summary', summaryPeriod, effectiveUserId],
-    queryFn: () => timeEntryService.getSummary(summaryPeriod, effectiveUserId),
+    queryKey: ['time-entries', 'summary', summaryPeriod],
+    queryFn: () => timeEntryService.getSummary(summaryPeriod),
   });
 
   // Fetch all entries for current period (for the table)
   const dateRange = useMemo(() => getDateRange(activePeriod), [activePeriod]);
   const { data: entriesResponse, isLoading: isLoadingEntries } = useQuery({
-    queryKey: ['time-entries', 'list', dateRange, effectiveUserId],
+    queryKey: ['time-entries', 'list', dateRange],
     queryFn: () =>
       timeEntryService.getAll({
         ...dateRange,
-        userId: effectiveUserId,
         limit: 100,
       }),
   });
-
-  // Fetch users for admin/supervisor filter
-  const { data: usersResponse } = useQuery({
-    queryKey: ['users', { limit: 100 }],
-    queryFn: () => userService.getAll({ limit: 100 }),
-    enabled: isAdminOrSupervisor,
-  });
-
-  const users = usersResponse?.data || [];
-  const userOptions = [
-    { value: '', label: 'Todos los usuarios' },
-    ...users.map((u) => ({ value: u.id, label: u.name })),
-  ];
 
   // Mutations
   const clockInMutation = useMutation({
@@ -154,38 +137,23 @@ export function TimeEntries() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Registro de Horas</h1>
-
-        {/* User filter for admin/supervisor */}
-        {isAdminOrSupervisor && (
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-gray-500" />
-            <Select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              options={userOptions}
-              className="w-48"
-            />
-          </div>
-        )}
       </div>
 
-      {/* Clock Button Section - Only show for current user */}
-      {!selectedUserId && (
-        <Card>
-          <CardContent className="flex flex-col items-center py-8">
-            <ClockButton
-              isActive={!!activeSession}
-              clockInTime={activeSession?.clockIn}
-              onClockIn={() => clockInMutation.mutate()}
-              onClockOut={() => clockOutMutation.mutate()}
-              isLoading={isClockLoading}
-            />
-          </CardContent>
-        </Card>
-      )}
+      {/* Clock Button Section */}
+      <Card>
+        <CardContent className="flex flex-col items-center py-8">
+          <ClockButton
+            isActive={!!activeSession}
+            clockInTime={activeSession?.clockIn}
+            onClockIn={() => clockInMutation.mutate()}
+            onClockOut={() => clockOutMutation.mutate()}
+            isLoading={isClockLoading}
+          />
+        </CardContent>
+      </Card>
 
       {/* Period Tabs */}
-      <Tabs
+      <LegacyTabs
         tabs={periodTabs}
         activeTab={activePeriod}
         onChange={(id) => setActivePeriod(id as Period)}
@@ -222,4 +190,17 @@ export function TimeEntries() {
       </Card>
     </div>
   );
+}
+
+export function TimeEntries() {
+  const { user } = useAuthContext();
+
+  const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
+
+  // Show team overview for admin/supervisor, individual view for becario
+  if (isAdminOrSupervisor) {
+    return <TeamHoursOverview />;
+  }
+
+  return <BecarioTimeEntries />;
 }
