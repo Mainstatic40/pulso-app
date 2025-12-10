@@ -31,18 +31,18 @@ router.get(
   eventController.getById
 );
 
-// POST /api/events - Create event (admin only)
+// POST /api/events - Create event (admin and supervisor)
 router.post(
   '/',
-  authorize('admin'),
+  authorize('admin', 'supervisor'),
   validate(createEventSchema),
   eventController.create
 );
 
-// PUT /api/events/:id - Update event (admin only)
+// PUT /api/events/:id - Update event (admin and supervisor)
 router.put(
   '/:id',
-  authorize('admin'),
+  authorize('admin', 'supervisor'),
   validate(updateEventSchema),
   eventController.update
 );

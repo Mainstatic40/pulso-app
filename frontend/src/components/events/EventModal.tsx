@@ -70,6 +70,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   const [isEditing, setIsEditing] = useState(false);
 
   const isAdmin = user?.role === 'admin';
+  const canEdit = user?.role === 'admin' || user?.role === 'supervisor';
 
   const updateEventMutation = useMutation({
     mutationFn: (data: UpdateEventRequest) => eventService.update(event!.id, data),
@@ -127,19 +128,21 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
               {statusInfo.label}
             </Badge>
           </div>
-          {isAdmin && (
+          {canEdit && (
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
                 <Edit2 className="h-4 w-4" />
               </Button>
-              <Button
-                size="sm"
-                variant="danger"
-                onClick={handleDelete}
-                isLoading={deleteEventMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  variant="danger"
+                  onClick={handleDelete}
+                  isLoading={deleteEventMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>

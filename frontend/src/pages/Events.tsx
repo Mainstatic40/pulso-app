@@ -48,6 +48,7 @@ export function Events() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const isAdmin = user?.role === 'admin';
+  const canManageEvents = user?.role === 'admin' || user?.role === 'supervisor';
 
   // Query
   const { data: eventsResponse, isLoading } = useQuery({
@@ -99,7 +100,7 @@ export function Events() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Eventos</h1>
-        {isAdmin && (
+        {canManageEvents && (
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Evento
@@ -163,7 +164,7 @@ export function Events() {
                 ? 'No se encontraron eventos con los filtros seleccionados.'
                 : 'Aún no hay eventos creados.'}
             </p>
-            {isAdmin && !hasFilters && (
+            {canManageEvents && !hasFilters && (
               <Button className="mt-4" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Crear primer evento
