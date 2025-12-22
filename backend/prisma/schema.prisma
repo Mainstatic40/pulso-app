@@ -104,15 +104,14 @@ model TaskAssignee {
 }
 
 model Event {
-  id               String   @id @default(uuid())
-  name             String   @db.VarChar(200)
-  description      String   @db.Text
-  clientRequirements String? @map("client_requirements") @db.Text
-  startDatetime    DateTime @map("start_datetime")
-  endDatetime      DateTime @map("end_datetime")
-  googleCalendarId String?  @map("google_calendar_id") @db.VarChar(255)
-  createdBy        String   @map("created_by")
-  createdAt        DateTime @default(now()) @map("created_at")
+  id                 String   @id @default(uuid())
+  name               String   @db.VarChar(200)
+  description        String   @db.Text
+  clientRequirements String?  @map("client_requirements") @db.Text
+  startDatetime      DateTime @map("start_datetime")
+  endDatetime        DateTime @map("end_datetime")
+  createdBy          String   @map("created_by")
+  createdAt          DateTime @default(now()) @map("created_at")
 
   creator     User            @relation("EventCreator", fields: [createdBy], references: [id])
   assignees   EventAssignee[]

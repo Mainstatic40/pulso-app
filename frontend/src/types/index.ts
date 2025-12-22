@@ -37,7 +37,6 @@ export interface Event {
   clientRequirements?: string;
   startDatetime: string;
   endDatetime: string;
-  googleCalendarId?: string;
   createdBy: string;
   createdAt: string;
   assignees?: User[];

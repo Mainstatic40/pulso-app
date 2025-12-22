@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { TimeEntries } from './pages/TimeEntries';
 import { Tasks } from './pages/Tasks';
 import { Events } from './pages/Events';
+import { Calendar } from './pages/Calendar';
 import { WeeklyLog } from './pages/WeeklyLog';
 import { Users } from './pages/Users';
 import { Reports } from './pages/Reports';
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/time-entries" element={<TimeEntries />} />
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/calendar" element={<Calendar />} />
                 <Route path="/weekly-log" element={<WeeklyLog />} />
               </Route>
             </Route>

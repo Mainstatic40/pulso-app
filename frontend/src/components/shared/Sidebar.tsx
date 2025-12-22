@@ -4,6 +4,7 @@ import {
   Clock,
   CheckSquare,
   Calendar,
+  CalendarDays,
   BookOpen,
   Users,
   BarChart3,
@@ -16,7 +17,8 @@ const navItems = [
   { to: '/time-entries', icon: Clock, label: 'Registro de Horas', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/tasks', icon: CheckSquare, label: 'Tareas', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/events', icon: Calendar, label: 'Eventos', roles: ['admin', 'supervisor', 'becario'] },
-  { to: '/weekly-log', icon: BookOpen, label: 'Bitácora Semanal', roles: ['admin', 'supervisor', 'becario'] },
+  { to: '/calendar', icon: CalendarDays, label: 'Calendario', roles: ['admin', 'supervisor', 'becario'] },
+  { to: '/weekly-log', icon: BookOpen, label: 'Bitacora Semanal', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/users', icon: Users, label: 'Usuarios', roles: ['admin', 'supervisor'] },
   { to: '/reports', icon: BarChart3, label: 'Reportes', roles: ['admin', 'supervisor'] },
 ];

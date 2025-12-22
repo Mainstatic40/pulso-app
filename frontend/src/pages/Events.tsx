@@ -19,19 +19,16 @@ function sortEvents(events: EventWithRelations[]): EventWithRelations[] {
     const aEnd = new Date(a.endDatetime);
     const bEnd = new Date(b.endDatetime);
 
-    // Ongoing events first
     const aOngoing = now >= aStart && now <= aEnd;
     const bOngoing = now >= bStart && now <= bEnd;
     if (aOngoing && !bOngoing) return -1;
     if (!aOngoing && bOngoing) return 1;
 
-    // Then upcoming events (closest first)
     const aUpcoming = aStart > now;
     const bUpcoming = bStart > now;
     if (aUpcoming && !bUpcoming) return -1;
     if (!aUpcoming && bUpcoming) return 1;
 
-    // Sort by date
     return aStart.getTime() - bStart.getTime();
   });
 }
@@ -40,17 +37,14 @@ export function Events() {
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
 
-  // State
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<EventWithRelations | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const isAdmin = user?.role === 'admin';
   const canManageEvents = user?.role === 'admin' || user?.role === 'supervisor';
 
-  // Query
   const { data: eventsResponse, isLoading } = useQuery({
     queryKey: ['events', { dateFrom, dateTo }],
     queryFn: () =>
@@ -61,7 +55,6 @@ export function Events() {
       }),
   });
 
-  // Create mutation
   const createEventMutation = useMutation({
     mutationFn: (data: CreateEventRequest) => eventService.create(data),
     onSuccess: () => {
@@ -70,11 +63,8 @@ export function Events() {
     },
   });
 
-  // Filter and sort events
   const events = useMemo(() => {
     const allEvents = eventsResponse?.data || [];
-
-    // Filter by search
     const filtered = allEvents.filter((event) => {
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
@@ -83,7 +73,6 @@ export function Events() {
         event.description?.toLowerCase().includes(query)
       );
     });
-
     return sortEvents(filtered);
   }, [eventsResponse?.data, searchQuery]);
 
@@ -97,7 +86,6 @@ export function Events() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Eventos</h1>
         {canManageEvents && (
@@ -108,7 +96,6 @@ export function Events() {
         )}
       </div>
 
-      {/* Filters */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -149,7 +136,6 @@ export function Events() {
         </CardContent>
       </Card>
 
-      {/* Events List */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
@@ -162,7 +148,7 @@ export function Events() {
             <p className="mt-2 text-gray-500">
               {hasFilters
                 ? 'No se encontraron eventos con los filtros seleccionados.'
-                : 'Aún no hay eventos creados.'}
+                : 'Aun no hay eventos creados.'}
             </p>
             {canManageEvents && !hasFilters && (
               <Button className="mt-4" onClick={() => setIsCreateModalOpen(true)}>
@@ -184,14 +170,12 @@ export function Events() {
         </div>
       )}
 
-      {/* Event Detail Modal */}
       <EventModal
         event={selectedEvent}
         isOpen={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
       />
 
-      {/* Create Event Modal */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

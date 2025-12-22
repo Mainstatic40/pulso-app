@@ -8,7 +8,6 @@ export interface EventWithRelations {
   clientRequirements?: string;
   startDatetime: string;
   endDatetime: string;
-  googleCalendarId?: string;
   createdBy: string;
   createdAt: string;
   creator?: {

@@ -60,7 +60,7 @@ function getEventStatus(start: string, end: string): 'today' | 'upcoming' | 'pas
 const statusConfig = {
   ongoing: { label: 'En curso', variant: 'success' as const },
   today: { label: 'Hoy', variant: 'warning' as const },
-  upcoming: { label: 'Próximo', variant: 'info' as const },
+  upcoming: { label: 'Proximo', variant: 'info' as const },
   past: { label: 'Pasado', variant: 'default' as const },
 };
 
@@ -89,7 +89,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   });
 
   const handleDelete = () => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este evento?')) {
+    if (window.confirm('Estas seguro de que deseas eliminar este evento?')) {
       deleteEventMutation.mutate();
     }
   };
@@ -152,7 +152,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
           <div className="mt-6">
             <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <FileText className="h-4 w-4" />
-              Descripción
+              Descripcion
             </h3>
             <p className="mt-2 whitespace-pre-wrap text-gray-600">{event.description}</p>
           </div>
@@ -178,7 +178,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
                 {formatTime(event.startDatetime)} - {formatTime(event.endDatetime)}
               </p>
               <p className="text-sm text-gray-500">
-                Duración: {formatDuration(event.startDatetime, event.endDatetime)}
+                Duracion: {formatDuration(event.startDatetime, event.endDatetime)}
               </p>
             </div>
           </div>

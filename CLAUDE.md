@@ -7,9 +7,9 @@ PULSO es un sistema de gestión de horas de trabajo y tareas para una oficina de
 - Registro de horas de trabajo mediante lector RFID (credenciales universitarias)
 - Gestión de tareas con flujo de estados y prioridades
 - Gestión de eventos especiales con asignación de personal
+- Calendario nativo con vistas de mes, semana y dia
 - Bitácora semanal para que los becarios documenten su progreso
 - Reportes exportables a Excel
-- Integración con Google Calendar
 
 **Usuarios:** 8-12 becarios + 1 jefe de departamento
 
@@ -45,7 +45,6 @@ PULSO es un sistema de gestión de horas de trabajo y tareas para una oficina de
 - **Documentación API:** Swagger/OpenAPI
 
 ### Integraciones
-- **Google Calendar API:** OAuth 2.0 para sincronización de eventos
 - **Lector RFID:** Microservicio para comunicación con hardware
 
 ### Herramientas de Desarrollo
@@ -68,12 +67,28 @@ pulso-app/
 ├── frontend/                 # Aplicación web React
 │   ├── src/
 │   │   ├── components/       # Componentes reutilizables
-│   │   │   ├── ui/           # Componentes base (Button, Input, Card, etc.)
-│   │   │   └── shared/       # Componentes compartidos (Navbar, Sidebar, etc.)
+│   │   │   ├── ui/           # Componentes base (Button, Input, Card, Modal, etc.)
+│   │   │   ├── shared/       # Componentes compartidos (Header, Sidebar, Layout, etc.)
+│   │   │   ├── tasks/        # Componentes de tareas (TaskCard, TaskForm, TaskModal, etc.)
+│   │   │   ├── events/       # Componentes de eventos (EventCard, EventForm, EventModal)
+│   │   │   ├── calendar/     # Componentes de calendario (CalendarHeader, MonthView, WeekView, DayView, etc.)
+│   │   │   ├── time-entries/ # Componentes de registro de horas (ClockButton, TimeEntryList, etc.)
+│   │   │   ├── weekly-log/   # Componentes de bitácora (WeeklyLogCard, WeeklyLogForm, etc.)
+│   │   │   ├── users/        # Componentes de usuarios (UserTable, UserForm, UserModal)
+│   │   │   └── reports/      # Componentes de reportes (ReportFilters, HoursByUserReport, etc.)
 │   │   ├── pages/            # Páginas/Vistas
+│   │   │   ├── Login.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Tasks.tsx
+│   │   │   ├── Events.tsx
+│   │   │   ├── Calendar.tsx
+│   │   │   ├── TimeEntries.tsx
+│   │   │   ├── WeeklyLog.tsx
+│   │   │   ├── Users.tsx
+│   │   │   └── Reports.tsx
 │   │   ├── hooks/            # Custom hooks
 │   │   ├── services/         # Llamadas a API (axios)
-│   │   ├── stores/           # Estado global si es necesario
+│   │   ├── stores/           # Estado global (auth.store.tsx)
 │   │   ├── types/            # TypeScript interfaces/types
 │   │   ├── utils/            # Funciones utilitarias
 │   │   ├── lib/              # Configuraciones (axios, react-query)
@@ -89,6 +104,7 @@ pulso-app/
 │   │   ├── routes/           # Definición de rutas
 │   │   ├── middlewares/      # Middlewares (auth, validation, etc.)
 │   │   ├── services/         # Lógica de negocio
+│   │   ├── schemas/          # Esquemas de validación Zod
 │   │   ├── utils/            # Funciones utilitarias
 │   │   ├── types/            # TypeScript interfaces/types
 │   │   └── config/           # Configuraciones
@@ -125,7 +141,7 @@ pulso-app/
 | name | VARCHAR(100) | Nombre completo |
 | email | VARCHAR(255) UNIQUE | Correo electrónico |
 | password_hash | VARCHAR(255) | Contraseña encriptada con bcrypt |
-| rfid_tag | VARCHAR(50) UNIQUE | ID de credencial RFID |
+| rfid_tag | VARCHAR(50) UNIQUE NULL | ID de credencial RFID (opcional) |
 | role | ENUM('admin', 'supervisor', 'becario') | Rol del usuario |
 | is_active | BOOLEAN DEFAULT true | Estado activo/inactivo |
 | created_at | TIMESTAMP | Fecha de creación |
@@ -172,7 +188,6 @@ pulso-app/
 | client_requirements | TEXT NULL | Requisitos del cliente (opcional) |
 | start_datetime | TIMESTAMP | Fecha y hora de inicio |
 | end_datetime | TIMESTAMP | Fecha y hora de fin |
-| google_calendar_id | VARCHAR(255) NULL | ID del evento en Google Calendar |
 | created_by | UUID (FK → users) | Creador del evento |
 | created_at | TIMESTAMP | Fecha de creación |
 
@@ -215,19 +230,17 @@ pulso-app/
 POST   /api/auth/login          # Iniciar sesión
 POST   /api/auth/logout         # Cerrar sesión
 POST   /api/auth/refresh        # Refrescar token
-POST   /api/auth/forgot-password # Solicitar recuperación
-POST   /api/auth/reset-password  # Restablecer contraseña
+GET    /api/auth/me             # Obtener usuario autenticado
 ```
 
 ### Usuarios
 ```
 GET    /api/users               # Listar usuarios (admin/supervisor)
-GET    /api/users/:id           # Obtener usuario
+GET    /api/users/me            # Obtener perfil actual
+GET    /api/users/:id           # Obtener usuario por ID
 POST   /api/users               # Crear usuario (admin)
 PUT    /api/users/:id           # Actualizar usuario (admin)
-DELETE /api/users/:id           # Eliminar usuario (admin)
-GET    /api/users/me            # Obtener perfil actual
-PUT    /api/users/me            # Actualizar perfil actual
+DELETE /api/users/:id           # Eliminar usuario - soft delete (admin)
 ```
 
 ### Registro de Horas (Time Entries)
@@ -255,12 +268,11 @@ POST   /api/tasks/:id/comments  # Agregar comentario
 ### Eventos
 ```
 GET    /api/events              # Listar eventos (filtros: date_from, date_to)
-GET    /api/events/:id          # Obtener evento
-POST   /api/events              # Crear evento (admin)
-PUT    /api/events/:id          # Actualizar evento (admin)
+GET    /api/events/upcoming     # Próximos eventos (7 días)
+GET    /api/events/:id          # Obtener evento por ID
+POST   /api/events              # Crear evento (admin/supervisor)
+PUT    /api/events/:id          # Actualizar evento (admin/supervisor)
 DELETE /api/events/:id          # Eliminar evento (admin)
-GET    /api/events/upcoming     # Próximos eventos
-POST   /api/events/:id/sync-calendar # Sincronizar con Google Calendar
 ```
 
 ### Bitácoras Semanales
@@ -353,7 +365,7 @@ GET    /api/reports/export/:type        # Exportar a Excel (type: hours, tasks, 
 - Ver todos los usuarios
 - Crear/editar tareas
 - Aprobar/rechazar tareas en revisión
-- Crear eventos
+- Crear/editar eventos
 - Ver bitácoras de su equipo
 - Generar reportes
 - Agregar requisitos del cliente
@@ -585,11 +597,6 @@ JWT_REFRESH_SECRET=your-refresh-secret-key-min-32-chars
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 
-# Google Calendar (opcional)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
-
 # Frontend
 VITE_API_URL=http://localhost:3000/api
 ```
@@ -598,28 +605,28 @@ VITE_API_URL=http://localhost:3000/api
 
 ## 📋 Checklist de Funcionalidades
 
-### MVP (Semana 1-2)
-- [ ] Setup inicial del proyecto (monorepo)
-- [ ] Configurar base de datos y Prisma
-- [ ] API de autenticación (login/logout/JWT)
-- [ ] CRUD de usuarios
-- [ ] Sistema de registro de horas (manual primero, RFID después)
-- [ ] CRUD de tareas con estados
-- [ ] Frontend: Login, Dashboard, Lista de tareas
+### MVP (Semana 1-2) ✅
+- [x] Setup inicial del proyecto (monorepo)
+- [x] Configurar base de datos y Prisma
+- [x] API de autenticación (login/logout/JWT)
+- [x] CRUD de usuarios
+- [x] Sistema de registro de horas (manual)
+- [x] CRUD de tareas con estados
+- [x] Frontend: Login, Dashboard, Lista de tareas
 
-### Fase 2 (Semana 2-3)
-- [ ] Sistema de comentarios en tareas
-- [ ] CRUD de eventos
-- [ ] Asignación múltiple en tareas/eventos
-- [ ] Bitácora semanal
-- [ ] Requisitos del cliente en tareas/eventos
-- [ ] Frontend: Detalle de tarea, Eventos, Bitácora
+### Fase 2 (Semana 2-3) ✅
+- [x] Sistema de comentarios en tareas
+- [x] CRUD de eventos
+- [x] Asignación múltiple en tareas/eventos
+- [x] Bitácora semanal
+- [x] Requisitos del cliente en tareas/eventos
+- [x] Frontend: Detalle de tarea, Eventos, Bitácora
 
-### Fase 3 (Semana 3-4)
-- [ ] Integración RFID
-- [ ] Integración Google Calendar
-- [ ] Sistema de reportes
-- [ ] Exportación a Excel
+### Fase 3 (Semana 3-4) - En progreso
+- [ ] Integración RFID (endpoint listo, pendiente hardware)
+- [x] Calendario nativo (vistas mes, semana, dia)
+- [x] Sistema de reportes
+- [x] Exportación a Excel
 - [ ] App móvil (React Native)
 - [ ] Testing y corrección de bugs
 - [ ] Despliegue
@@ -665,5 +672,5 @@ npm install
 
 ---
 
-**Última actualización:** Diciembre 2024
-**Versión del documento:** 2.0
+**Última actualización:** 22 Diciembre 2024
+**Versión del documento:** 2.1

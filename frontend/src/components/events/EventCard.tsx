@@ -53,7 +53,7 @@ function getEventStatus(start: string, end: string): 'today' | 'upcoming' | 'pas
 const statusConfig = {
   ongoing: { label: 'En curso', variant: 'success' as const },
   today: { label: 'Hoy', variant: 'warning' as const },
-  upcoming: { label: 'Próximo', variant: 'info' as const },
+  upcoming: { label: 'Proximo', variant: 'info' as const },
   past: { label: 'Pasado', variant: 'default' as const },
 };
 
@@ -63,10 +63,7 @@ export function EventCard({ event, onClick }: EventCardProps) {
   const assignees = event.assignees?.map((a) => ({ name: a.user.name })) || [];
 
   return (
-    <Card
-      className="cursor-pointer transition-shadow hover:shadow-md"
-      onClick={onClick}
-    >
+    <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={onClick}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-medium text-gray-900">{event.name}</h3>
@@ -97,9 +94,7 @@ export function EventCard({ event, onClick }: EventCardProps) {
           <div className="mt-3 rounded bg-yellow-50 p-2">
             <div className="flex items-start gap-2">
               <FileText className="mt-0.5 h-4 w-4 text-yellow-600" />
-              <p className="line-clamp-2 text-xs text-yellow-700">
-                {event.clientRequirements}
-              </p>
+              <p className="line-clamp-2 text-xs text-yellow-700">{event.clientRequirements}</p>
             </div>
           </div>
         )}
