@@ -10,6 +10,8 @@ import eventRoutes from './routes/event.routes';
 import { taskCommentsRouter, commentsRouter } from './routes/comment.routes';
 import weeklyLogRoutes from './routes/weekly-log.routes';
 import reportRoutes from './routes/report.routes';
+import equipmentRoutes from './routes/equipment.routes';
+import equipmentAssignmentRoutes from './routes/equipment-assignment.routes';
 
 const app = express();
 
@@ -35,6 +37,8 @@ app.use('/api/comments', commentsRouter);
 app.use('/api/events', eventRoutes);
 app.use('/api/weekly-logs', weeklyLogRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/equipment-assignments', equipmentAssignmentRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

@@ -7,8 +7,10 @@ import { Input } from '../components/ui/Input';
 import { Spinner } from '../components/ui/Spinner';
 import { Modal } from '../components/ui/Modal';
 import { EventCard, EventModal, EventForm } from '../components/events';
-import { eventService, type EventWithRelations, type CreateEventRequest } from '../services/event.service';
+import { eventService, type EventWithRelations, type CreateEventRequest, type UpdateEventRequest } from '../services/event.service';
+import { equipmentAssignmentService } from '../services/equipment-assignment.service';
 import { useAuthContext } from '../stores/auth.store.tsx';
+import type { EquipmentAssignments } from '../components/events/EventForm';
 
 function sortEvents(events: EventWithRelations[]): EventWithRelations[] {
   const now = new Date();
@@ -56,9 +58,92 @@ export function Events() {
   });
 
   const createEventMutation = useMutation({
-    mutationFn: (data: CreateEventRequest) => eventService.create(data),
+    mutationFn: async ({
+      eventData,
+      equipmentAssignments,
+    }: {
+      eventData: CreateEventRequest;
+      equipmentAssignments?: EquipmentAssignments;
+    }) => {
+      const event = await eventService.create(eventData);
+
+      // Create equipment assignments if any (new shift-based structure)
+      if (equipmentAssignments && Object.keys(equipmentAssignments).length > 0) {
+        console.log('Processing equipment assignments:', equipmentAssignments);
+
+        // Extract date part from event start datetime (already ISO format)
+        const eventDate = new Date(eventData.startDatetime);
+        const year = eventDate.getFullYear();
+        const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+        const day = String(eventDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        // Collect all assignment promises
+        const assignmentPromises: Promise<{ userId: string; shift: string; success: boolean; error?: unknown }>[] = [];
+
+        for (const [userId, userShifts] of Object.entries(equipmentAssignments)) {
+          console.log(`Processing user ${userId} with ${userShifts.odrenedequipos.length} shifts`);
+
+          for (const shift of userShifts.odrenedequipos) {
+            const equipmentIds = [
+              shift.cameraId,
+              shift.lensId,
+              shift.adapterId,
+              shift.sdCardId,
+            ].filter((id): id is string => !!id);
+
+            if (equipmentIds.length > 0) {
+              // Ensure time format is HH:mm (remove extra :00 if present)
+              const startTimeStr = shift.odrenHoraInicio.substring(0, 5);
+              const endTimeStr = shift.HoraFin.substring(0, 5);
+
+              // Construct ISO datetime strings
+              const startTime = new Date(`${dateStr}T${startTimeStr}:00`).toISOString();
+              const endTime = new Date(`${dateStr}T${endTimeStr}:00`).toISOString();
+
+              const shiftLabel = `${shift.odrenHoraInicio}-${shift.HoraFin}`;
+              console.log(`Creating assignment: user=${userId}, shift=${shiftLabel}, equipmentIds=`, equipmentIds);
+
+              // Add promise to array
+              assignmentPromises.push(
+                equipmentAssignmentService.create({
+                  equipmentIds,
+                  userId,
+                  eventId: event.id,
+                  startTime,
+                  endTime,
+                  notes: `Turno: ${shiftLabel}`,
+                })
+                .then(() => ({ userId, shift: shiftLabel, success: true }))
+                .catch((error) => ({ userId, shift: shiftLabel, success: false, error }))
+              );
+            }
+          }
+        }
+
+        // Execute all assignments in parallel
+        if (assignmentPromises.length > 0) {
+          console.log(`Executing ${assignmentPromises.length} equipment assignments...`);
+          const results = await Promise.all(assignmentPromises);
+
+          // Log results
+          const successful = results.filter(r => r.success);
+          const failed = results.filter(r => !r.success);
+
+          console.log(`Equipment assignments: ${successful.length} successful, ${failed.length} failed`);
+
+          if (failed.length > 0) {
+            console.error('Failed assignments:', failed);
+          }
+        }
+      }
+
+      return event;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-assignments'] });
       setIsCreateModalOpen(false);
     },
   });
@@ -83,6 +168,13 @@ export function Events() {
   };
 
   const hasFilters = searchQuery || dateFrom || dateTo;
+
+  const handleCreateEvent = (
+    data: CreateEventRequest | UpdateEventRequest,
+    equipmentAssignments?: EquipmentAssignments
+  ) => {
+    createEventMutation.mutate({ eventData: data as CreateEventRequest, equipmentAssignments });
+  };
 
   return (
     <div className="space-y-6">
@@ -183,7 +275,7 @@ export function Events() {
         size="lg"
       >
         <EventForm
-          onSubmit={(data) => createEventMutation.mutate(data as CreateEventRequest)}
+          onSubmit={handleCreateEvent}
           onCancel={() => setIsCreateModalOpen(false)}
           isLoading={createEventMutation.isPending}
         />

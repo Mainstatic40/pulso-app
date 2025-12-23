@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send } from 'lucide-react';
+import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
@@ -9,11 +9,29 @@ import { Avatar } from '../ui/Avatar';
 import { Spinner } from '../ui/Spinner';
 import { statusOptions } from './TaskStatusBadge';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
-import { TaskForm } from './TaskForm';
-import { taskService, type UpdateTaskRequest } from '../../services/task.service';
+import { TaskForm, type EquipmentAssignments } from './TaskForm';
+import { taskService, type UpdateTaskRequest, type CreateTaskRequest } from '../../services/task.service';
 import { commentService, type CommentWithUser } from '../../services/comment.service';
+import { equipmentAssignmentService } from '../../services/equipment-assignment.service';
 import { useAuthContext } from '../../stores/auth.store.tsx';
-import type { TaskStatus } from '../../types';
+import type { TaskStatus, EquipmentCategory, EquipmentAssignment } from '../../types';
+
+const categoryConfig: Record<EquipmentCategory, { label: string; color: string }> = {
+  camera: { label: 'Cámara', color: 'bg-blue-100 text-blue-800' },
+  lens: { label: 'Lente', color: 'bg-purple-100 text-purple-800' },
+  adapter: { label: 'Adaptador', color: 'bg-orange-100 text-orange-800' },
+  sd_card: { label: 'SD', color: 'bg-green-100 text-green-800' },
+};
+
+interface EquipmentByUser {
+  userId: string;
+  userName: string;
+  equipment: Array<{
+    id: string;
+    name: string;
+    category: EquipmentCategory;
+  }>;
+}
 
 interface TaskModalProps {
   taskId: string | null;
@@ -92,10 +110,86 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     enabled: !!taskId && isOpen,
   });
 
+  // Query active equipment assignments
+  const { data: assignmentsData } = useQuery({
+    queryKey: ['equipment-assignments', { active: true }],
+    queryFn: () => equipmentAssignmentService.getAll({ active: true, limit: 100 }),
+    enabled: !!task && isOpen,
+  });
+
+  // Filter and group equipment by user for this task
+  const equipmentByUser = useMemo((): EquipmentByUser[] => {
+    if (!task) return [];
+
+    const assignments = assignmentsData?.data || [];
+    const taskNotePrefix = `Tarea: ${task.title}`;
+
+    // Filter assignments where notes starts with "Tarea: {title}"
+    const taskAssignments = assignments.filter(
+      (a: EquipmentAssignment) => a.notes?.startsWith(taskNotePrefix)
+    );
+
+    const userMap = new Map<string, EquipmentByUser>();
+
+    taskAssignments.forEach((assignment: EquipmentAssignment) => {
+      if (!assignment.user || !assignment.equipment) return;
+
+      const userId = assignment.user.id;
+      if (!userMap.has(userId)) {
+        userMap.set(userId, {
+          userId,
+          userName: assignment.user.name,
+          equipment: [],
+        });
+      }
+
+      userMap.get(userId)!.equipment.push({
+        id: assignment.equipment.id,
+        name: assignment.equipment.name,
+        category: assignment.equipment.category,
+      });
+    });
+
+    return Array.from(userMap.values());
+  }, [assignmentsData, task]);
+
   const updateTaskMutation = useMutation({
-    mutationFn: (data: UpdateTaskRequest) => taskService.update(taskId!, data),
+    mutationFn: async ({
+      taskData,
+      equipmentAssignments,
+    }: {
+      taskData: UpdateTaskRequest;
+      equipmentAssignments?: EquipmentAssignments;
+    }) => {
+      const updatedTask = await taskService.update(taskId!, taskData);
+
+      // Create equipment assignments if any
+      if (equipmentAssignments && Object.keys(equipmentAssignments).length > 0) {
+        for (const [userId, assignment] of Object.entries(equipmentAssignments)) {
+          const equipmentIds = [
+            assignment.cameraId,
+            assignment.lensId,
+            assignment.adapterId,
+            assignment.sdCardId,
+          ].filter((id): id is string => !!id);
+
+          if (equipmentIds.length > 0) {
+            await equipmentAssignmentService.create({
+              equipmentIds,
+              userId,
+              startTime: new Date().toISOString(),
+              notes: `Tarea: ${task?.title || 'Sin título'}`,
+            });
+          }
+        }
+      }
+
+      return updatedTask;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-assignments'] });
       setIsEditing(false);
     },
   });
@@ -158,12 +252,19 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
   if (!isOpen) return null;
 
+  const handleUpdateTask = (
+    data: CreateTaskRequest | UpdateTaskRequest,
+    equipmentAssignments?: EquipmentAssignments
+  ) => {
+    updateTaskMutation.mutate({ taskData: data as UpdateTaskRequest, equipmentAssignments });
+  };
+
   if (isEditing && task) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title="Editar Tarea" size="lg">
         <TaskForm
           task={task}
-          onSubmit={(data) => updateTaskMutation.mutate(data)}
+          onSubmit={handleUpdateTask}
           onCancel={() => setIsEditing(false)}
           isLoading={updateTaskMutation.isPending}
         />
@@ -266,6 +367,40 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   >
                     <Avatar name={assignee.user.name} size="sm" />
                     <span className="text-sm text-gray-700">{assignee.user.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Equipment Assignments */}
+          {equipmentByUser.length > 0 && (
+            <div className="mt-6">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <Camera className="h-4 w-4" />
+                Equipos Asignados
+              </h3>
+              <div className="mt-3 space-y-3">
+                {equipmentByUser.map((userEquipment) => (
+                  <div
+                    key={userEquipment.userId}
+                    className="rounded-lg border border-gray-200 p-3"
+                  >
+                    <p className="font-medium text-gray-900">{userEquipment.userName}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {userEquipment.equipment.map((eq) => {
+                        const config = categoryConfig[eq.category];
+                        return (
+                          <span
+                            key={eq.id}
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.color}`}
+                          >
+                            <span className="text-[10px]">{config.label}:</span>
+                            {eq.name}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -282,9 +282,50 @@ export const taskService = {
       throw new NotFoundError('Task not found');
     }
 
-    // Hard delete (with cascade for assignees and comments)
-    await prisma.task.delete({
-      where: { id },
+    // Use transaction to return equipment and delete task
+    await prisma.$transaction(async (tx) => {
+      // Find all active equipment assignments for this task (by notes pattern)
+      const taskNotePrefix = `Tarea: ${task.title}`;
+      const activeAssignments = await tx.equipmentAssignment.findMany({
+        where: {
+          notes: { startsWith: taskNotePrefix },
+          endTime: null,
+        },
+        select: {
+          id: true,
+          equipmentId: true,
+        },
+      });
+
+      // Return each equipment (set endTime and status to available)
+      if (activeAssignments.length > 0) {
+        const now = new Date();
+
+        // Update all assignments to mark as returned
+        await tx.equipmentAssignment.updateMany({
+          where: {
+            id: { in: activeAssignments.map((a) => a.id) },
+          },
+          data: {
+            endTime: now,
+          },
+        });
+
+        // Update all equipment to available
+        await tx.equipment.updateMany({
+          where: {
+            id: { in: activeAssignments.map((a) => a.equipmentId) },
+          },
+          data: {
+            status: 'available',
+          },
+        });
+      }
+
+      // Delete the task (cascade will handle assignees and comments)
+      await tx.task.delete({
+        where: { id },
+      });
     });
 
     return { message: 'Task deleted successfully' };

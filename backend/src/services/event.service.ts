@@ -12,7 +12,6 @@ const eventSelect = {
   clientRequirements: true,
   startDatetime: true,
   endDatetime: true,
-  googleCalendarId: true,
   createdBy: true,
   createdAt: true,
   creator: {
@@ -207,9 +206,49 @@ export const eventService = {
       throw new NotFoundError('Event not found');
     }
 
-    // Hard delete (with cascade for assignees)
-    await prisma.event.delete({
-      where: { id },
+    // Use transaction to return equipment and delete event
+    await prisma.$transaction(async (tx) => {
+      // Find all active equipment assignments for this event
+      const activeAssignments = await tx.equipmentAssignment.findMany({
+        where: {
+          eventId: id,
+          endTime: null,
+        },
+        select: {
+          id: true,
+          equipmentId: true,
+        },
+      });
+
+      // Return each equipment (set endTime and status to available)
+      if (activeAssignments.length > 0) {
+        const now = new Date();
+
+        // Update all assignments to mark as returned
+        await tx.equipmentAssignment.updateMany({
+          where: {
+            id: { in: activeAssignments.map((a) => a.id) },
+          },
+          data: {
+            endTime: now,
+          },
+        });
+
+        // Update all equipment to available
+        await tx.equipment.updateMany({
+          where: {
+            id: { in: activeAssignments.map((a) => a.equipmentId) },
+          },
+          data: {
+            status: 'available',
+          },
+        });
+      }
+
+      // Delete the event (cascade will handle assignees)
+      await tx.event.delete({
+        where: { id },
+      });
     });
 
     return { message: 'Event deleted successfully' };

@@ -13,6 +13,7 @@ import { Calendar } from './pages/Calendar';
 import { WeeklyLog } from './pages/WeeklyLog';
 import { Users } from './pages/Users';
 import { Reports } from './pages/Reports';
+import { Equipment } from './pages/Equipment';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/events" element={<Events />} />
                 <Route path="/calendar" element={<Calendar />} />
+                <Route path="/equipment" element={<Equipment />} />
                 <Route path="/weekly-log" element={<WeeklyLog />} />
               </Route>
             </Route>

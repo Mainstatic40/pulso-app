@@ -7,6 +7,7 @@ PULSO es un sistema de gestión de horas de trabajo y tareas para una oficina de
 - Registro de horas de trabajo mediante lector RFID (credenciales universitarias)
 - Gestión de tareas con flujo de estados y prioridades
 - Gestión de eventos especiales con asignación de personal
+- Gestión de equipos con asignación por turnos no solapados
 - Calendario nativo con vistas de mes, semana y dia
 - Bitácora semanal para que los becarios documenten su progreso
 - Reportes exportables a Excel
@@ -75,6 +76,7 @@ pulso-app/
 │   │   │   ├── time-entries/ # Componentes de registro de horas (ClockButton, TimeEntryList, etc.)
 │   │   │   ├── weekly-log/   # Componentes de bitácora (WeeklyLogCard, WeeklyLogForm, etc.)
 │   │   │   ├── users/        # Componentes de usuarios (UserTable, UserForm, UserModal)
+│   │   │   ├── equipment/    # Componentes de equipos (EquipmentList, EquipmentForm, AssignmentModal)
 │   │   │   └── reports/      # Componentes de reportes (ReportFilters, HoursByUserReport, etc.)
 │   │   ├── pages/            # Páginas/Vistas
 │   │   │   ├── Login.tsx
@@ -85,6 +87,7 @@ pulso-app/
 │   │   │   ├── TimeEntries.tsx
 │   │   │   ├── WeeklyLog.tsx
 │   │   │   ├── Users.tsx
+│   │   │   ├── Equipment.tsx
 │   │   │   └── Reports.tsx
 │   │   ├── hooks/            # Custom hooks
 │   │   ├── services/         # Llamadas a API (axios)
@@ -221,6 +224,37 @@ pulso-app/
 | total_hours | DECIMAL(5,2) | Total horas (calculado automáticamente) |
 | created_at | TIMESTAMP | Fecha de creación |
 
+### Tabla: equipment (Equipos)
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID (PK) | Identificador único |
+| name | VARCHAR(200) | Nombre del equipo |
+| description | TEXT NULL | Descripción del equipo |
+| category | ENUM('camera', 'audio', 'lighting', 'computer', 'other') | Categoría |
+| serial_number | VARCHAR(100) UNIQUE NULL | Número de serie |
+| status | ENUM('available', 'in_use', 'maintenance', 'retired') | Estado actual |
+| is_active | BOOLEAN DEFAULT true | Estado activo/inactivo |
+| created_at | TIMESTAMP | Fecha de creación |
+| updated_at | TIMESTAMP | Fecha de actualización |
+
+### Tabla: equipment_assignments (Asignaciones de Equipos)
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID (PK) | Identificador único |
+| equipment_id | UUID (FK → equipment) | Referencia al equipo |
+| user_id | UUID (FK → users) | Usuario responsable |
+| event_id | UUID (FK → events, NULL) | Evento asociado (opcional) |
+| start_time | TIMESTAMP | Inicio del turno/asignación |
+| end_time | TIMESTAMP NULL | Fin del turno (null = indefinido) |
+| notes | TEXT NULL | Notas adicionales |
+| created_by | UUID (FK → users) | Quien creó la asignación |
+| created_at | TIMESTAMP | Fecha de creación |
+
+**Nota sobre validación de asignaciones:**
+- Un equipo puede tener múltiples asignaciones si los horarios NO se solapan
+- El estado `in_use` solo se aplica si hay un turno activo en el momento actual
+- Solapamiento = `new.startTime < existing.endTime AND new.endTime > existing.startTime`
+
 ---
 
 ## 🔌 API Endpoints
@@ -284,6 +318,35 @@ PUT    /api/weekly-logs/:id             # Actualizar bitácora
 GET    /api/weekly-logs/current-week    # Obtener/crear bitácora de la semana actual
 GET    /api/weekly-logs/summary/:userId # Resumen para crear bitácora (tareas completadas, horas)
 ```
+
+### Equipos
+```
+GET    /api/equipment                   # Listar equipos (filtros: category, status, active)
+GET    /api/equipment/:id               # Obtener equipo por ID
+POST   /api/equipment                   # Crear equipo (admin/supervisor)
+PUT    /api/equipment/:id               # Actualizar equipo (admin/supervisor)
+DELETE /api/equipment/:id               # Eliminar equipo - soft delete (admin)
+```
+
+### Asignaciones de Equipos
+```
+GET    /api/equipment-assignments              # Listar asignaciones (filtros: equipmentId, userId, eventId, active)
+GET    /api/equipment-assignments/:id          # Obtener asignación por ID
+POST   /api/equipment-assignments              # Crear asignación(es) - soporta múltiples equipos
+PUT    /api/equipment-assignments/:id          # Actualizar asignación
+POST   /api/equipment-assignments/:id/return   # Devolver equipo (marcar endTime)
+DELETE /api/equipment-assignments/:id          # Eliminar asignación
+```
+
+**Lógica de asignación de equipos:**
+- `equipmentIds`: Array de IDs de equipos a asignar
+- `startTime`: Inicio del turno (requerido)
+- `endTime`: Fin del turno (opcional, null = indefinido)
+- Validación: No permite asignaciones con horarios solapados
+- Estado `in_use`: Solo si `startTime <= now AND (endTime is null OR endTime > now)`
+- Función `isTimeOverlapping(start1, end1, start2, end2)`: Detecta solapamiento de turnos
+- Función `syncEquipmentStatuses()`: Sincroniza estados al consultar equipos
+- Mensajes de error claros: "El equipo X está asignado a Y el DD/MM de HH:MM a HH:MM"
 
 ### Reportes
 ```
@@ -627,6 +690,7 @@ VITE_API_URL=http://localhost:3000/api
 - [x] Calendario nativo (vistas mes, semana, dia)
 - [x] Sistema de reportes
 - [x] Exportación a Excel
+- [x] Gestión de equipos (CRUD + asignaciones con validación de turnos)
 - [ ] App móvil (React Native)
 - [ ] Testing y corrección de bugs
 - [ ] Despliegue
@@ -672,5 +736,5 @@ npm install
 
 ---
 
-**Última actualización:** 22 Diciembre 2024
-**Versión del documento:** 2.1
+**Última actualización:** 23 Diciembre 2024
+**Versión del documento:** 2.3

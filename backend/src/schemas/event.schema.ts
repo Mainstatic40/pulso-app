@@ -49,7 +49,6 @@ export const createEventSchema = z.object({
         .string({ required_error: 'End datetime is required' })
         .transform((val) => new Date(val))
         .pipe(z.date({ invalid_type_error: 'Invalid end datetime format' })),
-      googleCalendarId: z.string().max(255).optional().nullable(),
       assigneeIds: z
         .array(z.string().uuid('Invalid assignee ID'))
         .optional()
@@ -84,7 +83,6 @@ export const updateEventSchema = z.object({
         .transform((val) => new Date(val))
         .pipe(z.date({ invalid_type_error: 'Invalid end datetime format' }))
         .optional(),
-      googleCalendarId: z.string().max(255).optional().nullable(),
       assigneeIds: z
         .array(z.string().uuid('Invalid assignee ID'))
         .optional(),

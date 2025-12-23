@@ -4,6 +4,10 @@ export type TaskStatus = 'pending' | 'in_progress' | 'review' | 'completed';
 
 export type TaskPriority = 'high' | 'medium' | 'low';
 
+export type EquipmentCategory = 'camera' | 'lens' | 'adapter' | 'sd_card';
+
+export type EquipmentStatus = 'available' | 'in_use' | 'maintenance';
+
 export interface User {
   id: string;
   name: string;
@@ -73,6 +77,53 @@ export interface WeeklyLog {
   nextGoals?: string;
   totalHours: number;
   createdAt: string;
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  category: EquipmentCategory;
+  status: EquipmentStatus;
+  description?: string;
+  serialNumber?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  assignments?: EquipmentAssignment[];
+}
+
+export interface EquipmentAssignment {
+  id: string;
+  equipmentId: string;
+  userId: string;
+  eventId?: string;
+  startTime: string;
+  endTime?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  equipment?: {
+    id: string;
+    name: string;
+    category: EquipmentCategory;
+    status: EquipmentStatus;
+    serialNumber?: string;
+  };
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  event?: {
+    id: string;
+    name: string;
+    startDatetime: string;
+    endDatetime: string;
+  };
+  creator?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface ApiResponse<T = unknown> {

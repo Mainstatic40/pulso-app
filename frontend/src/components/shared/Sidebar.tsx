@@ -8,6 +8,7 @@ import {
   BookOpen,
   Users,
   BarChart3,
+  Camera,
 } from 'lucide-react';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import { cn } from '../../lib/utils';
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/tasks', icon: CheckSquare, label: 'Tareas', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/events', icon: Calendar, label: 'Eventos', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/calendar', icon: CalendarDays, label: 'Calendario', roles: ['admin', 'supervisor', 'becario'] },
+  { to: '/equipment', icon: Camera, label: 'Equipos', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/weekly-log', icon: BookOpen, label: 'Bitacora Semanal', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/users', icon: Users, label: 'Usuarios', roles: ['admin', 'supervisor'] },
   { to: '/reports', icon: BarChart3, label: 'Reportes', roles: ['admin', 'supervisor'] },

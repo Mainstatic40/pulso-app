@@ -8,9 +8,11 @@ import { Select } from '../components/ui/Select';
 import { Spinner } from '../components/ui/Spinner';
 import { Modal } from '../components/ui/Modal';
 import { TaskCard, TaskModal, TaskForm, statusOptions, priorityOptions } from '../components/tasks';
-import { taskService, type TaskWithRelations, type CreateTaskRequest } from '../services/task.service';
+import { taskService, type TaskWithRelations, type CreateTaskRequest, type UpdateTaskRequest } from '../services/task.service';
+import { equipmentAssignmentService } from '../services/equipment-assignment.service';
 import { useAuthContext } from '../stores/auth.store.tsx';
 import type { TaskStatus, TaskPriority } from '../types';
+import type { EquipmentAssignments } from '../components/tasks/TaskForm';
 
 const allStatusOptions = [{ value: '', label: 'Todos los estados' }, ...statusOptions];
 const allPriorityOptions = [{ value: '', label: 'Todas las prioridades' }, ...priorityOptions];
@@ -47,12 +49,52 @@ export function Tasks() {
 
   // Create mutation
   const createTaskMutation = useMutation({
-    mutationFn: (data: CreateTaskRequest) => taskService.create(data),
+    mutationFn: async ({
+      taskData,
+      equipmentAssignments,
+    }: {
+      taskData: CreateTaskRequest;
+      equipmentAssignments?: EquipmentAssignments;
+    }) => {
+      const task = await taskService.create(taskData);
+
+      // Create equipment assignments if any
+      if (equipmentAssignments && Object.keys(equipmentAssignments).length > 0) {
+        for (const [userId, assignment] of Object.entries(equipmentAssignments)) {
+          const equipmentIds = [
+            assignment.cameraId,
+            assignment.lensId,
+            assignment.adapterId,
+            assignment.sdCardId,
+          ].filter((id): id is string => !!id);
+
+          if (equipmentIds.length > 0) {
+            await equipmentAssignmentService.create({
+              equipmentIds,
+              userId,
+              startTime: new Date().toISOString(),
+              notes: `Tarea: ${taskData.title}`,
+            });
+          }
+        }
+      }
+
+      return task;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-assignments'] });
       setIsCreateModalOpen(false);
     },
   });
+
+  const handleCreateTask = (
+    data: CreateTaskRequest | UpdateTaskRequest,
+    equipmentAssignments?: EquipmentAssignments
+  ) => {
+    createTaskMutation.mutate({ taskData: data as CreateTaskRequest, equipmentAssignments });
+  };
 
   // Filter tasks by search query
   const tasks = (tasksResponse?.data || []).filter((task: TaskWithRelations) => {
@@ -163,7 +205,7 @@ export function Tasks() {
         size="lg"
       >
         <TaskForm
-          onSubmit={(data) => createTaskMutation.mutate(data as CreateTaskRequest)}
+          onSubmit={handleCreateTask}
           onCancel={() => setIsCreateModalOpen(false)}
           isLoading={createTaskMutation.isPending}
         />
