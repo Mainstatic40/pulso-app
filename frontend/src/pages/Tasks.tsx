@@ -56,25 +56,81 @@ export function Tasks() {
       taskData: CreateTaskRequest;
       equipmentAssignments?: EquipmentAssignments;
     }) => {
+      console.log('[Tasks] Creating task with data:', taskData);
+      console.log('[Tasks] Equipment assignments:', equipmentAssignments);
+
       const task = await taskService.create(taskData);
+      console.log('[Tasks] Task created successfully:', task.id);
 
-      // Create equipment assignments if any
+      // Create equipment assignments if any (with shift support)
       if (equipmentAssignments && Object.keys(equipmentAssignments).length > 0) {
-        for (const [userId, assignment] of Object.entries(equipmentAssignments)) {
-          const equipmentIds = [
-            assignment.cameraId,
-            assignment.lensId,
-            assignment.adapterId,
-            assignment.sdCardId,
-          ].filter((id): id is string => !!id);
+        for (const [userId, userShiftAssignments] of Object.entries(equipmentAssignments)) {
+          console.log(`[Tasks] Processing assignments for user: ${userId}`, userShiftAssignments);
 
-          if (equipmentIds.length > 0) {
-            await equipmentAssignmentService.create({
-              equipmentIds,
-              userId,
-              startTime: new Date().toISOString(),
-              notes: `Tarea: ${taskData.title}`,
-            });
+          // Process morning shift assignments
+          if (userShiftAssignments.morning) {
+            const morningAssignment = userShiftAssignments.morning;
+            const morningEquipmentIds = [
+              morningAssignment.cameraId,
+              morningAssignment.lensId,
+              morningAssignment.adapterId,
+              morningAssignment.sdCardId,
+            ].filter((id): id is string => !!id);
+
+            console.log('[Tasks] Morning equipment IDs:', morningEquipmentIds);
+            console.log('[Tasks] Morning times:', taskData.morningStartTime, '-', taskData.morningEndTime);
+
+            if (morningEquipmentIds.length > 0 && taskData.morningStartTime && taskData.morningEndTime) {
+              const executionDate = taskData.executionDate || new Date().toISOString().split('T')[0];
+              const assignmentData = {
+                equipmentIds: morningEquipmentIds,
+                userId,
+                startTime: `${executionDate}T${taskData.morningStartTime}:00`,
+                endTime: `${executionDate}T${taskData.morningEndTime}:00`,
+                notes: `Tarea: ${taskData.title} (Mañana)`,
+              };
+              console.log('[Tasks] Creating MORNING assignment with data:', JSON.stringify(assignmentData, null, 2));
+              try {
+                await equipmentAssignmentService.create(assignmentData);
+                console.log('[Tasks] Morning assignment created successfully');
+              } catch (err) {
+                console.error('[Tasks] Error creating morning assignment:', err);
+                throw err;
+              }
+            }
+          }
+
+          // Process afternoon shift assignments
+          if (userShiftAssignments.afternoon) {
+            const afternoonAssignment = userShiftAssignments.afternoon;
+            const afternoonEquipmentIds = [
+              afternoonAssignment.cameraId,
+              afternoonAssignment.lensId,
+              afternoonAssignment.adapterId,
+              afternoonAssignment.sdCardId,
+            ].filter((id): id is string => !!id);
+
+            console.log('[Tasks] Afternoon equipment IDs:', afternoonEquipmentIds);
+            console.log('[Tasks] Afternoon times:', taskData.afternoonStartTime, '-', taskData.afternoonEndTime);
+
+            if (afternoonEquipmentIds.length > 0 && taskData.afternoonStartTime && taskData.afternoonEndTime) {
+              const executionDate = taskData.executionDate || new Date().toISOString().split('T')[0];
+              const assignmentData = {
+                equipmentIds: afternoonEquipmentIds,
+                userId,
+                startTime: `${executionDate}T${taskData.afternoonStartTime}:00`,
+                endTime: `${executionDate}T${taskData.afternoonEndTime}:00`,
+                notes: `Tarea: ${taskData.title} (Tarde)`,
+              };
+              console.log('[Tasks] Creating AFTERNOON assignment with data:', JSON.stringify(assignmentData, null, 2));
+              try {
+                await equipmentAssignmentService.create(assignmentData);
+                console.log('[Tasks] Afternoon assignment created successfully');
+              } catch (err) {
+                console.error('[Tasks] Error creating afternoon assignment:', err);
+                throw err;
+              }
+            }
           }
         }
       }

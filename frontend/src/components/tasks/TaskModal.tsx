@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera } from 'lucide-react';
+import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera, Clock, Sun, Sunset } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
@@ -9,7 +9,7 @@ import { Avatar } from '../ui/Avatar';
 import { Spinner } from '../ui/Spinner';
 import { statusOptions } from './TaskStatusBadge';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
-import { TaskForm, type EquipmentAssignments } from './TaskForm';
+import { TaskForm, type EquipmentAssignments, type ExistingEquipmentAssignment } from './TaskForm';
 import { taskService, type UpdateTaskRequest, type CreateTaskRequest } from '../../services/task.service';
 import { commentService, type CommentWithUser } from '../../services/comment.service';
 import { equipmentAssignmentService } from '../../services/equipment-assignment.service';
@@ -23,14 +23,23 @@ const categoryConfig: Record<EquipmentCategory, { label: string; color: string }
   sd_card: { label: 'SD', color: 'bg-green-100 text-green-800' },
 };
 
-interface EquipmentByUser {
+interface EquipmentItem {
+  id: string;
+  name: string;
+  category: EquipmentCategory;
+}
+
+interface ShiftEquipment {
+  morning: EquipmentItem[];
+  afternoon: EquipmentItem[];
+}
+
+interface EquipmentByUserAndShift {
   userId: string;
   userName: string;
-  equipment: Array<{
-    id: string;
-    name: string;
-    category: EquipmentCategory;
-  }>;
+  shifts: ShiftEquipment;
+  morningTimeRange?: string;
+  afternoonTimeRange?: string;
 }
 
 interface TaskModalProps {
@@ -40,7 +49,12 @@ interface TaskModalProps {
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('es-MX', {
+  // Fix timezone issue: extract just the date part (YYYY-MM-DD) and use noon to avoid UTC shift
+  // This handles both "2025-12-29" and "2025-12-29T00:00:00.000Z" formats
+  const datePart = dateString.split('T')[0]; // Extract YYYY-MM-DD
+  const dateToFormat = new Date(datePart + 'T12:00:00'); // Use noon local time
+
+  return dateToFormat.toLocaleDateString('es-MX', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -110,47 +124,120 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     enabled: !!taskId && isOpen,
   });
 
-  // Query active equipment assignments
+  // Query all equipment assignments (no active filter - we filter by task title in notes)
   const { data: assignmentsData } = useQuery({
-    queryKey: ['equipment-assignments', { active: true }],
-    queryFn: () => equipmentAssignmentService.getAll({ active: true, limit: 100 }),
+    queryKey: ['equipment-assignments', 'all'],
+    queryFn: () => equipmentAssignmentService.getAll({ limit: 500 }),
     enabled: !!task && isOpen,
   });
 
-  // Filter and group equipment by user for this task
-  const equipmentByUser = useMemo((): EquipmentByUser[] => {
+  // Filter and group equipment by user and shift for this task
+  const equipmentByUserAndShift = useMemo((): EquipmentByUserAndShift[] => {
     if (!task) return [];
 
     const assignments = assignmentsData?.data || [];
     const taskNotePrefix = `Tarea: ${task.title}`;
+
+    // Debug: Log all assignments and what we're searching for
+    console.log('[TaskModal] Equipment assignments debug:', {
+      taskTitle: task.title,
+      searchingFor: taskNotePrefix,
+      totalAssignments: assignments.length,
+      allAssignmentNotes: assignments.map((a: EquipmentAssignment) => ({
+        id: a.id,
+        notes: a.notes,
+        equipmentName: a.equipment?.name,
+        userName: a.user?.name,
+      })),
+    });
 
     // Filter assignments where notes starts with "Tarea: {title}"
     const taskAssignments = assignments.filter(
       (a: EquipmentAssignment) => a.notes?.startsWith(taskNotePrefix)
     );
 
-    const userMap = new Map<string, EquipmentByUser>();
+    // Debug: Log filtered assignments
+    console.log('[TaskModal] Filtered assignments for this task:', {
+      count: taskAssignments.length,
+      assignments: taskAssignments.map((a: EquipmentAssignment) => ({
+        id: a.id,
+        notes: a.notes,
+        equipmentName: a.equipment?.name,
+        userName: a.user?.name,
+      })),
+    });
+
+    const userMap = new Map<string, EquipmentByUserAndShift>();
+
+    const formatTime = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    };
 
     taskAssignments.forEach((assignment: EquipmentAssignment) => {
       if (!assignment.user || !assignment.equipment) return;
 
       const userId = assignment.user.id;
+      const isMorning = assignment.notes?.includes('(Mañana)') ?? false;
+      const shiftType: 'morning' | 'afternoon' = isMorning ? 'morning' : 'afternoon';
+
       if (!userMap.has(userId)) {
         userMap.set(userId, {
           userId,
           userName: assignment.user.name,
-          equipment: [],
+          shifts: { morning: [], afternoon: [] },
         });
       }
 
-      userMap.get(userId)!.equipment.push({
+      const userEntry = userMap.get(userId)!;
+
+      userEntry.shifts[shiftType].push({
         id: assignment.equipment.id,
         name: assignment.equipment.name,
         category: assignment.equipment.category,
       });
+
+      // Extract time range from assignment
+      if (assignment.startTime && assignment.endTime) {
+        const timeRange = `${formatTime(assignment.startTime)} - ${formatTime(assignment.endTime)}`;
+        if (shiftType === 'morning') {
+          userEntry.morningTimeRange = timeRange;
+        } else {
+          userEntry.afternoonTimeRange = timeRange;
+        }
+      }
     });
 
     return Array.from(userMap.values());
+  }, [assignmentsData, task]);
+
+  // Transform assignments for TaskForm (for editing)
+  const existingAssignmentsForForm = useMemo((): ExistingEquipmentAssignment[] => {
+    if (!task) return [];
+
+    const assignments = assignmentsData?.data || [];
+    const taskNotePrefix = `Tarea: ${task.title}`;
+
+    const taskAssignments = assignments.filter(
+      (a: EquipmentAssignment) => a.notes?.startsWith(taskNotePrefix)
+    );
+
+    return taskAssignments
+      .filter((a: EquipmentAssignment) => a.user && a.equipment)
+      .map((a: EquipmentAssignment) => {
+        const isMorning = a.notes?.includes('(Mañana)') ?? false;
+        return {
+          id: a.id,
+          equipmentId: a.equipment!.id,
+          equipmentName: a.equipment!.name,
+          equipmentCategory: a.equipment!.category,
+          userId: a.user!.id,
+          userName: a.user!.name,
+          shift: (isMorning ? 'morning' : 'afternoon') as 'morning' | 'afternoon',
+          startTime: a.startTime,
+          endTime: a.endTime ?? null,
+        };
+      });
   }, [assignmentsData, task]);
 
   const updateTaskMutation = useMutation({
@@ -163,23 +250,51 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     }) => {
       const updatedTask = await taskService.update(taskId!, taskData);
 
-      // Create equipment assignments if any
+      // Create equipment assignments if any (now with shift support)
       if (equipmentAssignments && Object.keys(equipmentAssignments).length > 0) {
-        for (const [userId, assignment] of Object.entries(equipmentAssignments)) {
-          const equipmentIds = [
-            assignment.cameraId,
-            assignment.lensId,
-            assignment.adapterId,
-            assignment.sdCardId,
-          ].filter((id): id is string => !!id);
+        for (const [userId, userShiftAssignments] of Object.entries(equipmentAssignments)) {
+          // Process morning shift assignments
+          if (userShiftAssignments.morning) {
+            const morningAssignment = userShiftAssignments.morning;
+            const morningEquipmentIds = [
+              morningAssignment.cameraId,
+              morningAssignment.lensId,
+              morningAssignment.adapterId,
+              morningAssignment.sdCardId,
+            ].filter((id): id is string => !!id);
 
-          if (equipmentIds.length > 0) {
-            await equipmentAssignmentService.create({
-              equipmentIds,
-              userId,
-              startTime: new Date().toISOString(),
-              notes: `Tarea: ${task?.title || 'Sin título'}`,
-            });
+            if (morningEquipmentIds.length > 0 && taskData.morningStartTime && taskData.morningEndTime) {
+              const executionDate = taskData.executionDate || new Date().toISOString().split('T')[0];
+              await equipmentAssignmentService.create({
+                equipmentIds: morningEquipmentIds,
+                userId,
+                startTime: `${executionDate}T${taskData.morningStartTime}:00`,
+                endTime: `${executionDate}T${taskData.morningEndTime}:00`,
+                notes: `Tarea: ${task?.title || 'Sin título'} (Mañana)`,
+              });
+            }
+          }
+
+          // Process afternoon shift assignments
+          if (userShiftAssignments.afternoon) {
+            const afternoonAssignment = userShiftAssignments.afternoon;
+            const afternoonEquipmentIds = [
+              afternoonAssignment.cameraId,
+              afternoonAssignment.lensId,
+              afternoonAssignment.adapterId,
+              afternoonAssignment.sdCardId,
+            ].filter((id): id is string => !!id);
+
+            if (afternoonEquipmentIds.length > 0 && taskData.afternoonStartTime && taskData.afternoonEndTime) {
+              const executionDate = taskData.executionDate || new Date().toISOString().split('T')[0];
+              await equipmentAssignmentService.create({
+                equipmentIds: afternoonEquipmentIds,
+                userId,
+                startTime: `${executionDate}T${taskData.afternoonStartTime}:00`,
+                endTime: `${executionDate}T${taskData.afternoonEndTime}:00`,
+                notes: `Tarea: ${task?.title || 'Sin título'} (Tarde)`,
+              });
+            }
           }
         }
       }
@@ -264,6 +379,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
       <Modal isOpen={isOpen} onClose={handleClose} title="Editar Tarea" size="lg">
         <TaskForm
           task={task}
+          existingAssignments={existingAssignmentsForForm}
           onSubmit={handleUpdateTask}
           onCancel={() => setIsEditing(false)}
           isLoading={updateTaskMutation.isPending}
@@ -352,6 +468,44 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </span>
           </div>
 
+          {/* Execution Date - shown separately */}
+          {task.executionDate && (
+            <div className="mt-2 flex items-center gap-2 text-gray-600">
+              <Calendar className="h-4 w-4" />
+              <span className="text-sm">
+                Fecha de ejecución: <strong>{formatDate(task.executionDate)}</strong>
+              </span>
+            </div>
+          )}
+
+          {/* Shift Information - only times */}
+          {task.shift && (task.morningStartTime || task.afternoonStartTime) && (
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-blue-800">
+                <Clock className="h-4 w-4" />
+                Horario
+              </h3>
+              <div className="mt-3 flex flex-wrap gap-4">
+                {(task.shift === 'morning' || task.shift === 'both') && task.morningStartTime && task.morningEndTime && (
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm text-blue-700">
+                      <strong>Mañana:</strong> {task.morningStartTime} - {task.morningEndTime}
+                    </span>
+                  </div>
+                )}
+                {(task.shift === 'afternoon' || task.shift === 'both') && task.afternoonStartTime && task.afternoonEndTime && (
+                  <div className="flex items-center gap-2">
+                    <Sunset className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm text-blue-700">
+                      <strong>Tarde:</strong> {task.afternoonStartTime} - {task.afternoonEndTime}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Assignees */}
           {task.assignees && task.assignees.length > 0 && (
             <div className="mt-6">
@@ -373,34 +527,81 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </div>
           )}
 
-          {/* Equipment Assignments */}
-          {equipmentByUser.length > 0 && (
+          {/* Equipment Assignments by User and Shift */}
+          {equipmentByUserAndShift.length > 0 && (
             <div className="mt-6">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Camera className="h-4 w-4" />
-                Equipos Asignados
+                Distribución de Equipos
               </h3>
               <div className="mt-3 space-y-3">
-                {equipmentByUser.map((userEquipment) => (
+                {equipmentByUserAndShift.map((userEquipment) => (
                   <div
                     key={userEquipment.userId}
                     className="rounded-lg border border-gray-200 p-3"
                   >
-                    <p className="font-medium text-gray-900">{userEquipment.userName}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {userEquipment.equipment.map((eq) => {
-                        const config = categoryConfig[eq.category];
-                        return (
-                          <span
-                            key={eq.id}
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.color}`}
-                          >
-                            <span className="text-[10px]">{config.label}:</span>
-                            {eq.name}
-                          </span>
-                        );
-                      })}
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-500" />
+                      <p className="font-medium text-gray-900">{userEquipment.userName}</p>
                     </div>
+
+                    {/* Morning Shift Equipment */}
+                    {userEquipment.shifts.morning.length > 0 && (
+                      <div className="mt-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Sun className="h-4 w-4 text-amber-500" />
+                          <span className="font-medium text-gray-700">Mañana</span>
+                          {userEquipment.morningTimeRange && (
+                            <span className="text-xs text-gray-500">
+                              ({userEquipment.morningTimeRange})
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 ml-6 flex flex-wrap gap-2">
+                          {userEquipment.shifts.morning.map((eq) => {
+                            const config = categoryConfig[eq.category];
+                            return (
+                              <span
+                                key={eq.id}
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.color}`}
+                              >
+                                <span className="text-[10px]">{config.label}:</span>
+                                {eq.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Afternoon Shift Equipment */}
+                    {userEquipment.shifts.afternoon.length > 0 && (
+                      <div className="mt-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Sunset className="h-4 w-4 text-orange-500" />
+                          <span className="font-medium text-gray-700">Tarde</span>
+                          {userEquipment.afternoonTimeRange && (
+                            <span className="text-xs text-gray-500">
+                              ({userEquipment.afternoonTimeRange})
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 ml-6 flex flex-wrap gap-2">
+                          {userEquipment.shifts.afternoon.map((eq) => {
+                            const config = categoryConfig[eq.category];
+                            return (
+                              <span
+                                key={eq.id}
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.color}`}
+                              >
+                                <span className="text-[10px]">{config.label}:</span>
+                                {eq.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

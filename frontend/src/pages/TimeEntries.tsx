@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, Users } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
-import { Select } from '../components/ui/Select';
 import { LegacyTabs } from '../components/ui/Tabs';
 import { Spinner } from '../components/ui/Spinner';
 import { ClockButton, TimeEntryList, TimeEntrySummary, TeamHoursOverview } from '../components/time-entries';
 import { timeEntryService, type TimeEntryWithEvent } from '../services/time-entry.service';
-import { userService } from '../services/user.service';
 import { useAuthContext } from '../stores/auth.store.tsx';
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'all';
@@ -65,7 +63,6 @@ function getDateRange(period: Period): { dateFrom?: string; dateTo?: string } {
 
 // Becario view component (existing functionality)
 function BecarioTimeEntries() {
-  const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const [activePeriod, setActivePeriod] = useState<Period>('daily');
 

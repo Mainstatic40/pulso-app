@@ -10,8 +10,8 @@ export const listAssignmentsSchema = z.object({
     limit: z
       .string()
       .optional()
-      .transform((val) => (val ? parseInt(val, 10) : 10))
-      .pipe(z.number().int().min(1).max(100)),
+      .transform((val) => (val ? parseInt(val, 10) : 100))
+      .pipe(z.number().int().min(1).max(1000)),
     equipmentId: z.string().uuid().optional(),
     userId: z.string().uuid().optional(),
     eventId: z.string().uuid().optional(),
@@ -19,6 +19,10 @@ export const listAssignmentsSchema = z.object({
       .string()
       .optional()
       .transform((val) => (val === 'true' ? true : val === 'false' ? false : undefined)),
+    today: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true'),
   }),
 });
 
@@ -39,12 +43,14 @@ export const createAssignmentSchema = z.object({
       .string({ required_error: 'Start time is required' })
       .transform((val) => new Date(val))
       .pipe(z.date({ invalid_type_error: 'Invalid date format' })),
-    endTime: z
-      .string()
-      .transform((val) => new Date(val))
-      .pipe(z.date({ invalid_type_error: 'Invalid date format' }))
-      .optional()
-      .nullable(),
+    endTime: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() !== '' ? val : undefined),
+      z
+        .string()
+        .transform((val) => new Date(val))
+        .pipe(z.date({ invalid_type_error: 'Invalid date format' }))
+        .optional()
+    ),
     notes: z.string().optional().nullable(),
   }),
 });
@@ -56,17 +62,22 @@ export const updateAssignmentSchema = z.object({
   body: z.object({
     userId: z.string().uuid('Invalid user ID').optional(),
     eventId: z.string().uuid('Invalid event ID').optional().nullable(),
-    startTime: z
-      .string()
-      .transform((val) => new Date(val))
-      .pipe(z.date({ invalid_type_error: 'Invalid date format' }))
-      .optional(),
-    endTime: z
-      .string()
-      .transform((val) => new Date(val))
-      .pipe(z.date({ invalid_type_error: 'Invalid date format' }))
-      .optional()
-      .nullable(),
+    startTime: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() !== '' ? val : undefined),
+      z
+        .string()
+        .transform((val) => new Date(val))
+        .pipe(z.date({ invalid_type_error: 'Invalid date format' }))
+        .optional()
+    ),
+    endTime: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() !== '' ? val : undefined),
+      z
+        .string()
+        .transform((val) => new Date(val))
+        .pipe(z.date({ invalid_type_error: 'Invalid date format' }))
+        .optional()
+    ),
     notes: z.string().optional().nullable(),
   }),
 });

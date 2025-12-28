@@ -201,16 +201,40 @@ export function EventForm({ event, existingAssignments, onSubmit, onCancel, isLo
     queryFn: () => userService.getAll({ limit: 100 }),
   });
 
-  // Query available equipment + equipment already assigned to THIS event
-  const { data: equipmentResponse, isLoading: isLoadingEquipment } = useQuery({
-    queryKey: ['equipment', 'for-event-form', event?.id],
-    queryFn: async () => {
-      // Get available equipment
-      const availableRes = await equipmentService.getAll({ status: 'available', limit: 100 });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    setValue,
+  } = useForm<EventFormData>({
+    resolver: zodResolver(eventSchema),
+    defaultValues: {
+      name: event?.name || '',
+      description: event?.description || '',
+      clientRequirements: event?.clientRequirements || '',
+      startDatetime: event?.startDatetime ? toDatetimeLocal(event.startDatetime) : '',
+      endDatetime: event?.endDatetime ? toDatetimeLocal(event.endDatetime) : '',
+      assigneeIds: event?.assignees?.map((a) => a.user.id) || [],
+    },
+  });
 
-      // If editing, also get equipment assigned to this event (they should appear as selectable)
+  const selectedAssignees = watch('assigneeIds') || [];
+  const startDatetime = watch('startDatetime');
+  const endDatetime = watch('endDatetime');
+
+  // Query available equipment for the event time range
+  const { data: availableEquipmentData, isLoading: isLoadingEquipment } = useQuery({
+    queryKey: ['equipment-available', 'event', startDatetime, endDatetime],
+    queryFn: async () => {
+      // Get available equipment for the event time range
+      const available = await equipmentService.getAvailable({
+        startTime: new Date(startDatetime).toISOString(),
+        endTime: new Date(endDatetime).toISOString(),
+      });
+
+      // If editing, also include equipment already assigned to THIS event
       if (event?.id && existingAssignments && existingAssignments.length > 0) {
-        // Add assigned equipment that might not be in available list
         const assignedEquipment = existingAssignments
           .filter(a => a.equipment)
           .map(a => ({
@@ -223,23 +247,23 @@ export function EventForm({ event, existingAssignments, onSubmit, onCancel, isLo
           } as Equipment));
 
         // Merge: available + assigned (avoiding duplicates)
-        const merged = [...(availableRes.data || [])];
+        const merged = [...available];
         assignedEquipment.forEach(eq => {
           if (!merged.find(m => m.id === eq.id)) {
             merged.push(eq);
           }
         });
 
-        return { ...availableRes, data: merged };
+        return merged;
       }
 
-      return availableRes;
+      return available;
     },
-    enabled: canAssignEquipment,
+    enabled: canAssignEquipment && !!startDatetime && !!endDatetime,
   });
 
   const users = usersResponse?.data || [];
-  const availableEquipment = equipmentResponse?.data || [];
+  const availableEquipment = availableEquipmentData || [];
 
   // Initialize equipment assignments from existing data when editing
   useEffect(() => {
@@ -357,28 +381,6 @@ export function EventForm({ event, existingAssignments, onSubmit, onCancel, isLo
 
     return warnings;
   }, [equipmentAssignments, users, availableEquipment]);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch,
-    setValue,
-  } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema),
-    defaultValues: {
-      name: event?.name || '',
-      description: event?.description || '',
-      clientRequirements: event?.clientRequirements || '',
-      startDatetime: event?.startDatetime ? toDatetimeLocal(event.startDatetime) : '',
-      endDatetime: event?.endDatetime ? toDatetimeLocal(event.endDatetime) : '',
-      assigneeIds: event?.assignees?.map((a) => a.user.id) || [],
-    },
-  });
-
-  const selectedAssignees = watch('assigneeIds') || [];
-  const startDatetime = watch('startDatetime');
-  const endDatetime = watch('endDatetime');
 
   // Get event time range for defaults
   const eventTimeRange = useMemo(() => {
@@ -629,9 +631,13 @@ export function EventForm({ event, existingAssignments, onSubmit, onCancel, isLo
           <label className="mb-2 block text-sm font-medium text-gray-700">
             Asignar equipos por turnos
           </label>
-          {isLoadingEquipment ? (
+          {!startDatetime || !endDatetime ? (
+            <p className="py-4 text-center text-sm text-gray-500 rounded-lg border border-gray-200 bg-gray-50">
+              Selecciona las fechas del evento para ver equipos disponibles
+            </p>
+          ) : isLoadingEquipment ? (
             <p className="py-2 text-center text-sm text-gray-500">
-              Cargando equipos...
+              Cargando equipos disponibles...
             </p>
           ) : (
             <div className="space-y-4">

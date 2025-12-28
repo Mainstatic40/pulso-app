@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Calendar, Clock, RotateCcw, Package, Search, ChevronDown, ChevronRight, ClipboardList, FileQuestion } from 'lucide-react';
+import { User, Calendar, Clock, RotateCcw, Package, Search, ChevronDown, ChevronRight, ClipboardList, FileQuestion, CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -11,6 +11,7 @@ import { equipmentAssignmentService } from '../../services/equipment-assignment.
 import { useAuthContext } from '../../stores/auth.store';
 import type { EquipmentAssignment } from '../../types';
 
+type ViewType = 'active' | 'today';
 type FilterType = 'all' | 'events' | 'tasks' | 'unassigned';
 
 // Classification helpers
@@ -18,15 +19,6 @@ const isEventAssignment = (a: EquipmentAssignment) => !!a.eventId;
 const isTaskAssignment = (a: EquipmentAssignment) => a.notes?.startsWith('Tarea:') ?? false;
 const isUnassigned = (a: EquipmentAssignment) => !a.eventId && !a.notes?.startsWith('Tarea:');
 const extractTaskName = (notes: string) => notes.replace(/^Tarea:\s*/, '');
-
-function formatDateTime(dateString: string): string {
-  return new Date(dateString).toLocaleString('es-MX', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 function getElapsedTime(startTime: string): string {
   const start = new Date(startTime);
@@ -45,6 +37,32 @@ function getElapsedTime(startTime: string): string {
   return `${diffMins}m`;
 }
 
+function getShiftStatus(startTime: string, endTime: string | null): { label: string; color: string } {
+  const now = new Date();
+  const start = new Date(startTime);
+  const end = endTime ? new Date(endTime) : null;
+
+  if (start > now) {
+    return { label: 'Programado', color: 'bg-blue-100 text-blue-700' };
+  }
+  if (end && end <= now) {
+    return { label: 'Finalizado', color: 'bg-gray-100 text-gray-600' };
+  }
+  return { label: 'En curso', color: 'bg-green-100 text-green-700' };
+}
+
+function formatTimeRange(startTime: string, endTime: string | null): string {
+  const start = new Date(startTime);
+  const startStr = start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+  if (endTime) {
+    const end = new Date(endTime);
+    const endStr = end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    return `${startStr} - ${endStr}`;
+  }
+  return `${startStr} - sin fin`;
+}
+
 interface AssignmentRowProps {
   assignment: EquipmentAssignment;
   onReturn: (id: string) => void;
@@ -53,6 +71,10 @@ interface AssignmentRowProps {
 }
 
 function AssignmentRow({ assignment, onReturn, isReturning, canReturn }: AssignmentRowProps) {
+  const shiftStatus = getShiftStatus(assignment.startTime, assignment.endTime || null);
+  const isActive = shiftStatus.label === 'En curso';
+  const canReturnNow = canReturn && isActive && !assignment.endTime;
+
   const handleReturn = () => {
     if (window.confirm(`¿Devolver ${assignment.equipment?.name}?`)) {
       onReturn(assignment.id);
@@ -67,6 +89,9 @@ function AssignmentRow({ assignment, onReturn, isReturning, canReturn }: Assignm
           {assignment.equipment && (
             <EquipmentCategoryBadge category={assignment.equipment.category} />
           )}
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${shiftStatus.color}`}>
+            {shiftStatus.label}
+          </span>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
           <span className="flex items-center gap-1">
@@ -81,17 +106,19 @@ function AssignmentRow({ assignment, onReturn, isReturning, canReturn }: Assignm
           )}
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
-            {formatDateTime(assignment.startTime)}
-            <span className="text-xs text-gray-400">
-              ({getElapsedTime(assignment.startTime)})
-            </span>
+            {formatTimeRange(assignment.startTime, assignment.endTime || null)}
           </span>
+          {isActive && (
+            <span className="text-xs text-gray-400">
+              ({getElapsedTime(assignment.startTime)} transcurridos)
+            </span>
+          )}
         </div>
         {assignment.notes && (
           <p className="mt-1 text-xs text-gray-400 italic">"{assignment.notes}"</p>
         )}
       </div>
-      {canReturn && (
+      {canReturnNow && (
         <Button
           size="sm"
           variant="outline"
@@ -151,13 +178,20 @@ export function ActiveAssignments() {
   const queryClient = useQueryClient();
   const canManage = user?.role === 'admin' || user?.role === 'supervisor';
 
+  const [viewType, setViewType] = useState<ViewType>('active');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
+  // Query based on view type
   const { data, isLoading } = useQuery({
-    queryKey: ['equipment-assignments', { active: true }],
-    queryFn: () => equipmentAssignmentService.getAll({ active: true, limit: 100 }),
+    queryKey: ['equipment-assignments', { viewType }],
+    queryFn: () => {
+      if (viewType === 'today') {
+        return equipmentAssignmentService.getAll({ today: true, limit: 100 });
+      }
+      return equipmentAssignmentService.getAll({ active: true, limit: 100 });
+    },
   });
 
   const returnMutation = useMutation({
@@ -282,13 +316,40 @@ export function ActiveAssignments() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          Asignaciones Activas
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-sm font-normal text-red-700">
-            {assignments.length}
-          </span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            {viewType === 'active' ? 'Asignaciones Activas' : 'Asignaciones de Hoy'}
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-sm font-normal text-red-700">
+              {assignments.length}
+            </span>
+          </CardTitle>
+          {/* View Type Tabs */}
+          <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+            <button
+              onClick={() => setViewType('active')}
+              className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewType === 'active'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Clock className="h-4 w-4" />
+              Activas
+            </button>
+            <button
+              onClick={() => setViewType('today')}
+              className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewType === 'today'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <CalendarDays className="h-4 w-4" />
+              Hoy
+            </button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Summary */}

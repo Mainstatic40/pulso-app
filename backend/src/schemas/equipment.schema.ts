@@ -72,7 +72,22 @@ export const updateEquipmentStatusSchema = z.object({
   }),
 });
 
+export const availableEquipmentSchema = z.object({
+  query: z.object({
+    startTime: z
+      .string({ required_error: 'Start time is required' })
+      .transform((val) => new Date(val))
+      .pipe(z.date({ invalid_type_error: 'Invalid start time format' })),
+    endTime: z
+      .string({ required_error: 'End time is required' })
+      .transform((val) => new Date(val))
+      .pipe(z.date({ invalid_type_error: 'Invalid end time format' })),
+    category: z.nativeEnum(EquipmentCategory).optional(),
+  }),
+});
+
 export type ListEquipmentQuery = z.infer<typeof listEquipmentSchema>['query'];
+export type AvailableEquipmentQuery = z.infer<typeof availableEquipmentSchema>['query'];
 export type CreateEquipmentInput = z.infer<typeof createEquipmentSchema>['body'];
 export type UpdateEquipmentInput = z.infer<typeof updateEquipmentSchema>['body'];
 export type UpdateEquipmentStatusInput = z.infer<typeof updateEquipmentStatusSchema>['body'];

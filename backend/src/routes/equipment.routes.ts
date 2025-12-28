@@ -4,6 +4,7 @@ import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import {
   listEquipmentSchema,
+  availableEquipmentSchema,
   getEquipmentSchema,
   createEquipmentSchema,
   updateEquipmentSchema,
@@ -20,6 +21,14 @@ router.get(
   '/',
   validate(listEquipmentSchema),
   equipmentController.getAll
+);
+
+// GET /api/equipment/available - Get equipment available for a time range
+// Must be before /:id to avoid matching "available" as an ID
+router.get(
+  '/available',
+  validate(availableEquipmentSchema),
+  equipmentController.getAvailable
 );
 
 // GET /api/equipment/:id - Get equipment by ID

@@ -5,7 +5,8 @@
 PULSO es un sistema de gestión de horas de trabajo y tareas para una oficina de creación multimedia universitaria. El sistema permite:
 
 - Registro de horas de trabajo mediante lector RFID (credenciales universitarias)
-- Gestión de tareas con flujo de estados y prioridades
+- Gestión de tareas con flujo de estados, prioridades y turnos (mañana/tarde)
+- Asignación de equipos a tareas por turno y usuario
 - Gestión de eventos especiales con asignación de personal
 - Gestión de equipos con asignación por turnos no solapados
 - Calendario nativo con vistas de mes, semana y dia
@@ -171,6 +172,12 @@ pulso-app/
 | status | ENUM('pending', 'in_progress', 'review', 'completed') | Estado |
 | priority | ENUM('high', 'medium', 'low') | Prioridad |
 | due_date | DATE | Fecha límite |
+| execution_date | DATE NULL | Fecha de ejecución/realización |
+| shift | ENUM('morning', 'afternoon', 'both') NULL | Turno de trabajo |
+| morning_start_time | VARCHAR(5) NULL | Hora inicio mañana (HH:mm) |
+| morning_end_time | VARCHAR(5) NULL | Hora fin mañana (HH:mm) |
+| afternoon_start_time | VARCHAR(5) NULL | Hora inicio tarde (HH:mm) |
+| afternoon_end_time | VARCHAR(5) NULL | Hora fin tarde (HH:mm) |
 | created_by | UUID (FK → users) | Creador de la tarea |
 | created_at | TIMESTAMP | Fecha de creación |
 | updated_at | TIMESTAMP | Fecha de actualización |
@@ -246,7 +253,7 @@ pulso-app/
 | event_id | UUID (FK → events, NULL) | Evento asociado (opcional) |
 | start_time | TIMESTAMP | Inicio del turno/asignación |
 | end_time | TIMESTAMP NULL | Fin del turno (null = indefinido) |
-| notes | TEXT NULL | Notas adicionales |
+| notes | TEXT NULL | Notas. Para tareas: "Tarea: {título} (Mañana/Tarde)" |
 | created_by | UUID (FK → users) | Quien creó la asignación |
 | created_at | TIMESTAMP | Fecha de creación |
 
@@ -254,6 +261,7 @@ pulso-app/
 - Un equipo puede tener múltiples asignaciones si los horarios NO se solapan
 - El estado `in_use` solo se aplica si hay un turno activo en el momento actual
 - Solapamiento = `new.startTime < existing.endTime AND new.endTime > existing.startTime`
+- Para vincular equipos a tareas, el campo `notes` usa formato: "Tarea: {título} (Mañana)" o "Tarea: {título} (Tarde)"
 
 ---
 
@@ -734,7 +742,30 @@ rm package-lock.json
 npm install
 ```
 
+### Error de fechas (timezone)
+Las fechas DATE en PostgreSQL pueden mostrar el día anterior debido a conversión UTC.
+
+**Solución en frontend:**
+```typescript
+// En funciones formatDate, siempre extraer solo la parte de fecha
+function formatDate(dateString: string): string {
+  const datePart = dateString.split('T')[0]; // Extrae YYYY-MM-DD
+  const dateToFormat = new Date(datePart + 'T12:00:00'); // Mediodía local
+  return dateToFormat.toLocaleDateString('es-MX', { ... });
+}
+```
+
+**Solución en backend (task.schema.ts):**
+```typescript
+function parseDateSafe(val: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    return new Date(val + 'T12:00:00');
+  }
+  return new Date(val);
+}
+```
+
 ---
 
-**Última actualización:** 23 Diciembre 2024
-**Versión del documento:** 2.3
+**Última actualización:** 28 Diciembre 2024
+**Versión del documento:** 2.4

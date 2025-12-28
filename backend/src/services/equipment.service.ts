@@ -2,6 +2,7 @@ import { PrismaClient, Prisma, EquipmentStatus } from '@prisma/client';
 import { NotFoundError, ValidationError } from '../utils/app-error';
 import type {
   ListEquipmentQuery,
+  AvailableEquipmentQuery,
   CreateEquipmentInput,
   UpdateEquipmentInput,
   UpdateEquipmentStatusInput,
@@ -287,4 +288,82 @@ export const equipmentService = {
       equipment.assignments.length === 0
     );
   },
+
+  /**
+   * Encuentra equipos disponibles para un rango de tiempo específico.
+   * Un equipo está disponible si:
+   * - Está activo (isActive = true)
+   * - No está en mantenimiento (status != maintenance)
+   * - No tiene asignaciones que se solapen con el rango dado
+   */
+  async findAvailableForTimeRange(query: AvailableEquipmentQuery) {
+    const { startTime, endTime, category } = query;
+
+    // Build where clause for equipment
+    const whereEquipment: Prisma.EquipmentWhereInput = {
+      isActive: true,
+      status: { not: EquipmentStatus.maintenance },
+    };
+
+    if (category) {
+      whereEquipment.category = category;
+    }
+
+    // Get all active equipment with their assignments that could potentially overlap
+    const equipment = await prisma.equipment.findMany({
+      where: whereEquipment,
+      select: {
+        ...equipmentSelect,
+        assignments: {
+          where: {
+            // Only get assignments that could potentially overlap with the requested range
+            // An assignment could overlap if it ends after our start OR has no end time
+            OR: [
+              { endTime: null },
+              { endTime: { gt: startTime } },
+            ],
+          },
+          select: {
+            id: true,
+            startTime: true,
+            endTime: true,
+          },
+        },
+      },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+    });
+
+    // Filter out equipment with overlapping assignments
+    const availableEquipment = equipment.filter((eq) => {
+      // Check each assignment for overlap
+      for (const assignment of eq.assignments) {
+        const hasOverlap = isTimeOverlapping(
+          assignment.startTime,
+          assignment.endTime,
+          startTime,
+          endTime
+        );
+        if (hasOverlap) {
+          return false; // Equipment has conflicting assignment
+        }
+      }
+      return true; // No conflicts found
+    });
+
+    // Remove assignments from response (not needed by frontend)
+    return availableEquipment.map(({ assignments, ...rest }) => rest);
+  },
 };
+
+/**
+ * Verifica si dos rangos de tiempo se solapan
+ */
+function isTimeOverlapping(
+  start1: Date,
+  end1: Date | null,
+  start2: Date,
+  end2: Date
+): boolean {
+  const effectiveEnd1 = end1 || new Date('9999-12-31T23:59:59');
+  return start1 < end2 && start2 < effectiveEnd1;
+}

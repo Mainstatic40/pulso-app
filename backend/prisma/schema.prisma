@@ -91,6 +91,12 @@ model Task {
   status             TaskStatus   @default(pending)
   priority           TaskPriority @default(medium)
   dueDate            DateTime     @map("due_date") @db.Date
+  executionDate      DateTime?    @map("execution_date") @db.Date
+  shift              String?      @db.VarChar(20)
+  morningStartTime   String?      @map("morning_start_time") @db.VarChar(5)
+  morningEndTime     String?      @map("morning_end_time") @db.VarChar(5)
+  afternoonStartTime String?      @map("afternoon_start_time") @db.VarChar(5)
+  afternoonEndTime   String?      @map("afternoon_end_time") @db.VarChar(5)
   createdBy          String       @map("created_by")
   createdAt          DateTime     @default(now()) @map("created_at")
   updatedAt          DateTime     @updatedAt @map("updated_at")
@@ -102,6 +108,7 @@ model Task {
   @@index([status])
   @@index([priority])
   @@index([dueDate])
+  @@index([executionDate])
   @@index([createdBy])
   @@map("tasks")
 }

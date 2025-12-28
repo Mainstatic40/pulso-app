@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Filter } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { UserTable, UserModal } from '../components/users';
 import { userService } from '../services/user.service';
@@ -56,13 +55,6 @@ export function Users() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       handleCloseModal();
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: userService.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
     },
   });
 

@@ -4,6 +4,8 @@ export type TaskStatus = 'pending' | 'in_progress' | 'review' | 'completed';
 
 export type TaskPriority = 'high' | 'medium' | 'low';
 
+export type TaskShift = 'morning' | 'afternoon' | 'both';
+
 export type EquipmentCategory = 'camera' | 'lens' | 'adapter' | 'sd_card';
 
 export type EquipmentStatus = 'available' | 'in_use' | 'maintenance';
@@ -27,6 +29,12 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate: string;
+  executionDate?: string;
+  shift?: TaskShift;
+  morningStartTime?: string;
+  morningEndTime?: string;
+  afternoonStartTime?: string;
+  afternoonEndTime?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

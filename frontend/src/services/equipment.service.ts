@@ -54,4 +54,13 @@ export const equipmentService = {
     const response = await api.delete<ApiResponse<{ message: string }>>(`/equipment/${id}`);
     return response.data.data!;
   },
+
+  async getAvailable(params: {
+    startTime: string;
+    endTime: string;
+    category?: EquipmentCategory;
+  }) {
+    const response = await api.get<ApiResponse<Equipment[]>>('/equipment/available', { params });
+    return response.data.data || [];
+  },
 };

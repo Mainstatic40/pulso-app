@@ -10,6 +10,7 @@ export interface ReportFilters {
 export interface HoursByUserData {
   userId: string;
   userName: string;
+  userEmail: string;
   totalHours: number;
   totalSessions: number;
 }

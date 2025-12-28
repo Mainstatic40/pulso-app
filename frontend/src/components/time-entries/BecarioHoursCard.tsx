@@ -1,20 +1,16 @@
 import { ChevronRight } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { ProgressBar } from './ProgressBar';
+import type { HoursByUserData } from '../../services/report.service';
 
 // Monthly hours target - easy to modify
 export const MONTHLY_HOURS_TARGET = 80;
 
-export interface BecarioHoursData {
-  userId: string;
-  userName: string;
-  userEmail: string;
-  totalHours: number;
-  totalSessions: number;
-}
+// Re-export for backwards compatibility
+export type BecarioHoursData = HoursByUserData;
 
 interface BecarioHoursCardProps {
-  data: BecarioHoursData;
+  data: HoursByUserData;
   daysElapsed: number;
   totalDays: number;
   onClick?: () => void;

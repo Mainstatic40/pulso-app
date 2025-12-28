@@ -13,6 +13,12 @@ const taskSelect = {
   status: true,
   priority: true,
   dueDate: true,
+  executionDate: true,
+  shift: true,
+  morningStartTime: true,
+  morningEndTime: true,
+  afternoonStartTime: true,
+  afternoonEndTime: true,
   createdBy: true,
   createdAt: true,
   updatedAt: true,
@@ -119,7 +125,7 @@ export const taskService = {
   },
 
   async create(input: CreateTaskInput, creatorId: string) {
-    const { assigneeIds, dueDate, ...rest } = input;
+    const { assigneeIds, dueDate, executionDate, ...rest } = input;
 
     // Validate assignees exist
     if (assigneeIds.length > 0) {
@@ -137,6 +143,7 @@ export const taskService = {
       data: {
         ...rest,
         dueDate,
+        executionDate: executionDate ?? null,
         createdBy: creatorId,
         assignees: {
           create: assigneeIds.map((userId) => ({ userId })),
@@ -159,13 +166,17 @@ export const taskService = {
       throw new NotFoundError('Task not found');
     }
 
-    const { assigneeIds, dueDate, ...rest } = input;
+    const { assigneeIds, dueDate, executionDate, ...rest } = input;
 
     // Build update data
     const updateData: Prisma.TaskUpdateInput = { ...rest };
 
     if (dueDate !== undefined) {
       updateData.dueDate = dueDate;
+    }
+
+    if (executionDate !== undefined) {
+      updateData.executionDate = executionDate;
     }
 
     // Handle assignees update

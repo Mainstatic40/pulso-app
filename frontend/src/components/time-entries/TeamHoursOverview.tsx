@@ -5,13 +5,14 @@ import { Card, CardContent } from '../ui/Card';
 import { Modal } from '../ui/Modal';
 import { Spinner } from '../ui/Spinner';
 import { MonthSelector, getMonthDateRange, formatDateForApi } from './MonthSelector';
-import { BecarioHoursCard, MONTHLY_HOURS_TARGET, type BecarioHoursData } from './BecarioHoursCard';
+import { BecarioHoursCard, MONTHLY_HOURS_TARGET } from './BecarioHoursCard';
+import type { HoursByUserData } from '../../services/report.service';
 import { ProgressBar } from './ProgressBar';
 import { reportService } from '../../services/report.service';
 import { timeEntryService } from '../../services/time-entry.service';
 
 interface BecarioDetailModalProps {
-  becario: BecarioHoursData | null;
+  becario: HoursByUserData | null;
   isOpen: boolean;
   onClose: () => void;
   year: number;
@@ -179,6 +180,7 @@ export function TeamHoursOverview() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
+  const [selectedBecario, setSelectedBecario] = useState<HoursByUserData | null>(null);
 
   const { start, end } = getMonthDateRange(year, month);
 
@@ -202,7 +204,7 @@ export function TeamHoursOverview() {
       }),
   });
 
-  const becarios: BecarioHoursData[] = hoursData || [];
+  const becarios: HoursByUserData[] = hoursData || [];
 
   // Calculate team totals
   const teamTotalHours = becarios.reduce((sum, b) => sum + b.totalHours, 0);
@@ -321,10 +323,20 @@ export function TeamHoursOverview() {
               data={becario}
               daysElapsed={daysElapsed}
               totalDays={totalDays}
+              onClick={() => setSelectedBecario(becario)}
             />
           ))}
         </div>
       )}
+
+      {/* Detail Modal */}
+      <BecarioDetailModal
+        becario={selectedBecario}
+        isOpen={!!selectedBecario}
+        onClose={() => setSelectedBecario(null)}
+        year={year}
+        month={month}
+      />
     </div>
   );
 }

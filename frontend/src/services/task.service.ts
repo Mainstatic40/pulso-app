@@ -1,5 +1,5 @@
 import api from '../lib/axios';
-import type { ApiResponse, TaskStatus, TaskPriority } from '../types';
+import type { ApiResponse, TaskStatus, TaskPriority, TaskShift } from '../types';
 
 export interface TaskWithRelations {
   id: string;
@@ -9,6 +9,12 @@ export interface TaskWithRelations {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate: string;
+  executionDate?: string;
+  shift?: TaskShift;
+  morningStartTime?: string;
+  morningEndTime?: string;
+  afternoonStartTime?: string;
+  afternoonEndTime?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -44,6 +50,12 @@ export interface CreateTaskRequest {
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate: string;
+  executionDate?: string | null;
+  shift?: TaskShift | null;
+  morningStartTime?: string | null;
+  morningEndTime?: string | null;
+  afternoonStartTime?: string | null;
+  afternoonEndTime?: string | null;
   assigneeIds?: string[];
 }
 
@@ -54,6 +66,12 @@ export interface UpdateTaskRequest {
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate?: string;
+  executionDate?: string | null;
+  shift?: TaskShift | null;
+  morningStartTime?: string | null;
+  morningEndTime?: string | null;
+  afternoonStartTime?: string | null;
+  afternoonEndTime?: string | null;
   assigneeIds?: string[];
 }
 

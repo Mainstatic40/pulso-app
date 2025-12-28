@@ -126,16 +126,69 @@ export const equipmentAssignmentService = {
   async findAll(
     query: ListAssignmentsQuery
   ): Promise<PaginatedResult<AssignmentWithRelations>> {
-    const { page = 1, limit = 10, equipmentId, userId, eventId, active } = query;
+    const { page = 1, limit = 10, equipmentId, userId, eventId, active, today } = query;
     const skip = (page - 1) * limit;
+    const now = new Date();
 
     const where: Prisma.EquipmentAssignmentWhereInput = {};
 
     if (equipmentId) where.equipmentId = equipmentId;
     if (userId) where.userId = userId;
     if (eventId) where.eventId = eventId;
-    if (active === true) where.endTime = null;
-    if (active === false) where.endTime = { not: null };
+
+    // "active" filter: assignments currently in progress
+    // - endTime is null (not returned yet), OR
+    // - endTime > now (shift not finished yet)
+    // - AND startTime <= now (already started)
+    if (active === true) {
+      where.AND = [
+        { startTime: { lte: now } },
+        {
+          OR: [
+            { endTime: null },
+            { endTime: { gt: now } },
+          ],
+        },
+      ];
+    }
+    if (active === false) {
+      // Returned or shift ended
+      where.AND = [
+        { endTime: { not: null } },
+        { endTime: { lte: now } },
+      ];
+    }
+
+    // "today" filter: all assignments for today (past, current, and future)
+    if (today) {
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(now);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Assignments that overlap with today:
+      // - startTime is today, OR
+      // - endTime is today, OR
+      // - startTime < today AND (endTime > today OR endTime is null)
+      where.OR = [
+        // Starts today
+        { startTime: { gte: startOfDay, lte: endOfDay } },
+        // Ends today
+        { endTime: { gte: startOfDay, lte: endOfDay } },
+        // Spans across today (started before, ends after or not ended)
+        {
+          AND: [
+            { startTime: { lt: startOfDay } },
+            {
+              OR: [
+                { endTime: { gt: endOfDay } },
+                { endTime: null },
+              ],
+            },
+          ],
+        },
+      ];
+    }
 
     const [assignments, total] = await Promise.all([
       prisma.equipmentAssignment.findMany({
@@ -147,6 +200,13 @@ export const equipmentAssignmentService = {
       }),
       prisma.equipmentAssignment.count({ where }),
     ]);
+
+    // Debug log
+    console.log(`[Assignments] Query params: active=${active}, today=${today}`);
+    console.log(`[Assignments] Found ${assignments.length} assignments (total: ${total})`);
+    assignments.forEach(a => {
+      console.log(`  - ${a.equipment?.name}: ${a.startTime} -> ${a.endTime || 'null'} (user: ${a.user?.name})`);
+    });
 
     return {
       data: assignments,
@@ -173,7 +233,18 @@ export const equipmentAssignmentService = {
   },
 
   async create(input: CreateAssignmentInput, creatorId: string) {
+    console.log('[Backend] Equipment assignment create() called');
+    console.log('[Backend] Input received:', JSON.stringify(input, null, 2));
+    console.log('[Backend] Creator ID:', creatorId);
+
     const { equipmentIds, userId, eventId, startTime, endTime, notes } = input;
+
+    console.log('[Backend] Parsed values:');
+    console.log('  - equipmentIds:', equipmentIds, '(length:', equipmentIds?.length, ')');
+    console.log('  - userId:', userId);
+    console.log('  - startTime:', startTime, '(type:', typeof startTime, ')');
+    console.log('  - endTime:', endTime, '(type:', typeof endTime, ')');
+    console.log('  - notes:', notes);
 
     // Validate user exists
     const user = await prisma.user.findUnique({

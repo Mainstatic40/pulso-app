@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { equipmentService } from '../services/equipment.service';
 import type {
   ListEquipmentQuery,
+  AvailableEquipmentQuery,
   CreateEquipmentInput,
   UpdateEquipmentInput,
   UpdateEquipmentStatusInput,
@@ -17,6 +18,20 @@ export const equipmentController = {
         success: true,
         data: result.data,
         meta: result.meta,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getAvailable(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = req.query as unknown as AvailableEquipmentQuery;
+      const equipment = await equipmentService.findAvailableForTimeRange(query);
+
+      res.json({
+        success: true,
+        data: equipment,
       });
     } catch (error) {
       next(error);
