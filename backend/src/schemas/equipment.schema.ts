@@ -83,6 +83,11 @@ export const availableEquipmentSchema = z.object({
       .transform((val) => new Date(val))
       .pipe(z.date({ invalid_type_error: 'Invalid end time format' })),
     category: z.nativeEnum(EquipmentCategory).optional(),
+    // When true, only considers event assignments for overlap check (ignores task assignments)
+    excludeTasks: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true'),
   }),
 });
 

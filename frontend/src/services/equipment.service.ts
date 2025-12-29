@@ -59,6 +59,7 @@ export const equipmentService = {
     startTime: string;
     endTime: string;
     category?: EquipmentCategory;
+    excludeTasks?: boolean;
   }) {
     const response = await api.get<ApiResponse<Equipment[]>>('/equipment/available', { params });
     return response.data.data || [];

@@ -295,9 +295,12 @@ export const equipmentService = {
    * - Está activo (isActive = true)
    * - No está en mantenimiento (status != maintenance)
    * - No tiene asignaciones que se solapen con el rango dado
+   *
+   * @param excludeTasks - Si es true, solo considera asignaciones de eventos (ignora tareas)
+   *                       Esto permite que eventos solo bloqueen otros eventos
    */
   async findAvailableForTimeRange(query: AvailableEquipmentQuery) {
-    const { startTime, endTime, category } = query;
+    const { startTime, endTime, category, excludeTasks } = query;
 
     // Build where clause for equipment
     const whereEquipment: Prisma.EquipmentWhereInput = {
@@ -309,24 +312,34 @@ export const equipmentService = {
       whereEquipment.category = category;
     }
 
+    // Build where clause for assignments
+    const assignmentWhereConditions: Prisma.EquipmentAssignmentWhereInput = {
+      // Only get assignments that could potentially overlap with the requested range
+      // An assignment could overlap if it ends after our start OR has no end time
+      OR: [
+        { endTime: null },
+        { endTime: { gt: startTime } },
+      ],
+    };
+
+    // When excludeTasks is true, only consider event assignments (those with eventId)
+    // Task assignments have no eventId or have notes containing "Tarea:"
+    if (excludeTasks) {
+      assignmentWhereConditions.eventId = { not: null };
+    }
+
     // Get all active equipment with their assignments that could potentially overlap
     const equipment = await prisma.equipment.findMany({
       where: whereEquipment,
       select: {
         ...equipmentSelect,
         assignments: {
-          where: {
-            // Only get assignments that could potentially overlap with the requested range
-            // An assignment could overlap if it ends after our start OR has no end time
-            OR: [
-              { endTime: null },
-              { endTime: { gt: startTime } },
-            ],
-          },
+          where: assignmentWhereConditions,
           select: {
             id: true,
             startTime: true,
             endTime: true,
+            eventId: true,
           },
         },
       },

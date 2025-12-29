@@ -447,6 +447,43 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </div>
           )}
 
+          {/* Assignees */}
+          {task.assignees && task.assignees.length > 0 && (
+            <div className="mt-6">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <User className="h-4 w-4" />
+                Asignados
+              </h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {task.assignees.map((assignee) => (
+                  <div
+                    key={assignee.user.id}
+                    className="flex items-center gap-2 rounded-full bg-gray-100 py-1 pl-1 pr-3"
+                  >
+                    <Avatar name={assignee.user.name} size="sm" />
+                    <span className="text-sm text-gray-700">{assignee.user.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Due Date and Execution Date together */}
+          <div className="mt-6 flex items-center gap-2 text-gray-600">
+            <Calendar className="h-4 w-4" />
+            <span className="text-sm">
+              Fecha límite: <strong>{formatDate(task.dueDate)}</strong>
+            </span>
+          </div>
+          {task.executionDate && (
+            <div className="mt-2 flex items-center gap-2 text-gray-600">
+              <Calendar className="h-4 w-4" />
+              <span className="text-sm">
+                Fecha de ejecución: <strong>{formatDate(task.executionDate)}</strong>
+              </span>
+            </div>
+          )}
+
           {/* Client Requirements */}
           {task.clientRequirements && (
             <div className="mt-6 rounded-lg bg-yellow-50 p-4">
@@ -457,24 +494,6 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               <p className="mt-2 whitespace-pre-wrap text-yellow-700">
                 {task.clientRequirements}
               </p>
-            </div>
-          )}
-
-          {/* Due Date */}
-          <div className="mt-6 flex items-center gap-2 text-gray-600">
-            <Calendar className="h-4 w-4" />
-            <span className="text-sm">
-              Fecha límite: <strong>{formatDate(task.dueDate)}</strong>
-            </span>
-          </div>
-
-          {/* Execution Date - shown separately */}
-          {task.executionDate && (
-            <div className="mt-2 flex items-center gap-2 text-gray-600">
-              <Calendar className="h-4 w-4" />
-              <span className="text-sm">
-                Fecha de ejecución: <strong>{formatDate(task.executionDate)}</strong>
-              </span>
             </div>
           )}
 
@@ -502,27 +521,6 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                     </span>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {/* Assignees */}
-          {task.assignees && task.assignees.length > 0 && (
-            <div className="mt-6">
-              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <User className="h-4 w-4" />
-                Asignados
-              </h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {task.assignees.map((assignee) => (
-                  <div
-                    key={assignee.user.id}
-                    className="flex items-center gap-2 rounded-full bg-gray-100 py-1 pl-1 pr-3"
-                  >
-                    <Avatar name={assignee.user.name} size="sm" />
-                    <span className="text-sm text-gray-700">{assignee.user.name}</span>
-                  </div>
-                ))}
               </div>
             </div>
           )}

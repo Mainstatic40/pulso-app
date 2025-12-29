@@ -224,13 +224,16 @@ export function EventForm({ event, existingAssignments, onSubmit, onCancel, isLo
   const endDatetime = watch('endDatetime');
 
   // Query available equipment for the event time range
+  // excludeTasks: true means we only check for conflicts with OTHER EVENTS, not tasks
   const { data: availableEquipmentData, isLoading: isLoadingEquipment } = useQuery({
     queryKey: ['equipment-available', 'event', startDatetime, endDatetime],
     queryFn: async () => {
       // Get available equipment for the event time range
+      // excludeTasks=true: only consider event assignments for conflicts
       const available = await equipmentService.getAvailable({
         startTime: new Date(startDatetime).toISOString(),
         endTime: new Date(endDatetime).toISOString(),
+        excludeTasks: true,
       });
 
       // If editing, also include equipment already assigned to THIS event

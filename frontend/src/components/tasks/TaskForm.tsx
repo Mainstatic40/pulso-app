@@ -147,63 +147,24 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
   const selectedAssignees = watch('assigneeIds') || [];
   const selectedShift = watch('shift');
   const executionDate = watch('executionDate');
-  const morningStart = watch('morningStartTime');
-  const morningEnd = watch('morningEndTime');
-  const afternoonStart = watch('afternoonStartTime');
-  const afternoonEnd = watch('afternoonEndTime');
 
-  // Calculate time ranges for equipment availability query
-  const shiftTimeRanges = useMemo(() => {
-    if (!executionDate || !selectedShift) return null;
-
-    const ranges: { morning?: { start: string; end: string }; afternoon?: { start: string; end: string } } = {};
-
-    if (selectedShift === 'morning' || selectedShift === 'both') {
-      const start = morningStart || DEFAULT_TIMES.morningStart;
-      const end = morningEnd || DEFAULT_TIMES.morningEnd;
-      ranges.morning = {
-        start: `${executionDate}T${start}:00`,
-        end: `${executionDate}T${end}:00`,
-      };
-    }
-
-    if (selectedShift === 'afternoon' || selectedShift === 'both') {
-      const start = afternoonStart || DEFAULT_TIMES.afternoonStart;
-      const end = afternoonEnd || DEFAULT_TIMES.afternoonEnd;
-      ranges.afternoon = {
-        start: `${executionDate}T${start}:00`,
-        end: `${executionDate}T${end}:00`,
-      };
-    }
-
-    return ranges;
-  }, [executionDate, selectedShift, morningStart, morningEnd, afternoonStart, afternoonEnd]);
-
-  // Query available equipment for morning shift
-  const { data: morningEquipment, isLoading: isLoadingMorningEquipment } = useQuery({
-    queryKey: ['equipment-available', 'morning', shiftTimeRanges?.morning],
-    queryFn: () => equipmentService.getAvailable({
-      startTime: shiftTimeRanges!.morning!.start,
-      endTime: shiftTimeRanges!.morning!.end,
-    }),
-    enabled: canAssignEquipment && !!shiftTimeRanges?.morning,
+  // Query all active equipment (tasks don't block equipment)
+  // Exclude equipment in maintenance status
+  const { data: allEquipmentResponse, isLoading: isLoadingEquipment } = useQuery({
+    queryKey: ['equipment-all-active'],
+    queryFn: () => equipmentService.getAll({ isActive: true, limit: 100 }),
+    enabled: canAssignEquipment && !!selectedShift,
   });
 
-  // Query available equipment for afternoon shift
-  const { data: afternoonEquipment, isLoading: isLoadingAfternoonEquipment } = useQuery({
-    queryKey: ['equipment-available', 'afternoon', shiftTimeRanges?.afternoon],
-    queryFn: () => equipmentService.getAvailable({
-      startTime: shiftTimeRanges!.afternoon!.start,
-      endTime: shiftTimeRanges!.afternoon!.end,
-    }),
-    enabled: canAssignEquipment && !!shiftTimeRanges?.afternoon,
-  });
+  // Filter out equipment in maintenance - tasks can use all other equipment
+  const allActiveEquipment = useMemo(() => {
+    const equipment = allEquipmentResponse?.data || [];
+    return equipment.filter(eq => eq.status !== 'maintenance');
+  }, [allEquipmentResponse]);
 
-  const isLoadingEquipment = isLoadingMorningEquipment || isLoadingAfternoonEquipment;
-
-  // Group equipment by category per shift
+  // Group equipment by category - same equipment available for all shifts
   const equipmentByShiftAndCategory = useMemo(() => {
-    const groupByCategory = (equipment: Equipment[] | undefined): Record<EquipmentCategory, Equipment[]> => {
+    const groupByCategory = (equipment: Equipment[]): Record<EquipmentCategory, Equipment[]> => {
       const grouped: Record<EquipmentCategory, Equipment[]> = {
         camera: [],
         lens: [],
@@ -211,7 +172,7 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
         sd_card: [],
       };
 
-      (equipment || []).forEach((eq) => {
+      equipment.forEach((eq) => {
         if (eq.isActive) {
           grouped[eq.category].push(eq);
         }
@@ -220,11 +181,13 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
       return grouped;
     };
 
+    const grouped = groupByCategory(allActiveEquipment);
+    // Same equipment available for both shifts (no time-based restrictions for tasks)
     return {
-      morning: groupByCategory(morningEquipment),
-      afternoon: groupByCategory(afternoonEquipment),
+      morning: grouped,
+      afternoon: grouped,
     };
-  }, [morningEquipment, afternoonEquipment]);
+  }, [allActiveEquipment]);
 
   // Set default times when shift is selected
   useEffect(() => {
@@ -274,21 +237,6 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
     }
   }, [isEditing, existingAssignments, existingEquipmentLoaded]);
 
-  // Debug: Log equipment availability queries
-  useEffect(() => {
-    if (shiftTimeRanges) {
-      console.log('[TaskForm] Equipment availability query params:', {
-        morningRange: shiftTimeRanges.morning,
-        afternoonRange: shiftTimeRanges.afternoon,
-      });
-    }
-  }, [shiftTimeRanges]);
-
-  useEffect(() => {
-    console.log('[TaskForm] Morning equipment available:', morningEquipment);
-    console.log('[TaskForm] Afternoon equipment available:', afternoonEquipment);
-    console.log('[TaskForm] Equipment by shift and category:', equipmentByShiftAndCategory);
-  }, [morningEquipment, afternoonEquipment, equipmentByShiftAndCategory]);
 
   const handleFormSubmit = (data: TaskFormData) => {
     const submitData: CreateTaskRequest | UpdateTaskRequest = {
