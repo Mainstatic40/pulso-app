@@ -1,5 +1,10 @@
 export { TaskCard } from './TaskCard';
+export { TaskChecklist } from './TaskChecklist';
 export { TaskForm } from './TaskForm';
 export { TaskModal } from './TaskModal';
 export { TaskStatusBadge, getStatusLabel, statusOptions } from './TaskStatusBadge';
 export { TaskPriorityBadge, getPriorityLabel, priorityOptions } from './TaskPriorityBadge';
+export { KanbanCard } from './KanbanCard';
+export { KanbanColumn, columnConfigs } from './KanbanColumn';
+export { KanbanBoard } from './KanbanBoard';
+export { TaskExportView } from './TaskExportView';

@@ -4,12 +4,13 @@ import { cn } from '../../lib/utils';
 interface AvatarProps {
   name: string;
   profileImage?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 const sizeClasses = {
-  sm: 'h-6 w-6 text-xs',
+  xs: 'h-6 w-6 text-[10px]',
+  sm: 'h-8 w-8 text-xs',
   md: 'h-8 w-8 text-sm',
   lg: 'h-10 w-10 text-base',
 };
@@ -89,7 +90,7 @@ export function Avatar({ name, profileImage, size = 'md', className }: AvatarPro
 interface AvatarGroupProps {
   users: Array<{ name: string; profileImage?: string | null }>;
   max?: number;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
 export function AvatarGroup({ users, max = 3, size = 'sm' }: AvatarGroupProps) {

@@ -12,10 +12,10 @@ PULSO es un sistema de gestión de horas de trabajo y tareas para una oficina de
 - Calendario nativo con vistas de mes, semana y dia
 - Bitácora semanal para que los becarios documenten su progreso
 - Reportes exportables a Excel
+- Vista de horas por mes con resumen diario/semanal/mensual
+- Gestión administrativa de horas (agregar/editar/eliminar)
 
 **Usuarios:** 8-12 becarios + 1 jefe de departamento
-
-**Plazo de desarrollo:** 1 mes
 
 ---
 
@@ -138,133 +138,320 @@ pulso-app/
 
 ---
 
-## 🗄️ Esquema de Base de Datos
+## 🗄️ Esquema de Base de Datos (Prisma)
 
-### Tabla: users
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID (PK) | Identificador único |
-| name | VARCHAR(100) | Nombre completo |
-| email | VARCHAR(255) UNIQUE | Correo electrónico |
-| password_hash | VARCHAR(255) | Contraseña encriptada con bcrypt |
-| rfid_tag | VARCHAR(50) UNIQUE NULL | ID de credencial RFID (opcional) |
-| profile_image | VARCHAR(255) NULL | Nombre del archivo de foto de perfil |
-| role | ENUM('admin', 'supervisor', 'becario') | Rol del usuario |
-| is_active | BOOLEAN DEFAULT true | Estado activo/inactivo |
-| created_at | TIMESTAMP | Fecha de creación |
-| updated_at | TIMESTAMP | Fecha de actualización |
+### Esquema Prisma Completo
 
-### Tabla: time_entries
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID (PK) | Identificador único |
-| user_id | UUID (FK → users) | Referencia al usuario |
-| event_id | UUID (FK → events, NULL) | Referencia al evento (opcional) |
-| clock_in | TIMESTAMP | Hora de entrada |
-| clock_out | TIMESTAMP NULL | Hora de salida |
-| total_hours | DECIMAL(5,2) | Horas calculadas automáticamente |
-| created_at | TIMESTAMP | Fecha de creación |
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
 
-### Tabla: tasks
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID (PK) | Identificador único |
-| title | VARCHAR(200) | Título de la tarea |
-| description | TEXT | Descripción detallada |
-| client_requirements | TEXT NULL | Requisitos específicos del cliente (opcional) |
-| status | ENUM('pending', 'in_progress', 'review', 'completed') | Estado |
-| priority | ENUM('high', 'medium', 'low') | Prioridad |
-| due_date | DATE | Fecha límite |
-| execution_date | DATE NULL | Fecha de ejecución/realización |
-| shift | ENUM('morning', 'afternoon', 'both') NULL | Turno de trabajo |
-| morning_start_time | VARCHAR(5) NULL | Hora inicio mañana (HH:mm) |
-| morning_end_time | VARCHAR(5) NULL | Hora fin mañana (HH:mm) |
-| afternoon_start_time | VARCHAR(5) NULL | Hora inicio tarde (HH:mm) |
-| afternoon_end_time | VARCHAR(5) NULL | Hora fin tarde (HH:mm) |
-| created_by | UUID (FK → users) | Creador de la tarea |
-| created_at | TIMESTAMP | Fecha de creación |
-| updated_at | TIMESTAMP | Fecha de actualización |
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-### Tabla: task_assignees (Many-to-Many)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| task_id | UUID (FK → tasks, PK) | Referencia a la tarea |
-| user_id | UUID (FK → users, PK) | Referencia al usuario asignado |
-| assigned_at | TIMESTAMP | Fecha de asignación |
+// ============ ENUMS ============
 
-### Tabla: events
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID (PK) | Identificador único |
-| name | VARCHAR(200) | Nombre del evento |
-| description | TEXT | Descripción |
-| client_requirements | TEXT NULL | Requisitos del cliente (opcional) |
-| start_datetime | TIMESTAMP | Fecha y hora de inicio |
-| end_datetime | TIMESTAMP | Fecha y hora de fin |
-| created_by | UUID (FK → users) | Creador del evento |
-| created_at | TIMESTAMP | Fecha de creación |
+enum UserRole {
+  admin
+  supervisor
+  becario
+}
 
-### Tabla: event_assignees (Many-to-Many)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| event_id | UUID (FK → events, PK) | Referencia al evento |
-| user_id | UUID (FK → users, PK) | Referencia al usuario asignado |
+enum TaskStatus {
+  pending
+  in_progress
+  review
+  completed
+}
 
-### Tabla: comments
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID (PK) | Identificador único |
-| task_id | UUID (FK → tasks) | Tarea asociada |
-| user_id | UUID (FK → users) | Autor del comentario |
-| content | TEXT | Contenido del comentario |
-| created_at | TIMESTAMP | Fecha de creación |
+enum TaskPriority {
+  high
+  medium
+  low
+}
 
-### Tabla: weekly_logs (Bitácoras Semanales)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID (PK) | Identificador único |
-| user_id | UUID (FK → users) | Autor de la bitácora |
-| week_start | DATE | Fecha de inicio de semana (lunes) |
-| week_end | DATE | Fecha de fin de semana (domingo) |
-| activities | TEXT | Actividades realizadas |
-| achievements | TEXT NULL | Logros destacados (opcional) |
-| challenges | TEXT NULL | Dificultades encontradas (opcional) |
-| learnings | TEXT NULL | Aprendizajes (opcional) |
-| next_goals | TEXT NULL | Objetivos próxima semana (opcional) |
-| total_hours | DECIMAL(5,2) | Total horas (calculado automáticamente) |
-| created_at | TIMESTAMP | Fecha de creación |
+enum EquipmentCategory {
+  camera
+  lens
+  adapter
+  sd_card
+}
 
-### Tabla: equipment (Equipos)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID (PK) | Identificador único |
-| name | VARCHAR(200) | Nombre del equipo |
-| description | TEXT NULL | Descripción del equipo |
-| category | ENUM('camera', 'audio', 'lighting', 'computer', 'other') | Categoría |
-| serial_number | VARCHAR(100) UNIQUE NULL | Número de serie |
-| status | ENUM('available', 'in_use', 'maintenance', 'retired') | Estado actual |
-| is_active | BOOLEAN DEFAULT true | Estado activo/inactivo |
-| created_at | TIMESTAMP | Fecha de creación |
-| updated_at | TIMESTAMP | Fecha de actualización |
+enum EquipmentStatus {
+  available
+  in_use
+  maintenance
+}
 
-### Tabla: equipment_assignments (Asignaciones de Equipos)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID (PK) | Identificador único |
-| equipment_id | UUID (FK → equipment) | Referencia al equipo |
-| user_id | UUID (FK → users) | Usuario responsable |
-| event_id | UUID (FK → events, NULL) | Evento asociado (opcional) |
-| start_time | TIMESTAMP | Inicio del turno/asignación |
-| end_time | TIMESTAMP NULL | Fin del turno (null = indefinido) |
-| notes | TEXT NULL | Notas. Para tareas: "Tarea: {título} (Mañana/Tarde)" |
-| created_by | UUID (FK → users) | Quien creó la asignación |
-| created_at | TIMESTAMP | Fecha de creación |
+enum EventType {
+  civic
+  church
+  yearbook
+  congress
+}
 
-**Nota sobre validación de asignaciones:**
-- Un equipo puede tener múltiples asignaciones si los horarios NO se solapan
-- El estado `in_use` solo se aplica si hay un turno activo en el momento actual
-- Solapamiento = `new.startTime < existing.endTime AND new.endTime > existing.startTime`
-- Para vincular equipos a tareas, el campo `notes` usa formato: "Tarea: {título} (Mañana)" o "Tarea: {título} (Tarde)"
+// ============ MODELOS ============
+
+model User {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  rfidTag      String?  @unique @map("rfid_tag") @db.VarChar(50)
+  profileImage String?  @map("profile_image") @db.VarChar(255)
+  role         UserRole @default(becario)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  timeEntries          TimeEntry[]
+  createdTasks         Task[]                @relation("TaskCreator")
+  assignedTasks        TaskAssignee[]
+  createdEvents        Event[]               @relation("EventCreator")
+  assignedEvents       EventAssignee[]
+  eventShifts          EventShift[]
+  comments             Comment[]
+  weeklyLogs           WeeklyLog[]
+  equipmentAssignments EquipmentAssignment[] @relation("EquipmentUser")
+  createdAssignments   EquipmentAssignment[] @relation("AssignmentCreator")
+
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model TimeEntry {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  eventId    String?   @map("event_id")
+  clockIn    DateTime  @map("clock_in")
+  clockOut   DateTime? @map("clock_out")
+  totalHours Decimal?  @map("total_hours") @db.Decimal(5, 2)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user  User   @relation(fields: [userId], references: [id])
+  event Event? @relation(fields: [eventId], references: [id])
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([clockIn])
+  @@map("time_entries")
+}
+
+model Task {
+  id                 String       @id @default(uuid())
+  title              String       @db.VarChar(200)
+  description        String       @db.Text
+  clientRequirements String?      @map("client_requirements") @db.Text
+  status             TaskStatus   @default(pending)
+  priority           TaskPriority @default(medium)
+  dueDate            DateTime     @map("due_date") @db.Date
+  executionDate      DateTime?    @map("execution_date") @db.Date
+  shift              String?      @db.VarChar(20)
+  morningStartTime   String?      @map("morning_start_time") @db.VarChar(5)
+  morningEndTime     String?      @map("morning_end_time") @db.VarChar(5)
+  afternoonStartTime String?      @map("afternoon_start_time") @db.VarChar(5)
+  afternoonEndTime   String?      @map("afternoon_end_time") @db.VarChar(5)
+  createdBy          String       @map("created_by")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  creator   User           @relation("TaskCreator", fields: [createdBy], references: [id])
+  assignees TaskAssignee[]
+  comments  Comment[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([executionDate])
+  @@index([createdBy])
+  @@map("tasks")
+}
+
+model TaskAssignee {
+  taskId     String   @map("task_id")
+  userId     String   @map("user_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@map("task_assignees")
+}
+
+model Event {
+  id                 String    @id @default(uuid())
+  name               String    @db.VarChar(200)
+  description        String    @db.Text
+  clientRequirements String?   @map("client_requirements") @db.Text
+  eventType          EventType @map("event_type")
+  startDatetime      DateTime  @map("start_datetime")
+  endDatetime        DateTime  @map("end_datetime")
+  morningStartTime   String?   @map("morning_start_time") @db.VarChar(5)
+  morningEndTime     String?   @map("morning_end_time") @db.VarChar(5)
+  afternoonStartTime String?   @map("afternoon_start_time") @db.VarChar(5)
+  afternoonEndTime   String?   @map("afternoon_end_time") @db.VarChar(5)
+  usePresetEquipment Boolean   @default(false) @map("use_preset_equipment")
+  createdBy          String    @map("created_by")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  creator              User                  @relation("EventCreator", fields: [createdBy], references: [id])
+  assignees            EventAssignee[]
+  timeEntries          TimeEntry[]
+  equipmentAssignments EquipmentAssignment[]
+  days                 EventDay[]
+
+  @@index([eventType])
+  @@index([startDatetime])
+  @@index([endDatetime])
+  @@index([createdBy])
+  @@map("events")
+}
+
+model EventAssignee {
+  eventId String @map("event_id")
+  userId  String @map("user_id")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@map("event_assignees")
+}
+
+model EventDay {
+  id        String   @id @default(uuid())
+  eventId   String   @map("event_id")
+  date      DateTime @db.Date
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  event  Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  shifts EventShift[]
+
+  @@unique([eventId, date])
+  @@index([eventId])
+  @@index([date])
+  @@map("event_days")
+}
+
+model EventShift {
+  id         String   @id @default(uuid())
+  eventDayId String   @map("event_day_id")
+  userId     String   @map("user_id")
+  startTime  String   @map("start_time") @db.VarChar(5)
+  endTime    String   @map("end_time") @db.VarChar(5)
+  shiftType  String?  @map("shift_type") @db.VarChar(20)
+  note       String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  eventDay             EventDay              @relation(fields: [eventDayId], references: [id], onDelete: Cascade)
+  user                 User                  @relation(fields: [userId], references: [id])
+  equipmentAssignments EquipmentAssignment[]
+
+  @@index([eventDayId])
+  @@index([userId])
+  @@map("event_shifts")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+  @@index([userId])
+  @@map("comments")
+}
+
+model WeeklyLog {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  weekStart    DateTime @map("week_start") @db.Date
+  weekEnd      DateTime @map("week_end") @db.Date
+  activities   String   @db.Text
+  achievements String?  @db.Text
+  challenges   String?  @db.Text
+  learnings    String?  @db.Text
+  nextGoals    String?  @map("next_goals") @db.Text
+  totalHours   Decimal  @map("total_hours") @db.Decimal(5, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, weekStart])
+  @@index([userId])
+  @@index([weekStart])
+  @@map("weekly_logs")
+}
+
+model Equipment {
+  id           String            @id @default(uuid())
+  name         String            @db.VarChar(200)
+  category     EquipmentCategory
+  status       EquipmentStatus   @default(available)
+  description  String?           @db.Text
+  serialNumber String?           @map("serial_number") @db.VarChar(100)
+  isActive     Boolean           @default(true) @map("is_active")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  assignments EquipmentAssignment[]
+
+  @@index([category])
+  @@index([status])
+  @@index([isActive])
+  @@map("equipment")
+}
+
+model EquipmentAssignment {
+  id           String    @id @default(uuid())
+  equipmentId  String    @map("equipment_id")
+  userId       String    @map("user_id")
+  eventId      String?   @map("event_id")
+  eventShiftId String?   @map("event_shift_id")
+  startTime    DateTime  @map("start_time")
+  endTime      DateTime? @map("end_time")
+  notes        String?   @db.Text
+  createdBy    String    @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  equipment  Equipment   @relation(fields: [equipmentId], references: [id])
+  user       User        @relation("EquipmentUser", fields: [userId], references: [id])
+  event      Event?      @relation(fields: [eventId], references: [id])
+  eventShift EventShift? @relation(fields: [eventShiftId], references: [id])
+  creator    User        @relation("AssignmentCreator", fields: [createdBy], references: [id])
+
+  @@index([equipmentId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([eventShiftId])
+  @@index([startTime])
+  @@map("equipment_assignments")
+}
+```
+
+### Notas sobre el Esquema
+
+**Campos Decimal de Prisma:**
+- `totalHours` en TimeEntry y WeeklyLog son `Decimal(5,2)`
+- Prisma devuelve Decimals como strings, **siempre convertir con `Number()`**
+
+**Relaciones importantes:**
+- User tiene múltiples relaciones con EquipmentAssignment (como usuario y como creador)
+- Event tiene días (EventDay) que tienen turnos (EventShift)
+- TaskAssignee y EventAssignee son tablas de unión many-to-many
 
 ---
 
@@ -272,10 +459,10 @@ pulso-app/
 
 ### Autenticación
 ```
-POST   /api/auth/login          # Iniciar sesión
+POST   /api/auth/login          # Iniciar sesión (retorna profileImage)
 POST   /api/auth/logout         # Cerrar sesión
 POST   /api/auth/refresh        # Refrescar token
-GET    /api/auth/me             # Obtener usuario autenticado
+GET    /api/auth/me             # Obtener usuario autenticado (incluye profileImage)
 ```
 
 ### Usuarios
@@ -292,18 +479,21 @@ DELETE /api/users/:id/profile-image   # Eliminar foto de perfil
 
 ### Registro de Horas (Time Entries)
 ```
-GET    /api/time-entries                # Listar registros (filtros: user_id, date_from, date_to)
+GET    /api/time-entries                # Listar registros (filtros: userId, dateFrom, dateTo)
 GET    /api/time-entries/:id            # Obtener registro
-POST   /api/time-entries/clock-in       # Registrar entrada
-POST   /api/time-entries/clock-out      # Registrar salida
-POST   /api/time-entries/rfid           # Registro via RFID (toggle entrada/salida)
 GET    /api/time-entries/active         # Obtener sesión activa del usuario
-GET    /api/time-entries/summary        # Resumen de horas (diario/semanal/mensual)
+GET    /api/time-entries/summary        # Resumen de horas (period: daily/weekly/monthly)
+POST   /api/time-entries/clock-in       # Registrar entrada (usuario actual)
+POST   /api/time-entries/clock-out      # Registrar salida (usuario actual)
+POST   /api/time-entries/rfid           # Toggle entrada/salida via RFID
+POST   /api/time-entries                # Crear entrada manual (admin/supervisor)
+PUT    /api/time-entries/:id            # Actualizar entrada (admin/supervisor)
+DELETE /api/time-entries/:id            # Eliminar entrada (admin/supervisor)
 ```
 
 ### Tareas
 ```
-GET    /api/tasks               # Listar tareas (filtros: status, priority, assignee, due_date)
+GET    /api/tasks               # Listar tareas (becarios solo ven sus tareas asignadas)
 GET    /api/tasks/:id           # Obtener tarea con comentarios
 POST   /api/tasks               # Crear tarea (admin/supervisor)
 PUT    /api/tasks/:id           # Actualizar tarea
@@ -329,7 +519,7 @@ GET    /api/weekly-logs/:id             # Obtener bitácora
 POST   /api/weekly-logs                 # Crear bitácora
 PUT    /api/weekly-logs/:id             # Actualizar bitácora
 GET    /api/weekly-logs/current-week    # Obtener/crear bitácora de la semana actual
-GET    /api/weekly-logs/summary/:userId # Resumen para crear bitácora (tareas completadas, horas)
+GET    /api/weekly-logs/summary/:userId # Resumen para crear bitácora
 ```
 
 ### Equipos
@@ -343,23 +533,12 @@ DELETE /api/equipment/:id               # Eliminar equipo - soft delete (admin)
 
 ### Asignaciones de Equipos
 ```
-GET    /api/equipment-assignments              # Listar asignaciones (filtros: equipmentId, userId, eventId, active)
-GET    /api/equipment-assignments/:id          # Obtener asignación por ID
-POST   /api/equipment-assignments              # Crear asignación(es) - soporta múltiples equipos
+GET    /api/equipment-assignments              # Listar asignaciones
+POST   /api/equipment-assignments              # Crear asignación(es)
 PUT    /api/equipment-assignments/:id          # Actualizar asignación
-POST   /api/equipment-assignments/:id/return   # Devolver equipo (marcar endTime)
+POST   /api/equipment-assignments/:id/return   # Devolver equipo
 DELETE /api/equipment-assignments/:id          # Eliminar asignación
 ```
-
-**Lógica de asignación de equipos:**
-- `equipmentIds`: Array de IDs de equipos a asignar
-- `startTime`: Inicio del turno (requerido)
-- `endTime`: Fin del turno (opcional, null = indefinido)
-- Validación: No permite asignaciones con horarios solapados
-- Estado `in_use`: Solo si `startTime <= now AND (endTime is null OR endTime > now)`
-- Función `isTimeOverlapping(start1, end1, start2, end2)`: Detecta solapamiento de turnos
-- Función `syncEquipmentStatuses()`: Sincroniza estados al consultar equipos
-- Mensajes de error claros: "El equipo X está asignado a Y el DD/MM de HH:MM a HH:MM"
 
 ### Reportes
 ```
@@ -368,7 +547,7 @@ GET    /api/reports/hours-by-event      # Horas por evento
 GET    /api/reports/tasks-summary       # Resumen de tareas
 GET    /api/reports/productivity        # Productividad del equipo
 GET    /api/reports/weekly-logs         # Reporte de bitácoras
-GET    /api/reports/export/:type        # Exportar a Excel (type: hours, tasks, logs)
+GET    /api/reports/export/:type        # Exportar a Excel
 ```
 
 ---
@@ -404,14 +583,6 @@ GET    /api/reports/export/:type        # Exportar a Excel (type: hours, tasks, 
 --status-completed: #22C55E;   /* Verde */
 ```
 
-### Principios de Diseño
-- **Minimalista:** Interfaz limpia sin elementos innecesarios
-- **Tipografía:** Inter o SF Pro (sans-serif moderna)
-- **Espaciado:** Consistente usando escala de 4px (4, 8, 12, 16, 24, 32, 48)
-- **Bordes:** Redondeados sutiles (4px - 8px)
-- **Sombras:** Mínimas, solo para elevación de cards y modals
-- **Responsive:** Mobile-first, breakpoints: sm(640px), md(768px), lg(1024px), xl(1280px)
-
 ### Componentes UI Base
 - Button (primary, secondary, outline, ghost, danger)
 - Input (text, email, password, textarea)
@@ -420,9 +591,11 @@ GET    /api/reports/export/:type        # Exportar a Excel (type: hours, tasks, 
 - Modal / Dialog
 - Table
 - Badge (para estados y prioridades)
-- Avatar
+- Avatar (con soporte para profileImage)
 - Tabs
 - Toast / Notifications
+- MonthSelector (navegación por mes)
+- ProgressBar (barras de progreso)
 
 ---
 
@@ -432,24 +605,26 @@ GET    /api/reports/export/:type        # Exportar a Excel (type: hours, tasks, 
 - Acceso total al sistema
 - Gestión de usuarios (CRUD completo)
 - Crear/editar/eliminar tareas y eventos
+- **Agregar/editar/eliminar horas de cualquier becario**
+- Ver resumen de horas del equipo (TeamHoursOverview)
 - Aprobar/rechazar tareas en revisión
 - Ver todas las bitácoras
 - Generar y exportar todos los reportes
-- Agregar requisitos del cliente
 
 ### Supervisor (supervisor)
 - Ver todos los usuarios
 - Crear/editar tareas
+- **Agregar/editar/eliminar horas de cualquier becario**
+- Ver resumen de horas del equipo
 - Aprobar/rechazar tareas en revisión
 - Crear/editar eventos
 - Ver bitácoras de su equipo
 - Generar reportes
-- Agregar requisitos del cliente
 
 ### Becario (becario)
-- Registrar sus propias horas (RFID)
-- Ver y actualizar tareas asignadas
-- Ver tareas de compañeros (solo lectura)
+- Registrar sus propias horas (clock in/out)
+- **Ver solo tareas asignadas a él** (no todas las tareas)
+- Ver resumen de horas personal (diario/semanal/mensual)
 - Cambiar estado de sus tareas (hasta "review")
 - Agregar comentarios en tareas
 - Crear y editar su propia bitácora semanal
@@ -457,128 +632,162 @@ GET    /api/reports/export/:type        # Exportar a Excel (type: hours, tasks, 
 
 ---
 
-## 📝 Convenciones de Código
+## 📝 Notas de Implementación
 
-### Nomenclatura
+### Sistema de Horas por Rol
+
+**Vista Becario (BecarioTimeEntries):**
+- Selector de mes para navegar entre meses
+- Resumen con 5 tarjetas: Hoy, Semana, Mes, Sesiones, En curso
+- Botón de clock in/out (solo en mes actual)
+- Historial de registros del mes
+
+**Vista Admin/Supervisor (TeamHoursOverview):**
+- Selector de mes
+- Resumen del equipo (total becarios, horas totales, sesiones)
+- Barra de progreso del equipo
+- Cards por becario con horas y progreso
+- Modal de detalle por becario con:
+  - Gráfico de horas por semana
+  - Lista de registros con editar/eliminar
+  - Botón para agregar horas
+
+**Modal AddTimeEntryModal:**
+- Dos modos: Rápido y Manual
+- Modo rápido: Botones 1-8 horas + hora de inicio
+- Modo manual: Hora entrada/salida específica
+- Selector de becario (solo al crear)
+- Selector de evento opcional
+
+### Filtrado de Tareas por Usuario
+
+Los becarios solo ven tareas asignadas a ellos:
 ```typescript
-// Archivos: kebab-case
-user-service.ts
-time-entry-controller.ts
-use-auth.ts
-
-// Componentes React: PascalCase
-TaskCard.tsx
-WeeklyLogForm.tsx
-
-// Variables y funciones: camelCase
-const userName = "John";
-function calculateTotalHours() {}
-
-// Constantes: UPPER_SNAKE_CASE
-const MAX_FILE_SIZE = 5000000;
-const API_BASE_URL = "http://localhost:3000";
-
-// Tipos e Interfaces: PascalCase con prefijo I para interfaces (opcional)
-type UserRole = 'admin' | 'supervisor' | 'becario';
-interface User { ... }
-
-// Enums: PascalCase
-enum TaskStatus {
-  Pending = 'pending',
-  InProgress = 'in_progress',
-  Review = 'review',
-  Completed = 'completed'
+// backend/src/services/task.service.ts
+if (userRole === 'becario') {
+  where.assignees = { some: { userId: userId } };
 }
 ```
 
-### Estructura de Componentes React
+### Foto de Perfil en Header
+
+El auth store refresca los datos del usuario al cargar la app:
 ```typescript
-// 1. Imports
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-
-// 2. Types/Interfaces
-interface TaskCardProps {
-  task: Task;
-  onStatusChange: (status: TaskStatus) => void;
-}
-
-// 3. Component
-export function TaskCard({ task, onStatusChange }: TaskCardProps) {
-  // 3.1 Hooks
-  const [isOpen, setIsOpen] = useState(false);
-  
-  // 3.2 Derived state / calculations
-  const isOverdue = new Date(task.dueDate) < new Date();
-  
-  // 3.3 Effects
-  useEffect(() => {
-    // ...
-  }, []);
-  
-  // 3.4 Handlers
-  const handleClick = () => {
-    setIsOpen(true);
-  };
-  
-  // 3.5 Render
-  return (
-    <div>...</div>
-  );
-}
-```
-
-### Estructura de Controladores (Backend)
-```typescript
-// user.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import { userService } from '../services/user.service';
-import { AppError } from '../utils/app-error';
-
-export const userController = {
-  async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const users = await userService.findAll();
-      res.json({ success: true, data: users });
-    } catch (error) {
-      next(error);
-    }
-  },
-  
-  async getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { id } = req.params;
-      const user = await userService.findById(id);
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
-      res.json({ success: true, data: user });
-    } catch (error) {
-      next(error);
-    }
+// frontend/src/stores/auth.store.tsx
+useEffect(() => {
+  if (user && token) {
+    authService.getMe().then((freshUser) => {
+      setUserState(freshUser);
+      localStorage.setItem('user', JSON.stringify(freshUser));
+    });
   }
+}, []);
+```
+
+### Manejo de Fechas Locales
+
+Para comparar fechas correctamente sin problemas de timezone:
+```typescript
+// Usar fecha local, NO toISOString()
+const getLocalDateStr = (date: Date) => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
+
+const todayStr = getLocalDateStr(new Date());
+const entryDateStr = getLocalDateStr(new Date(entry.clockIn));
 ```
 
-### Respuestas de API
+### Conversión de Decimals de Prisma
+
+**IMPORTANTE:** Prisma devuelve campos Decimal como strings, siempre convertir:
 ```typescript
-// Éxito
-{
-  "success": true,
-  "data": { ... },
-  "meta": { "total": 100, "page": 1, "limit": 10 } // opcional, para paginación
-}
+// ❌ INCORRECTO - puede concatenar strings
+const total = entries.reduce((acc, e) => acc + (e.totalHours || 0), 0);
 
-// Error
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid email format",
-    "details": [...] // opcional
-  }
-}
+// ✅ CORRECTO - convierte a número
+const total = entries.reduce((acc, e) => acc + Number(e.totalHours || 0), 0);
 ```
+
+### Tablero Kanban
+
+Sistema de gestión visual de tareas con drag & drop usando `@dnd-kit`:
+
+**Componentes:**
+- `KanbanBoard.tsx` - Contexto DnD y lógica de movimiento
+- `KanbanColumn.tsx` - Columnas por estado (Pendiente, En Progreso, En Revisión, Completado)
+- `KanbanCard.tsx` - Tarjeta arrastrable con manija de arrastre
+
+**Restricciones por rol:**
+- Admin/Supervisor: pueden mover cualquier tarea a cualquier estado
+- Becario: solo sus tareas asignadas, NO pueden mover directamente a "Completado"
+
+**Toggle de vista:** Botones Lista/Tablero en la página de Tareas
+
+### Sistema de Notificaciones
+
+Notificaciones automáticas para eventos del sistema:
+
+**Tipos de notificación:**
+- `task_assigned` - Nueva tarea asignada
+- `task_review` - Tarea enviada a revisión
+- `task_comment` - Nuevo comentario en tarea
+- `event_assigned` - Nuevo evento asignado
+
+**Backend:**
+- Modelo `Notification` en Prisma
+- Servicio `notification.service.ts` con `create()`, `createForMany()`, `markAsRead()`
+- Integrado en `task.service.ts`, `event.service.ts`, `comment.service.ts`
+
+**Frontend:**
+- `NotificationDropdown.tsx` en el Header
+- Polling cada 30 segundos
+- Badge con contador de no leídas
+- Click para marcar como leída y navegar
+
+### Sistema de Chat Interno
+
+Chat en tiempo real entre usuarios:
+
+**Modelos:**
+- `Conversation` - Conversaciones (individuales o grupales)
+- `ConversationParticipant` - Participantes
+- `Message` - Mensajes con soporte para adjuntos
+
+**Componentes:**
+- `Chat.tsx` - Página principal
+- `ConversationList.tsx` - Lista de conversaciones
+- `ChatWindow.tsx` - Ventana de chat activa
+- `MessageInput.tsx` - Input de mensaje con adjuntos
+
+### Archivos Adjuntos
+
+Sistema de subida y descarga de archivos:
+
+**Backend:**
+- Middleware `upload.middleware.ts` con Multer
+- Almacenamiento en `backend/uploads/attachments/`
+- Endpoints: `POST /attachments`, `GET /attachments/:id/download`, `GET /attachments/:id/preview`
+
+**Frontend:**
+- `AttachmentsList.tsx` - Lista de adjuntos con acciones
+- `AttachmentPreviewModal.tsx` - Vista previa (imágenes, PDFs, videos, texto)
+- Descarga autenticada usando blob URLs
+
+### Exportar Tarea como PNG
+
+Funcionalidad para exportar tareas como imagen:
+
+**Dependencia:** `html-to-image`
+
+**Componentes:**
+- `TaskExportView.tsx` - Vista formateada para exportar (600px, estilos inline)
+- `exportTaskToImage.ts` - Utilidad de exportación
+
+**Flujo:**
+1. Click en icono Download en TaskModal
+2. Se abre modal con vista previa
+3. Click en "Descargar PNG"
+4. Se genera imagen con resolución 2x
 
 ---
 
@@ -591,17 +800,15 @@ npm run dev          # Iniciar servidor de desarrollo
 npm run build        # Build de producción
 npm run preview      # Preview del build
 npm run lint         # Ejecutar ESLint
-npm run lint:fix     # Corregir errores de ESLint
-npm run type-check   # Verificar tipos TypeScript
+npm run type-check   # Verificar tipos TypeScript (npx tsc --noEmit)
 ```
 
 ### Backend
 ```bash
 cd backend
-npm run dev          # Iniciar con nodemon
+npm run dev          # Iniciar con tsx watch
 npm run build        # Compilar TypeScript
 npm run start        # Iniciar producción
-npm run lint         # Ejecutar ESLint
 
 # Prisma
 npx prisma generate  # Generar cliente Prisma
@@ -614,48 +821,189 @@ npx prisma db seed   # Ejecutar seeds
 ### Git
 ```bash
 git add .
-git commit -m "tipo(alcance): descripción"  # Conventional Commits
-git push origin main
+git commit -m "tipo(alcance): descripción"
 
 # Tipos de commit:
 # feat: nueva funcionalidad
 # fix: corrección de bug
 # docs: documentación
-# style: formato (no afecta código)
+# style: formato
 # refactor: refactorización
-# test: agregar tests
-# chore: tareas de mantenimiento
+# test: tests
+# chore: mantenimiento
 ```
 
 ---
 
-## ⚠️ Reglas y Restricciones
+## 🆘 Troubleshooting Común
 
-### Seguridad
-- NUNCA almacenar contraseñas en texto plano (usar bcrypt)
-- NUNCA exponer información sensible en logs
-- SIEMPRE validar y sanitizar inputs del usuario
-- SIEMPRE usar HTTPS en producción
-- Tokens JWT deben expirar (access: 15min, refresh: 7 días)
+### Error: Prisma Decimal como string
 
-### Base de Datos
-- SIEMPRE usar UUID para IDs
-- SIEMPRE incluir created_at y updated_at
-- NUNCA eliminar registros físicamente (usar soft delete con is_active)
-- Usar transacciones para operaciones múltiples
+**Problema:** `totalHours.toFixed is not a function`
 
-### Código
-- Máximo 300 líneas por archivo
-- Máximo 50 líneas por función
-- No usar `any` en TypeScript (usar `unknown` si es necesario)
-- Siempre manejar errores con try/catch
-- Siempre tipar parámetros y retornos de funciones
+**Causa:** Prisma devuelve Decimal como string, no como number.
 
-### API
-- Usar códigos HTTP correctos (200, 201, 400, 401, 403, 404, 500)
-- Implementar rate limiting en producción
-- Paginar resultados de listas (default: 10 items, max: 100)
-- Versionar API si hay breaking changes (/api/v1/, /api/v2/)
+**Solución:**
+```typescript
+// Siempre usar Number() al sumar o mostrar
+const total = entries.reduce((acc, e) => acc + Number(e.totalHours || 0), 0);
+{Number(entry.totalHours).toFixed(1)}h
+```
+
+### Error: Fechas muestran día incorrecto (timezone)
+
+**Problema:** Una fecha guardada como 2024-01-15 se muestra como 2024-01-14.
+
+**Causa:** Conversión UTC vs hora local.
+
+**Solución en frontend:**
+```typescript
+// Para comparar fechas, usar hora local
+const getLocalDateStr = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Para mostrar fechas DATE de Prisma
+const formatDate = (dateString: string) => {
+  const datePart = dateString.split('T')[0];
+  const date = new Date(datePart + 'T12:00:00'); // Usar mediodía
+  return date.toLocaleDateString('es-MX');
+};
+```
+
+**Solución en backend:**
+```typescript
+// Al parsear fechas DATE
+function parseDateSafe(val: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    return new Date(val + 'T12:00:00');
+  }
+  return new Date(val);
+}
+```
+
+### Error: Horas no se suman correctamente
+
+**Problema:** El resumen muestra "0481" en lugar de "12" horas.
+
+**Causa:** String concatenation en lugar de suma numérica.
+
+**Solución:**
+```typescript
+// ❌ Incorrecto
+acc + (e.totalHours || 0)  // "0" + "4" + "8" = "048"
+
+// ✅ Correcto
+acc + Number(e.totalHours || 0)  // 0 + 4 + 8 = 12
+```
+
+### Error: Becario ve todas las tareas
+
+**Problema:** Un becario puede ver tareas que no le fueron asignadas.
+
+**Solución:** Verificar que el servicio filtre por assignee:
+```typescript
+// backend/src/services/task.service.ts
+async findAll(query, userId, userRole) {
+  const where = {};
+
+  if (userRole === 'becario') {
+    where.assignees = { some: { userId: userId } };
+  }
+  // ...
+}
+```
+
+### Error: Foto de perfil no aparece en header
+
+**Problema:** La foto se sube pero no se muestra en el header.
+
+**Solución:**
+1. Verificar que `/api/auth/me` incluya `profileImage` en la respuesta
+2. Verificar que el auth store refresque los datos del usuario
+3. Verificar la URL: `{API_BASE}/uploads/profiles/{filename}`
+
+### Error de conexión a PostgreSQL
+```bash
+# Verificar que PostgreSQL esté corriendo
+sudo service postgresql status
+
+# Verificar DATABASE_URL en .env
+DATABASE_URL="postgresql://user:password@localhost:5432/pulso_db"
+```
+
+### Error de Prisma
+```bash
+# Regenerar cliente después de cambios en schema
+npx prisma generate
+
+# Si hay conflictos de migración
+npx prisma migrate reset  # ⚠️ BORRA TODOS LOS DATOS
+```
+
+### Error de CORS
+```typescript
+// En backend/src/index.ts
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
+```
+
+---
+
+## 📋 Checklist de Funcionalidades
+
+### MVP (Semana 1-2) ✅
+- [x] Setup inicial del proyecto
+- [x] Configurar base de datos y Prisma
+- [x] API de autenticación (login/logout/JWT)
+- [x] CRUD de usuarios
+- [x] Sistema de registro de horas (manual)
+- [x] CRUD de tareas con estados
+- [x] Frontend: Login, Dashboard, Lista de tareas
+
+### Fase 2 (Semana 2-3) ✅
+- [x] Sistema de comentarios en tareas
+- [x] CRUD de eventos
+- [x] Asignación múltiple en tareas/eventos
+- [x] Bitácora semanal
+- [x] Requisitos del cliente en tareas/eventos
+- [x] Frontend: Detalle de tarea, Eventos, Bitácora
+
+### Fase 3 (Semana 3-4) ✅
+- [x] Calendario nativo (vistas mes, semana, día)
+- [x] Sistema de reportes
+- [x] Exportación a Excel
+- [x] Gestión de equipos (CRUD + asignaciones)
+- [x] Eventos multi-día con tipos
+- [x] Plantillas rápidas de tareas
+- [x] Fotos de perfil de usuarios
+- [x] Vista de horas por mes para becarios
+- [x] Resumen diario/semanal/mensual de horas
+- [x] Admin puede agregar/editar/eliminar horas
+- [x] Modo rápido para agregar horas (1-8h)
+- [x] Filtrado de tareas por asignado (becarios)
+- [x] Foto de perfil visible en header
+
+### Fase 4 (Extras) ✅
+- [x] Checklist en tareas (subtareas)
+- [x] Archivos adjuntos en tareas y eventos
+- [x] Vista previa de archivos adjuntos
+- [x] Sistema de chat interno
+- [x] Sistema de notificaciones
+- [x] Búsqueda global (Ctrl+K)
+- [x] Tablero Kanban con drag & drop
+- [x] Exportar tarea como imagen PNG
+
+### Pendiente
+- [ ] Integración RFID (endpoint listo, pendiente hardware)
+- [ ] App móvil (React Native)
+- [ ] Testing automatizado
+- [ ] Despliegue en producción
 
 ---
 
@@ -679,169 +1027,5 @@ VITE_API_URL=http://localhost:3000/api
 
 ---
 
-## 📋 Checklist de Funcionalidades
-
-### MVP (Semana 1-2) ✅
-- [x] Setup inicial del proyecto (monorepo)
-- [x] Configurar base de datos y Prisma
-- [x] API de autenticación (login/logout/JWT)
-- [x] CRUD de usuarios
-- [x] Sistema de registro de horas (manual)
-- [x] CRUD de tareas con estados
-- [x] Frontend: Login, Dashboard, Lista de tareas
-
-### Fase 2 (Semana 2-3) ✅
-- [x] Sistema de comentarios en tareas
-- [x] CRUD de eventos
-- [x] Asignación múltiple en tareas/eventos
-- [x] Bitácora semanal
-- [x] Requisitos del cliente en tareas/eventos
-- [x] Frontend: Detalle de tarea, Eventos, Bitácora
-
-### Fase 3 (Semana 3-4) - En progreso
-- [ ] Integración RFID (endpoint listo, pendiente hardware)
-- [x] Calendario nativo (vistas mes, semana, dia)
-- [x] Sistema de reportes
-- [x] Exportación a Excel
-- [x] Gestión de equipos (CRUD + asignaciones con validación de turnos)
-- [x] Eventos multi-día con tipos (civic, church, yearbook, congress)
-- [x] Asignación rápida en eventos yearbook (asignar persona a múltiples días)
-- [x] Plantillas rápidas de tareas (edición foto/video, fotografía, grabación, credencial)
-- [x] Fotos de perfil de usuarios (upload, delete, avatar con imagen)
-- [ ] App móvil (React Native)
-- [ ] Testing y corrección de bugs
-- [ ] Despliegue
-
----
-
-## 🆘 Troubleshooting Común
-
-### Error de conexión a PostgreSQL
-```bash
-# Verificar que PostgreSQL esté corriendo
-sudo service postgresql status
-
-# Verificar credenciales en .env
-# DATABASE_URL debe tener el formato correcto
-```
-
-### Error de Prisma
-```bash
-# Regenerar cliente después de cambios en schema
-npx prisma generate
-
-# Si hay conflictos de migración
-npx prisma migrate reset  # ⚠️ BORRA TODOS LOS DATOS
-```
-
-### Error de CORS
-```typescript
-// En backend/src/index.ts
-app.use(cors({
-  origin: 'http://localhost:5173', // URL del frontend
-  credentials: true
-}));
-```
-
-### Error de tipos TypeScript
-```bash
-# Limpiar cache y reinstalar
-rm -rf node_modules
-rm package-lock.json
-npm install
-```
-
-### Error de fechas (timezone)
-Las fechas DATE en PostgreSQL pueden mostrar el día anterior debido a conversión UTC.
-
-**Solución en frontend:**
-```typescript
-// En funciones formatDate, siempre extraer solo la parte de fecha
-function formatDate(dateString: string): string {
-  const datePart = dateString.split('T')[0]; // Extrae YYYY-MM-DD
-  const dateToFormat = new Date(datePart + 'T12:00:00'); // Mediodía local
-  return dateToFormat.toLocaleDateString('es-MX', { ... });
-}
-```
-
-**Solución en backend (task.schema.ts):**
-```typescript
-function parseDateSafe(val: string): Date {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    return new Date(val + 'T12:00:00');
-  }
-  return new Date(val);
-}
-```
-
----
-
-## 📝 Notas de Implementación
-
-### Formulario de Tareas (TaskForm)
-El formulario de tareas tiene el siguiente orden de campos:
-1. **Título** - Con selector de plantillas rápidas (dropdown)
-2. **Fechas** - Fecha límite, Fecha de realización, Prioridad (en una fila)
-3. **Horario** - Selector de turno + campos de hora según turno
-4. **Descripción** - Textarea
-5. **Requisitos del cliente** - Textarea opcional
-6. **Asignados** - Lista de usuarios con checkboxes
-7. **Distribución de equipos** - Solo visible cuando hay usuarios asignados y turno seleccionado
-
-**Plantillas rápidas de tareas:**
-- Edición de fotografía
-- Edición de video
-- Fotografía
-- Grabación de video
-- Foto de credencial empleado
-
-### Eventos de Tipo Yearbook (Foto de Anuario)
-Los eventos de tipo `yearbook` tienen funcionalidades especiales:
-- **Asignación rápida**: Permite asignar la misma persona a múltiples días consecutivos
-- **Turnos predefinidos**: Mañana y tarde con horarios configurables
-- **Equipo preset**: Opción para preconfigurar cámara, lente y adaptador
-- **Equipo adicional**: Equipos sin turno específico (solo yearbook)
-
-### Manejo de Fechas
-Para evitar problemas de timezone, todas las fechas DATE se procesan usando mediodía (T12:00:00):
-```typescript
-// Backend - event.schema.ts
-function parseStartDate(val: string): Date {
-  if (dateOnlyRegex.test(val)) {
-    return new Date(val + 'T12:00:00');
-  }
-  return new Date(val);
-}
-```
-
-### Fotos de Perfil de Usuarios
-Sistema de upload de imágenes de perfil:
-
-**Backend:**
-- Middleware `upload.middleware.ts` con multer para manejo de archivos
-- Archivos guardados en `backend/uploads/profiles/` con nombres UUID únicos
-- Formatos permitidos: JPG, PNG, WebP
-- Tamaño máximo: 20MB
-- Endpoint `POST /api/users/:id/profile-image` para subir
-- Endpoint `DELETE /api/users/:id/profile-image` para eliminar
-- Archivos estáticos servidos desde `/uploads`
-
-**Frontend:**
-- Componente `Avatar` soporta prop `profileImage` (muestra imagen o iniciales como fallback)
-- Componente `ProfileImageUpload` para cambiar foto desde el Header
-- Integración en `UserForm` para que admins puedan cambiar fotos de usuarios
-- URL de imagen: `{API_BASE}/uploads/profiles/{filename}`
-
-```typescript
-// Uso del Avatar con imagen de perfil
-<Avatar
-  name={user.name}
-  profileImage={user.profileImage}
-  size="lg"
-/>
-```
-
----
-
-**Última actualización:** 31 Diciembre 2024
-**Versión del documento:** 2.6
+**Última actualización:** 1 Enero 2026
+**Versión del documento:** 3.1

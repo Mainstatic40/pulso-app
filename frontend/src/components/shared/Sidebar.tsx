@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Clock,
@@ -9,9 +10,11 @@ import {
   Users,
   BarChart3,
   Camera,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import { cn } from '../../lib/utils';
+import { conversationService } from '../../services/conversation.service';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'supervisor', 'becario'] },
@@ -20,6 +23,7 @@ const navItems = [
   { to: '/events', icon: Calendar, label: 'Eventos', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/calendar', icon: CalendarDays, label: 'Calendario', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/equipment', icon: Camera, label: 'Equipos', roles: ['admin', 'supervisor', 'becario'] },
+  { to: '/chat', icon: MessageCircle, label: 'Chat', roles: ['admin', 'supervisor', 'becario'], hasBadge: true },
   { to: '/weekly-log', icon: BookOpen, label: 'Bitacora Semanal', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/users', icon: Users, label: 'Usuarios', roles: ['admin', 'supervisor'] },
   { to: '/reports', icon: BarChart3, label: 'Reportes', roles: ['admin', 'supervisor'] },
@@ -27,6 +31,15 @@ const navItems = [
 
 export function Sidebar() {
   const { user } = useAuthContext();
+
+  // Fetch unread message count with polling
+  const { data: unreadData } = useQuery({
+    queryKey: ['unreadCount'],
+    queryFn: conversationService.getUnreadCount,
+    refetchInterval: 30000, // Poll every 30 seconds
+  });
+
+  const unreadCount = unreadData?.unreadCount || 0;
 
   const filteredNavItems = navItems.filter((item) =>
     item.roles.includes(user?.role || '')
@@ -54,7 +67,12 @@ export function Sidebar() {
             }
           >
             <item.icon className="h-5 w-5" />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.hasBadge && unreadCount > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-medium text-white">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

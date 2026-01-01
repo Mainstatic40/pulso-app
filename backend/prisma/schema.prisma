@@ -58,16 +58,21 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  timeEntries          TimeEntry[]
-  createdTasks         Task[]                @relation("TaskCreator")
-  assignedTasks        TaskAssignee[]
-  createdEvents        Event[]               @relation("EventCreator")
-  assignedEvents       EventAssignee[]
-  eventShifts          EventShift[]
-  comments             Comment[]
-  weeklyLogs           WeeklyLog[]
-  equipmentAssignments EquipmentAssignment[] @relation("EquipmentUser")
-  createdAssignments   EquipmentAssignment[] @relation("AssignmentCreator")
+  timeEntries              TimeEntry[]
+  createdTasks             Task[]                      @relation("TaskCreator")
+  assignedTasks            TaskAssignee[]
+  createdEvents            Event[]                     @relation("EventCreator")
+  assignedEvents           EventAssignee[]
+  eventShifts              EventShift[]
+  comments                 Comment[]
+  weeklyLogs               WeeklyLog[]
+  equipmentAssignments     EquipmentAssignment[]       @relation("EquipmentUser")
+  createdAssignments       EquipmentAssignment[]       @relation("AssignmentCreator")
+  monthlyHoursConfigs      MonthlyHoursConfig[]
+  attachments              Attachment[]
+  conversationParticipants ConversationParticipant[]
+  messages                 Message[]
+  notifications            Notification[]
 
   @@index([role])
   @@index([isActive])
@@ -110,9 +115,11 @@ model Task {
   createdAt          DateTime     @default(now()) @map("created_at")
   updatedAt          DateTime     @updatedAt @map("updated_at")
 
-  creator   User           @relation("TaskCreator", fields: [createdBy], references: [id])
-  assignees TaskAssignee[]
-  comments  Comment[]
+  creator        User                @relation("TaskCreator", fields: [createdBy], references: [id])
+  assignees      TaskAssignee[]
+  comments       Comment[]
+  checklistItems TaskChecklistItem[]
+  attachments    Attachment[]
 
   @@index([status])
   @@index([priority])
@@ -132,6 +139,21 @@ model TaskAssignee {
 
   @@id([taskId, userId])
   @@map("task_assignees")
+}
+
+model TaskChecklistItem {
+  id          String   @id @default(uuid())
+  taskId      String   @map("task_id")
+  content     String   @db.VarChar(500)
+  isCompleted Boolean  @default(false) @map("is_completed")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_checklist_items")
 }
 
 model Event {
@@ -156,6 +178,7 @@ model Event {
   timeEntries          TimeEntry[]
   equipmentAssignments EquipmentAssignment[]
   days                 EventDay[]
+  attachments          Attachment[]
 
   @@index([eventType])
   @@index([startDatetime])
@@ -290,4 +313,105 @@ model EquipmentAssignment {
   @@index([eventShiftId])
   @@index([startTime])
   @@map("equipment_assignments")
+}
+
+model MonthlyHoursConfig {
+  id          String   @id @default(uuid())
+  year        Int
+  month       Int      // 1-12
+  targetHours Decimal  @map("target_hours") @db.Decimal(5, 2)
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@unique([year, month])
+  @@index([year])
+  @@map("monthly_hours_config")
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  filename   String   @db.VarChar(255)
+  storedName String   @map("stored_name") @db.VarChar(255)
+  mimeType   String   @map("mime_type") @db.VarChar(100)
+  size       Int
+  taskId     String?  @map("task_id")
+  eventId    String?  @map("event_id")
+  uploadedBy String   @map("uploaded_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  event    Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  uploader User      @relation(fields: [uploadedBy], references: [id])
+  messages Message[]
+
+  @@index([taskId])
+  @@index([eventId])
+  @@map("attachments")
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  name      String?  @db.VarChar(100)
+  isGroup   Boolean  @default(false) @map("is_group")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  conversationId String    @map("conversation_id")
+  userId         String    @map("user_id")
+  joinedAt       DateTime  @default(now()) @map("joined_at")
+  lastReadAt     DateTime? @map("last_read_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  senderId       String   @map("sender_id")
+  content        String   @db.Text
+  attachmentId   String?  @map("attachment_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id])
+  attachment   Attachment?  @relation(fields: [attachmentId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String   @db.VarChar(50)
+  title     String   @db.VarChar(200)
+  message   String   @db.Text
+  link      String?  @db.VarChar(255)
+  isRead    Boolean  @default(false) @map("is_read")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }

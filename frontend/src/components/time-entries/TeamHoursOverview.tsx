@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Users, Clock, TrendingUp } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Users, Clock, TrendingUp, Plus, Pencil, Trash2, Settings } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
 import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { Spinner } from '../ui/Spinner';
 import { MonthSelector, getMonthDateRange, formatDateForApi } from './MonthSelector';
-import { BecarioHoursCard, MONTHLY_HOURS_TARGET } from './BecarioHoursCard';
+import { BecarioHoursCard, DEFAULT_MONTHLY_HOURS_TARGET } from './BecarioHoursCard';
+import { AddTimeEntryModal } from './AddTimeEntryModal';
 import type { HoursByUserData } from '../../services/report.service';
 import { ProgressBar } from './ProgressBar';
 import { reportService } from '../../services/report.service';
-import { timeEntryService } from '../../services/time-entry.service';
+import { timeEntryService, type TimeEntryWithEvent } from '../../services/time-entry.service';
+import { monthlyHoursConfigService } from '../../services/monthly-hours-config.service';
 
 interface BecarioDetailModalProps {
   becario: HoursByUserData | null;
@@ -17,9 +21,12 @@ interface BecarioDetailModalProps {
   onClose: () => void;
   year: number;
   month: number;
+  onEditEntry: (entry: TimeEntryWithEvent) => void;
+  onAddEntry: (userId: string) => void;
 }
 
-function BecarioDetailModal({ becario, isOpen, onClose, year, month }: BecarioDetailModalProps) {
+function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry, onAddEntry }: BecarioDetailModalProps) {
+  const queryClient = useQueryClient();
   const { start, end } = getMonthDateRange(year, month);
 
   const { data: entries, isLoading } = useQuery({
@@ -33,6 +40,20 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month }: BecarioDe
       }),
     enabled: isOpen && !!becario,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => timeEntryService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['time-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['hours-by-user'] });
+    },
+  });
+
+  const handleDelete = (entry: TimeEntryWithEvent) => {
+    if (window.confirm('¿Eliminar este registro de horas?')) {
+      deleteMutation.mutate(entry.id);
+    }
+  };
 
   if (!becario) return null;
 
@@ -49,7 +70,7 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month }: BecarioDe
       if (!entriesByWeek[weekKey]) {
         entriesByWeek[weekKey] = { hours: 0, sessions: 0 };
       }
-      entriesByWeek[weekKey].hours += entry.totalHours || 0;
+      entriesByWeek[weekKey].hours += Number(entry.totalHours || 0);
       entriesByWeek[weekKey].sessions += 1;
     });
   }
@@ -125,9 +146,19 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month }: BecarioDe
           )}
         </div>
 
-        {/* Recent entries */}
+        {/* Recent entries with edit/delete */}
         <div>
-          <h3 className="mb-4 font-medium text-gray-900">Registros Recientes</h3>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-medium text-gray-900">Registros del Mes</h3>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onAddEntry(becario.userId)}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Agregar
+            </Button>
+          </div>
           {isLoading ? (
             <div className="flex justify-center py-4">
               <Spinner />
@@ -135,8 +166,8 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month }: BecarioDe
           ) : !entries?.data || entries.data.length === 0 ? (
             <p className="py-4 text-center text-gray-500">Sin registros</p>
           ) : (
-            <div className="max-h-60 space-y-2 overflow-y-auto">
-              {entries.data.slice(0, 10).map((entry) => (
+            <div className="max-h-72 space-y-2 overflow-y-auto">
+              {entries.data.map((entry) => (
                 <div
                   key={entry.id}
                   className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm"
@@ -164,8 +195,25 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month }: BecarioDe
                     )}
                   </span>
                   <span className="font-medium text-gray-900">
-                    {entry.totalHours?.toFixed(1) || '0'}h
+                    {entry.totalHours ? Number(entry.totalHours).toFixed(1) : '0'}h
                   </span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => onEditEntry(entry)}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-blue-600"
+                      title="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(entry)}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-red-600"
+                      title="Eliminar"
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -176,11 +224,83 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month }: BecarioDe
   );
 }
 
+// Modal for configuring target hours
+interface TargetHoursModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  year: number;
+  month: number;
+  currentTarget: number;
+}
+
+const monthNames = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+function TargetHoursModal({ isOpen, onClose, year, month, currentTarget }: TargetHoursModalProps) {
+  const queryClient = useQueryClient();
+  const [targetHours, setTargetHours] = useState(currentTarget.toString());
+
+  const mutation = useMutation({
+    mutationFn: (hours: number) => monthlyHoursConfigService.upsert(year, month + 1, hours),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['monthly-hours-config'] });
+      onClose();
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const hours = parseFloat(targetHours);
+    if (!isNaN(hours) && hours > 0 && hours <= 200) {
+      mutation.mutate(hours);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Configurar Meta de Horas">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Configura las horas objetivo para {monthNames[month]} {year}
+        </p>
+
+        <Input
+          label="Horas objetivo por becario"
+          type="number"
+          min="1"
+          max="200"
+          step="0.5"
+          value={targetHours}
+          onChange={(e) => setTargetHours(e.target.value)}
+        />
+
+        {mutation.error && (
+          <p className="text-sm text-red-600">Error al guardar la configuración</p>
+        )}
+
+        <div className="flex justify-end gap-3 pt-4">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" isLoading={mutation.isPending}>
+            Guardar
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export function TeamHoursOverview() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selectedBecario, setSelectedBecario] = useState<HoursByUserData | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<TimeEntryWithEvent | null>(null);
+  const [preselectedUserId, setPreselectedUserId] = useState<string | undefined>();
 
   const { start, end } = getMonthDateRange(year, month);
 
@@ -195,6 +315,14 @@ export function TeamHoursOverview() {
     daysElapsed = 0;
   }
 
+  // Fetch target hours for the selected month
+  const { data: targetData } = useQuery({
+    queryKey: ['monthly-hours-config', year, month + 1],
+    queryFn: () => monthlyHoursConfigService.getByMonth(year, month + 1),
+  });
+
+  const targetHours = targetData?.targetHours || DEFAULT_MONTHLY_HOURS_TARGET;
+
   const { data: hoursData, isLoading } = useQuery({
     queryKey: ['hours-by-user', year, month],
     queryFn: () =>
@@ -207,14 +335,32 @@ export function TeamHoursOverview() {
   const becarios: HoursByUserData[] = hoursData || [];
 
   // Calculate team totals
-  const teamTotalHours = becarios.reduce((sum, b) => sum + b.totalHours, 0);
+  const teamTotalHours = becarios.reduce((sum, b) => sum + Number(b.totalHours || 0), 0);
   const teamTotalSessions = becarios.reduce((sum, b) => sum + b.totalSessions, 0);
-  const teamTarget = becarios.length * MONTHLY_HOURS_TARGET;
+  const teamTarget = becarios.length * targetHours;
   const teamPercentage = teamTarget > 0 ? (teamTotalHours / teamTarget) * 100 : 0;
 
   const handleMonthChange = (newYear: number, newMonth: number) => {
     setYear(newYear);
     setMonth(newMonth);
+  };
+
+  const handleAddEntry = (userId?: string) => {
+    setPreselectedUserId(userId);
+    setEditingEntry(null);
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditEntry = (entry: TimeEntryWithEvent) => {
+    setEditingEntry(entry);
+    setPreselectedUserId(entry.userId);
+    setIsAddModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setEditingEntry(null);
+    setPreselectedUserId(undefined);
   };
 
   return (
@@ -223,11 +369,26 @@ export function TeamHoursOverview() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Control de Horas del Equipo</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Meta mensual: {MONTHLY_HOURS_TARGET} horas por becario
-          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <p className="text-sm text-gray-500">
+              Meta mensual: {targetHours} horas por becario
+            </p>
+            <button
+              onClick={() => setIsTargetModalOpen(true)}
+              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              title="Configurar meta"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <MonthSelector year={year} month={month} onChange={handleMonthChange} />
+        <div className="flex items-center gap-3">
+          <Button onClick={() => handleAddEntry()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Agregar horas
+          </Button>
+          <MonthSelector year={year} month={month} onChange={handleMonthChange} />
+        </div>
       </div>
 
       {/* Team Summary Cards */}
@@ -323,6 +484,7 @@ export function TeamHoursOverview() {
               data={becario}
               daysElapsed={daysElapsed}
               totalDays={totalDays}
+              targetHours={targetHours}
               onClick={() => setSelectedBecario(becario)}
             />
           ))}
@@ -336,6 +498,25 @@ export function TeamHoursOverview() {
         onClose={() => setSelectedBecario(null)}
         year={year}
         month={month}
+        onEditEntry={handleEditEntry}
+        onAddEntry={handleAddEntry}
+      />
+
+      {/* Add/Edit Time Entry Modal */}
+      <AddTimeEntryModal
+        isOpen={isAddModalOpen}
+        onClose={handleCloseModal}
+        editingEntry={editingEntry}
+        preselectedUserId={preselectedUserId}
+      />
+
+      {/* Target Hours Config Modal */}
+      <TargetHoursModal
+        isOpen={isTargetModalOpen}
+        onClose={() => setIsTargetModalOpen(false)}
+        year={year}
+        month={month}
+        currentTarget={targetHours}
       />
     </div>
   );

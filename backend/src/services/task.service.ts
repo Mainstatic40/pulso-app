@@ -2,6 +2,7 @@ import { PrismaClient, Prisma, TaskStatus } from '@prisma/client';
 import { ValidationError, NotFoundError, ForbiddenError } from '../utils/app-error';
 import type { ListTasksQuery, CreateTaskInput, UpdateTaskInput, UpdateStatusInput } from '../schemas/task.schema';
 import type { PaginatedResult } from './user.service';
+import { notificationService } from './notification.service';
 
 const prisma = new PrismaClient();
 
@@ -58,6 +59,33 @@ const taskWithCommentsSelect = {
           name: true,
           email: true,
           profileImage: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' as const },
+  },
+  checklistItems: {
+    select: {
+      id: true,
+      content: true,
+      isCompleted: true,
+      order: true,
+    },
+    orderBy: { order: 'asc' as const },
+  },
+  attachments: {
+    select: {
+      id: true,
+      filename: true,
+      storedName: true,
+      mimeType: true,
+      size: true,
+      uploadedBy: true,
+      createdAt: true,
+      uploader: {
+        select: {
+          id: true,
+          name: true,
         },
       },
     },
@@ -164,6 +192,18 @@ export const taskService = {
       select: taskSelect,
     });
 
+    // Notify assignees (exclude creator if they're also assigned)
+    const assigneesToNotify = assigneeIds.filter((id) => id !== creatorId);
+    if (assigneesToNotify.length > 0) {
+      await notificationService.createForMany(assigneesToNotify, {
+        type: 'task_assigned',
+        title: 'Nueva tarea asignada',
+        message: `Se te asignó la tarea "${task.title}"`,
+        link: `/tasks?open=${task.id}`,
+        metadata: { taskId: task.id },
+      });
+    }
+
     return task;
   },
 
@@ -192,6 +232,9 @@ export const taskService = {
     }
 
     // Handle assignees update
+    const existingAssigneeIds = existingTask.assignees.map((a) => a.userId);
+    let newAssigneeIds: string[] = [];
+
     if (assigneeIds !== undefined) {
       // Validate new assignees exist
       if (assigneeIds.length > 0) {
@@ -204,6 +247,9 @@ export const taskService = {
           throw new ValidationError('One or more assignees not found');
         }
       }
+
+      // Find new assignees (not in existing)
+      newAssigneeIds = assigneeIds.filter((id) => !existingAssigneeIds.includes(id));
 
       // Delete existing and create new
       await prisma.taskAssignee.deleteMany({
@@ -222,6 +268,17 @@ export const taskService = {
       data: updateData,
       select: taskSelect,
     });
+
+    // Notify new assignees
+    if (newAssigneeIds.length > 0) {
+      await notificationService.createForMany(newAssigneeIds, {
+        type: 'task_assigned',
+        title: 'Nueva tarea asignada',
+        message: `Se te asignó la tarea "${task.title}"`,
+        link: `/tasks?open=${task.id}`,
+        metadata: { taskId: task.id },
+      });
+    }
 
     return task;
   },
@@ -292,6 +349,31 @@ export const taskService = {
       data: { status: newStatus },
       select: taskSelect,
     });
+
+    // Notify admins/supervisors when task is sent to review
+    if (newStatus === TaskStatus.review && currentStatus !== TaskStatus.review) {
+      const reviewers = await prisma.user.findMany({
+        where: {
+          role: { in: ['admin', 'supervisor'] },
+          isActive: true,
+          id: { not: userId }, // Don't notify the person who changed the status
+        },
+        select: { id: true },
+      });
+
+      if (reviewers.length > 0) {
+        await notificationService.createForMany(
+          reviewers.map((r) => r.id),
+          {
+            type: 'task_review',
+            title: 'Tarea lista para revisión',
+            message: `La tarea "${updatedTask.title}" está lista para revisar`,
+            link: `/tasks?open=${updatedTask.id}`,
+            metadata: { taskId: updatedTask.id },
+          }
+        );
+      }
+    }
 
     return updatedTask;
   },

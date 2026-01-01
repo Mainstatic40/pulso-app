@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { NotFoundError, ForbiddenError } from '../utils/app-error';
 import type { CreateCommentInput, UpdateCommentInput } from '../schemas/comment.schema';
+import { notificationService } from './notification.service';
 
 const prisma = new PrismaClient();
 
@@ -42,10 +43,17 @@ export const commentService = {
   },
 
   async create(taskId: string, input: CreateCommentInput, userId: string) {
-    // Verify task exists
+    // Verify task exists and get participants
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      select: { id: true },
+      select: {
+        id: true,
+        title: true,
+        createdBy: true,
+        assignees: {
+          select: { userId: true },
+        },
+      },
     });
 
     if (!task) {
@@ -60,6 +68,23 @@ export const commentService = {
       },
       select: commentSelect,
     });
+
+    // Notify other participants (creator + assignees, excluding comment author)
+    const participantIds = new Set<string>();
+    participantIds.add(task.createdBy);
+    task.assignees.forEach((a) => participantIds.add(a.userId));
+    participantIds.delete(userId); // Don't notify the author
+
+    if (participantIds.size > 0) {
+      const commenterName = comment.user?.name || 'Alguien';
+      await notificationService.createForMany(Array.from(participantIds), {
+        type: 'task_comment',
+        title: 'Nuevo comentario',
+        message: `${commenterName} comentó en "${task.title}"`,
+        link: `/tasks?open=${taskId}`,
+        metadata: { taskId, commentId: comment.id },
+      });
+    }
 
     return comment;
   },

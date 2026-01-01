@@ -3,8 +3,8 @@ import { Avatar } from '../ui/Avatar';
 import { ProgressBar } from './ProgressBar';
 import type { HoursByUserData } from '../../services/report.service';
 
-// Monthly hours target - easy to modify
-export const MONTHLY_HOURS_TARGET = 80;
+// Default monthly hours target - can be overridden via props
+export const DEFAULT_MONTHLY_HOURS_TARGET = 80;
 
 // Re-export for backwards compatibility
 export type BecarioHoursData = HoursByUserData;
@@ -13,6 +13,7 @@ interface BecarioHoursCardProps {
   data: HoursByUserData;
   daysElapsed: number;
   totalDays: number;
+  targetHours?: number;
   onClick?: () => void;
 }
 
@@ -21,14 +22,15 @@ type ProgressStatus = 'completed' | 'on_track' | 'behind';
 function getProgressStatus(
   hoursWorked: number,
   daysElapsed: number,
-  totalDays: number
+  totalDays: number,
+  targetHours: number
 ): ProgressStatus {
-  if (hoursWorked >= MONTHLY_HOURS_TARGET) {
+  if (hoursWorked >= targetHours) {
     return 'completed';
   }
 
   // Calculate expected hours based on days elapsed
-  const expectedHours = (daysElapsed / totalDays) * MONTHLY_HOURS_TARGET;
+  const expectedHours = (daysElapsed / totalDays) * targetHours;
 
   // Allow 10% margin before marking as behind
   if (hoursWorked >= expectedHours * 0.9) {
@@ -60,10 +62,11 @@ export function BecarioHoursCard({
   data,
   daysElapsed,
   totalDays,
+  targetHours = DEFAULT_MONTHLY_HOURS_TARGET,
   onClick,
 }: BecarioHoursCardProps) {
-  const percentage = Math.min((data.totalHours / MONTHLY_HOURS_TARGET) * 100, 100);
-  const status = getProgressStatus(data.totalHours, daysElapsed, totalDays);
+  const percentage = Math.min((data.totalHours / targetHours) * 100, 100);
+  const status = getProgressStatus(data.totalHours, daysElapsed, totalDays, targetHours);
   const config = statusConfig[status];
 
   return (
@@ -89,7 +92,7 @@ export function BecarioHoursCard({
       <div className="mt-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-600">
-            {data.totalHours.toFixed(1)} / {MONTHLY_HOURS_TARGET} horas
+            {data.totalHours.toFixed(1)} / {targetHours} horas
           </span>
           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
             {config.label}
@@ -99,7 +102,7 @@ export function BecarioHoursCard({
         <div className="mt-2">
           <ProgressBar
             value={data.totalHours}
-            max={MONTHLY_HOURS_TARGET}
+            max={targetHours}
             variant={config.variant}
             size="md"
           />

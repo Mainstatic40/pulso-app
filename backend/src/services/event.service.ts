@@ -2,6 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { ValidationError, NotFoundError } from '../utils/app-error';
 import type { ListEventsQuery, CreateEventInput, UpdateEventInput } from '../schemas/event.schema';
 import type { PaginatedResult } from './user.service';
+import { notificationService } from './notification.service';
 
 const prisma = new PrismaClient();
 
@@ -133,6 +134,24 @@ const eventDetailSelect = {
     orderBy: {
       date: 'asc' as const,
     },
+  },
+  attachments: {
+    select: {
+      id: true,
+      filename: true,
+      storedName: true,
+      mimeType: true,
+      size: true,
+      uploadedBy: true,
+      createdAt: true,
+      uploader: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' as const },
   },
 } as const;
 
@@ -400,6 +419,38 @@ export const eventService = {
 
     if (!event) {
       throw new Error('Failed to create event');
+    }
+
+    // Collect all users to notify (from shifts)
+    const usersToNotify = new Set<string>();
+    if (days && days.length > 0) {
+      days.forEach((day) => {
+        day.shifts.forEach((shift) => {
+          if (shift.userId !== creatorId) {
+            usersToNotify.add(shift.userId);
+          }
+        });
+      });
+    }
+
+    // Also add legacy assignees
+    if (assigneeIds && assigneeIds.length > 0) {
+      assigneeIds.forEach((id) => {
+        if (id !== creatorId) {
+          usersToNotify.add(id);
+        }
+      });
+    }
+
+    // Send notifications
+    if (usersToNotify.size > 0) {
+      await notificationService.createForMany(Array.from(usersToNotify), {
+        type: 'event_assigned',
+        title: 'Asignado a evento',
+        message: `Fuiste asignado al evento "${event.name}"`,
+        link: `/events?open=${event.id}`,
+        metadata: { eventId: event.id },
+      });
     }
 
     return event;

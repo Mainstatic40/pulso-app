@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { ValidationError, NotFoundError } from '../utils/app-error';
-import type { ListTimeEntriesQuery, ClockInInput, RfidInput, SummaryQuery } from '../schemas/time-entry.schema';
+import type { ListTimeEntriesQuery, ClockInInput, RfidInput, SummaryQuery, CreateTimeEntryInput, UpdateTimeEntryInput } from '../schemas/time-entry.schema';
 import type { PaginatedResult } from './user.service';
 
 const prisma = new PrismaClient();
@@ -338,5 +338,113 @@ export const timeEntryService = {
       activeSessions: entries.length - completedSessions.length,
       entries,
     };
+  },
+
+  // Admin: Create manual time entry
+  async create(input: CreateTimeEntryInput) {
+    const { userId, clockIn, clockOut, eventId } = input;
+
+    // Validate user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, isActive: true },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    if (!user.isActive) {
+      throw new ValidationError('User account is deactivated');
+    }
+
+    // Validate event if provided
+    if (eventId) {
+      const event = await prisma.event.findUnique({
+        where: { id: eventId },
+      });
+      if (!event) {
+        throw new ValidationError('Event not found');
+      }
+    }
+
+    const totalHours = calculateHours(clockIn, clockOut);
+
+    const entry = await prisma.timeEntry.create({
+      data: {
+        userId,
+        clockIn,
+        clockOut,
+        totalHours,
+        eventId: eventId || null,
+      },
+      select: timeEntrySelect,
+    });
+
+    return entry;
+  },
+
+  // Admin: Update time entry
+  async update(id: string, input: UpdateTimeEntryInput) {
+    const existingEntry = await prisma.timeEntry.findUnique({
+      where: { id },
+    });
+
+    if (!existingEntry) {
+      throw new NotFoundError('Time entry not found');
+    }
+
+    const { clockIn, clockOut, eventId } = input;
+
+    // Calculate new total hours if times are updated
+    const newClockIn = clockIn || existingEntry.clockIn;
+    const newClockOut = clockOut !== undefined ? clockOut : existingEntry.clockOut;
+
+    let totalHours: number | null = existingEntry.totalHours ? Number(existingEntry.totalHours) : null;
+    if (newClockOut) {
+      totalHours = calculateHours(newClockIn, newClockOut);
+    } else {
+      totalHours = null;
+    }
+
+    // Validate event if provided
+    if (eventId) {
+      const event = await prisma.event.findUnique({
+        where: { id: eventId },
+      });
+      if (!event) {
+        throw new ValidationError('Event not found');
+      }
+    }
+
+    const entry = await prisma.timeEntry.update({
+      where: { id },
+      data: {
+        clockIn: clockIn || undefined,
+        clockOut: clockOut !== undefined ? clockOut : undefined,
+        totalHours,
+        eventId: eventId !== undefined ? (eventId || null) : undefined,
+      },
+      select: timeEntrySelect,
+    });
+
+    return entry;
+  },
+
+  // Admin: Delete time entry
+  async delete(id: string) {
+    const entry = await prisma.timeEntry.findUnique({
+      where: { id },
+    });
+
+    if (!entry) {
+      throw new NotFoundError('Time entry not found');
+    }
+
+    await prisma.timeEntry.delete({
+      where: { id },
+    });
+
+    return { message: 'Time entry deleted successfully' };
   },
 };

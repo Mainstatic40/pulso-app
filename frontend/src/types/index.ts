@@ -24,6 +24,30 @@ export interface User {
   updatedAt: string;
 }
 
+export interface TaskChecklistItem {
+  id: string;
+  taskId: string;
+  content: string;
+  isCompleted: boolean;
+  order: number;
+}
+
+export interface Attachment {
+  id: string;
+  filename: string;
+  storedName: string;
+  mimeType: string;
+  size: number;
+  taskId?: string;
+  eventId?: string;
+  uploadedBy: string;
+  createdAt: string;
+  uploader?: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -43,6 +67,8 @@ export interface Task {
   updatedAt: string;
   assignees?: User[];
   comments?: Comment[];
+  checklistItems?: TaskChecklistItem[];
+  attachments?: Attachment[];
 }
 
 // Equipment for a shift assignment
@@ -131,6 +157,7 @@ export interface Event {
     };
   }>;
   days?: EventDay[];
+  attachments?: Attachment[];
   // Count for list views
   _count?: {
     days: number;
@@ -216,6 +243,66 @@ export interface EquipmentAssignment {
     id: string;
     name: string;
   };
+}
+
+export interface ConversationParticipant {
+  conversationId: string;
+  userId: string;
+  joinedAt: string;
+  lastReadAt?: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    profileImage?: string | null;
+  };
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  attachmentId?: string;
+  createdAt: string;
+  updatedAt?: string;
+  sender?: {
+    id: string;
+    name: string;
+    email: string;
+    profileImage?: string | null;
+  };
+  attachment?: {
+    id: string;
+    filename: string;
+    storedName: string;
+    mimeType: string;
+    size: number;
+  };
+}
+
+export interface Conversation {
+  id: string;
+  name?: string;
+  isGroup: boolean;
+  participants: ConversationParticipant[];
+  messages?: Message[];
+  lastMessage?: Message | null;
+  unreadCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  link?: string;
+  isRead: boolean;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
 }
 
 export interface ApiResponse<T = unknown> {

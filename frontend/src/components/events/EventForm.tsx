@@ -10,7 +10,7 @@ import { EventDaysManager } from './EventDaysManager';
 import { userService } from '../../services/user.service';
 import { equipmentService } from '../../services/equipment.service';
 import type { CreateEventRequest } from '../../services/event.service';
-import type { Event, EventType, EventDayInput, ShiftEquipment, Equipment } from '../../types';
+import type { Event, EventType, EventDayInput, ShiftEquipment } from '../../types';
 
 interface EventFormProps {
   event?: Event;

@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, LayoutGrid, List } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Spinner } from '../components/ui/Spinner';
 import { Modal } from '../components/ui/Modal';
-import { TaskCard, TaskModal, TaskForm, statusOptions, priorityOptions } from '../components/tasks';
+import { TaskCard, TaskModal, TaskForm, KanbanBoard, statusOptions, priorityOptions } from '../components/tasks';
 import { taskService, type TaskWithRelations, type CreateTaskRequest, type UpdateTaskRequest } from '../services/task.service';
 import { equipmentAssignmentService } from '../services/equipment-assignment.service';
 import { useAuthContext } from '../stores/auth.store.tsx';
 import type { TaskStatus, TaskPriority } from '../types';
 import type { EquipmentAssignments } from '../components/tasks/TaskForm';
+
+type ViewMode = 'list' | 'board';
 
 const allStatusOptions = [{ value: '', label: 'Todos los estados' }, ...statusOptions];
 const allPriorityOptions = [{ value: '', label: 'Todas las prioridades' }, ...priorityOptions];
@@ -22,6 +24,7 @@ export function Tasks() {
   const queryClient = useQueryClient();
 
   // State
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('');
@@ -167,12 +170,40 @@ export function Tasks() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Tareas</h1>
-        {isAdminOrSupervisor && (
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Tarea
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* View Toggle */}
+          <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              Lista
+            </button>
+            <button
+              onClick={() => setViewMode('board')}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'board'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Tablero
+            </button>
+          </div>
+
+          {isAdminOrSupervisor && (
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nueva Tarea
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -211,10 +242,18 @@ export function Tasks() {
         </CardContent>
       </Card>
 
-      {/* Task List */}
+      {/* Task Views */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
+        </div>
+      ) : viewMode === 'board' ? (
+        /* Kanban Board View */
+        <div className="min-h-[500px]">
+          <KanbanBoard
+            tasks={tasks}
+            onTaskClick={(taskId) => setSelectedTaskId(taskId)}
+          />
         </div>
       ) : tasks.length === 0 ? (
         <Card>
@@ -235,6 +274,7 @@ export function Tasks() {
           </CardContent>
         </Card>
       ) : (
+        /* List View */
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tasks.map((task: TaskWithRelations) => (
             <TaskCard

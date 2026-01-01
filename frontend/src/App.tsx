@@ -14,6 +14,7 @@ import { WeeklyLog } from './pages/WeeklyLog';
 import { Users } from './pages/Users';
 import { Reports } from './pages/Reports';
 import { Equipment } from './pages/Equipment';
+import { Chat } from './pages/Chat';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
                 <Route path="/events" element={<Events />} />
                 <Route path="/calendar" element={<Calendar />} />
                 <Route path="/equipment" element={<Equipment />} />
+                <Route path="/chat" element={<Chat />} />
                 <Route path="/weekly-log" element={<WeeklyLog />} />
               </Route>
             </Route>

@@ -57,7 +57,58 @@ export const summarySchema = z.object({
   }),
 });
 
+// Schema for admin to create manual time entry
+export const createTimeEntrySchema = z.object({
+  body: z
+    .object({
+      userId: z.string().uuid('Invalid user ID'),
+      clockIn: z.string().transform((val) => new Date(val)).pipe(z.date()),
+      clockOut: z.string().transform((val) => new Date(val)).pipe(z.date()),
+      eventId: z.string().uuid('Invalid event ID').optional().nullable(),
+      notes: z.string().max(500).optional().nullable(),
+    })
+    .refine((data) => data.clockOut > data.clockIn, {
+      message: 'Clock out must be after clock in',
+      path: ['clockOut'],
+    }),
+});
+
+// Schema for admin to update time entry
+export const updateTimeEntrySchema = z.object({
+  params: z.object({
+    id: z.string().uuid('Invalid time entry ID'),
+  }),
+  body: z
+    .object({
+      clockIn: z.string().transform((val) => new Date(val)).pipe(z.date()).optional(),
+      clockOut: z.string().transform((val) => new Date(val)).pipe(z.date()).optional().nullable(),
+      eventId: z.string().uuid('Invalid event ID').optional().nullable(),
+      notes: z.string().max(500).optional().nullable(),
+    })
+    .refine(
+      (data) => {
+        if (data.clockIn && data.clockOut) {
+          return data.clockOut > data.clockIn;
+        }
+        return true;
+      },
+      {
+        message: 'Clock out must be after clock in',
+        path: ['clockOut'],
+      }
+    ),
+});
+
+// Schema for delete
+export const deleteTimeEntrySchema = z.object({
+  params: z.object({
+    id: z.string().uuid('Invalid time entry ID'),
+  }),
+});
+
 export type ListTimeEntriesQuery = z.infer<typeof listTimeEntriesSchema>['query'];
 export type ClockInInput = z.infer<typeof clockInSchema>['body'];
 export type RfidInput = z.infer<typeof rfidSchema>['body'];
 export type SummaryQuery = z.infer<typeof summarySchema>['query'];
+export type CreateTimeEntryInput = z.infer<typeof createTimeEntrySchema>['body'];
+export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntrySchema>['body'];

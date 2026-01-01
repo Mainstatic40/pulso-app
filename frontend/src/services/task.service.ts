@@ -1,5 +1,5 @@
 import api from '../lib/axios';
-import type { ApiResponse, TaskStatus, TaskPriority, TaskShift } from '../types';
+import type { ApiResponse, TaskStatus, TaskPriority, TaskShift, TaskChecklistItem, Attachment } from '../types';
 
 export interface TaskWithRelations {
   id: string;
@@ -44,6 +44,8 @@ export interface TaskWithRelations {
       profileImage?: string | null;
     };
   }>;
+  checklistItems?: TaskChecklistItem[];
+  attachments?: Attachment[];
 }
 
 export interface CreateTaskRequest {
@@ -122,6 +124,26 @@ export const taskService = {
 
   async delete(id: string) {
     const response = await api.delete<ApiResponse<{ message: string }>>(`/tasks/${id}`);
+    return response.data.data!;
+  },
+
+  // Checklist methods
+  async addChecklistItem(taskId: string, content: string) {
+    const response = await api.post<ApiResponse<TaskChecklistItem>>(`/tasks/${taskId}/checklist`, { content });
+    return response.data.data!;
+  },
+
+  async updateChecklistItem(taskId: string, itemId: string, data: { content?: string; isCompleted?: boolean }) {
+    const response = await api.put<ApiResponse<TaskChecklistItem>>(`/tasks/${taskId}/checklist/${itemId}`, data);
+    return response.data.data!;
+  },
+
+  async deleteChecklistItem(taskId: string, itemId: string) {
+    await api.delete(`/tasks/${taskId}/checklist/${itemId}`);
+  },
+
+  async reorderChecklistItems(taskId: string, itemIds: string[]) {
+    const response = await api.patch<ApiResponse<TaskChecklistItem[]>>(`/tasks/${taskId}/checklist/reorder`, { itemIds });
     return response.data.data!;
   },
 };

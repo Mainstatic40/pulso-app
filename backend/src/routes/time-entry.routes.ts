@@ -9,6 +9,9 @@ import {
   clockOutSchema,
   rfidSchema,
   summarySchema,
+  createTimeEntrySchema,
+  updateTimeEntrySchema,
+  deleteTimeEntrySchema,
 } from '../schemas/time-entry.schema';
 
 const router = Router();
@@ -59,6 +62,27 @@ router.post(
   '/rfid',
   validate(rfidSchema),
   timeEntryController.rfid
+);
+
+// POST /api/time-entries - Create manual time entry (admin/supervisor only)
+router.post(
+  '/',
+  validate(createTimeEntrySchema),
+  timeEntryController.create
+);
+
+// PUT /api/time-entries/:id - Update time entry (admin/supervisor only)
+router.put(
+  '/:id',
+  validate(updateTimeEntrySchema),
+  timeEntryController.update
+);
+
+// DELETE /api/time-entries/:id - Delete time entry (admin/supervisor only)
+router.delete(
+  '/:id',
+  validate(deleteTimeEntrySchema),
+  timeEntryController.delete
 );
 
 export default router;

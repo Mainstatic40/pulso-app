@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera, Clock, Sun, Sunset, Users, ClipboardList } from 'lucide-react';
+import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera, Clock, Sun, Sunset, Users, ClipboardList, Download } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
@@ -9,10 +9,14 @@ import { Avatar } from '../ui/Avatar';
 import { Spinner } from '../ui/Spinner';
 import { statusOptions } from './TaskStatusBadge';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
+import { TaskChecklist } from './TaskChecklist';
+import { AttachmentsList } from '../shared/AttachmentsList';
 import { TaskForm, type EquipmentAssignments, type ExistingEquipmentAssignment } from './TaskForm';
+import { TaskExportView } from './TaskExportView';
 import { taskService, type UpdateTaskRequest, type CreateTaskRequest } from '../../services/task.service';
 import { commentService, type CommentWithUser } from '../../services/comment.service';
 import { equipmentAssignmentService } from '../../services/equipment-assignment.service';
+import { exportTaskToImage } from '../../utils/exportTaskToImage';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import type { TaskStatus, EquipmentCategory, EquipmentAssignment } from '../../types';
 
@@ -107,6 +111,9 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
 
@@ -360,7 +367,23 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   const handleClose = () => {
     setIsEditing(false);
     setNewComment('');
+    setIsExportModalOpen(false);
     onClose();
+  };
+
+  const handleExport = async () => {
+    if (!exportRef.current || !task) return;
+
+    setIsExporting(true);
+    try {
+      await exportTaskToImage(exportRef.current, task.title);
+      setIsExportModalOpen(false);
+    } catch (error) {
+      console.error('Error exporting task:', error);
+      alert('Error al exportar la imagen. Por favor intenta de nuevo.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -387,6 +410,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   }
 
   return (
+  <>
     <Modal isOpen={isOpen} onClose={handleClose} title="Detalle de Tarea" size="2xl">
       {isLoadingTask ? (
         <div className="flex justify-center py-12">
@@ -397,21 +421,31 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
           {/* 1. Header */}
           <div className="flex items-start justify-between gap-4">
             <h2 className="text-xl font-semibold text-gray-900">{task.title}</h2>
-            {isAdminOrSupervisor && (
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={handleDelete}
-                  isLoading={deleteTaskMutation.isPending}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsExportModalOpen(true)}
+                title="Exportar como PNG"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              {isAdminOrSupervisor && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={handleDelete}
+                    isLoading={deleteTaskMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* 2. Estado y Prioridad */}
@@ -506,7 +540,21 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </div>
           )}
 
-          {/* 7. Sección de Distribución de Equipos */}
+          {/* 7. Sección de Checklist */}
+          <TaskChecklist
+            taskId={task.id}
+            items={task.checklistItems || []}
+            readOnly={false}
+          />
+
+          {/* 8. Sección de Archivos Adjuntos */}
+          <AttachmentsList
+            attachments={task.attachments || []}
+            taskId={task.id}
+            queryKey={['tasks', task.id]}
+          />
+
+          {/* 9. Sección de Distribución de Equipos */}
           {equipmentByUserAndShift.length > 0 && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -579,7 +627,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </div>
           )}
 
-          {/* 8. Sección de Personas Asignadas */}
+          {/* 10. Sección de Personas Asignadas */}
           {task.assignees && task.assignees.length > 0 && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -600,7 +648,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </div>
           )}
 
-          {/* 9. Comments Section */}
+          {/* 11. Comments Section */}
           <div className="mt-8 border-t border-gray-200 pt-6">
             <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <MessageSquare className="h-4 w-4" />
@@ -674,5 +722,48 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
         <div className="py-12 text-center text-gray-500">Tarea no encontrada</div>
       )}
     </Modal>
+
+    {/* Export Preview Modal */}
+    <Modal
+      isOpen={isExportModalOpen}
+      onClose={() => setIsExportModalOpen(false)}
+      title="Exportar Tarea como Imagen"
+      size="lg"
+    >
+      <div className="p-4">
+        <p className="mb-4 text-sm text-gray-600">
+          Vista previa de la imagen que se generará:
+        </p>
+
+        {/* Preview container with scroll */}
+        <div className="mb-4 max-h-[60vh] overflow-auto rounded-lg border border-gray-200 bg-gray-100 p-4">
+          {task && (
+            <TaskExportView
+              ref={exportRef}
+              task={task}
+              equipmentByUser={equipmentByUserAndShift}
+            />
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsExportModalOpen(false)}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleExport}
+            isLoading={isExporting}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Descargar PNG
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  </>
   );
 }

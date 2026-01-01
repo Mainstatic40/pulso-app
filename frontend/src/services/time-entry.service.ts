@@ -88,4 +88,33 @@ export const timeEntryService = {
     const response = await api.post<ApiResponse<RfidResponse>>('/time-entries/rfid', data);
     return response.data.data!;
   },
+
+  // Admin: Create manual time entry
+  async create(data: {
+    userId: string;
+    clockIn: string;
+    clockOut: string;
+    eventId?: string | null;
+    notes?: string | null;
+  }) {
+    const response = await api.post<ApiResponse<TimeEntryWithEvent>>('/time-entries', data);
+    return response.data.data!;
+  },
+
+  // Admin: Update time entry
+  async update(id: string, data: {
+    clockIn?: string;
+    clockOut?: string | null;
+    eventId?: string | null;
+    notes?: string | null;
+  }) {
+    const response = await api.put<ApiResponse<TimeEntryWithEvent>>(`/time-entries/${id}`, data);
+    return response.data.data!;
+  },
+
+  // Admin: Delete time entry
+  async delete(id: string) {
+    const response = await api.delete<ApiResponse<{ message: string }>>(`/time-entries/${id}`);
+    return response.data.data!;
+  },
 };

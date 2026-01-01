@@ -13,6 +13,12 @@ import weeklyLogRoutes from './routes/weekly-log.routes';
 import reportRoutes from './routes/report.routes';
 import equipmentRoutes from './routes/equipment.routes';
 import equipmentAssignmentRoutes from './routes/equipment-assignment.routes';
+import monthlyHoursConfigRoutes from './routes/monthly-hours-config.routes';
+import searchRoutes from './routes/search.routes';
+import checklistRoutes from './routes/checklist.routes';
+import attachmentRoutes from './routes/attachment.routes';
+import conversationRoutes from './routes/conversation.routes';
+import notificationRoutes from './routes/notification.routes';
 
 const app = express();
 
@@ -37,12 +43,18 @@ app.use('/api/users', userRoutes);
 app.use('/api/time-entries', timeEntryRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/tasks/:taskId/comments', taskCommentsRouter);
+app.use('/api/tasks/:taskId/checklist', checklistRoutes);
 app.use('/api/comments', commentsRouter);
 app.use('/api/events', eventRoutes);
 app.use('/api/weekly-logs', weeklyLogRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/equipment-assignments', equipmentAssignmentRoutes);
+app.use('/api/monthly-hours-config', monthlyHoursConfigRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/attachments', attachmentRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

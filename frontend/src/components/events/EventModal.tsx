@@ -7,6 +7,7 @@ import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { EventForm } from './EventForm';
 import { EventDaysDisplay } from './EventDaysDisplay';
+import { AttachmentsList } from '../shared/AttachmentsList';
 import { eventService, type EventWithRelations, type EventWithDetails, type CreateEventRequest, type UpdateEventRequest } from '../../services/event.service';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import type { EventType } from '../../types';
@@ -277,7 +278,16 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
           </div>
         )}
 
-        {/* 5. Days and Shifts - Turnos */}
+        {/* 5. Attachments - Archivos adjuntos */}
+        <div className="mt-6">
+          <AttachmentsList
+            attachments={fullEvent.attachments || []}
+            eventId={fullEvent.id}
+            queryKey={['event', fullEvent.id]}
+          />
+        </div>
+
+        {/* 6. Days and Shifts - Turnos */}
         {fullEvent.days && fullEvent.days.length > 0 && (
           <div className="mt-6">
             <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
