@@ -106,7 +106,7 @@ pulso-app/
 │   ├── src/
 │   │   ├── controllers/      # Controladores de rutas
 │   │   ├── routes/           # Definición de rutas
-│   │   ├── middlewares/      # Middlewares (auth, validation, etc.)
+│   │   ├── middlewares/      # Middlewares (auth, validation, upload)
 │   │   ├── services/         # Lógica de negocio
 │   │   ├── schemas/          # Esquemas de validación Zod
 │   │   ├── utils/            # Funciones utilitarias
@@ -115,6 +115,8 @@ pulso-app/
 │   ├── prisma/
 │   │   ├── schema.prisma     # Esquema de base de datos
 │   │   └── migrations/       # Migraciones
+│   ├── uploads/              # Archivos subidos (no versionado)
+│   │   └── profiles/         # Fotos de perfil de usuarios
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -146,6 +148,7 @@ pulso-app/
 | email | VARCHAR(255) UNIQUE | Correo electrónico |
 | password_hash | VARCHAR(255) | Contraseña encriptada con bcrypt |
 | rfid_tag | VARCHAR(50) UNIQUE NULL | ID de credencial RFID (opcional) |
+| profile_image | VARCHAR(255) NULL | Nombre del archivo de foto de perfil |
 | role | ENUM('admin', 'supervisor', 'becario') | Rol del usuario |
 | is_active | BOOLEAN DEFAULT true | Estado activo/inactivo |
 | created_at | TIMESTAMP | Fecha de creación |
@@ -283,6 +286,8 @@ GET    /api/users/:id           # Obtener usuario por ID
 POST   /api/users               # Crear usuario (admin)
 PUT    /api/users/:id           # Actualizar usuario (admin)
 DELETE /api/users/:id           # Eliminar usuario - soft delete (admin)
+POST   /api/users/:id/profile-image   # Subir/cambiar foto de perfil
+DELETE /api/users/:id/profile-image   # Eliminar foto de perfil
 ```
 
 ### Registro de Horas (Time Entries)
@@ -702,6 +707,7 @@ VITE_API_URL=http://localhost:3000/api
 - [x] Eventos multi-día con tipos (civic, church, yearbook, congress)
 - [x] Asignación rápida en eventos yearbook (asignar persona a múltiples días)
 - [x] Plantillas rápidas de tareas (edición foto/video, fotografía, grabación, credencial)
+- [x] Fotos de perfil de usuarios (upload, delete, avatar con imagen)
 - [ ] App móvil (React Native)
 - [ ] Testing y corrección de bugs
 - [ ] Despliegue
@@ -808,7 +814,34 @@ function parseStartDate(val: string): Date {
 }
 ```
 
+### Fotos de Perfil de Usuarios
+Sistema de upload de imágenes de perfil:
+
+**Backend:**
+- Middleware `upload.middleware.ts` con multer para manejo de archivos
+- Archivos guardados en `backend/uploads/profiles/` con nombres UUID únicos
+- Formatos permitidos: JPG, PNG, WebP
+- Tamaño máximo: 20MB
+- Endpoint `POST /api/users/:id/profile-image` para subir
+- Endpoint `DELETE /api/users/:id/profile-image` para eliminar
+- Archivos estáticos servidos desde `/uploads`
+
+**Frontend:**
+- Componente `Avatar` soporta prop `profileImage` (muestra imagen o iniciales como fallback)
+- Componente `ProfileImageUpload` para cambiar foto desde el Header
+- Integración en `UserForm` para que admins puedan cambiar fotos de usuarios
+- URL de imagen: `{API_BASE}/uploads/profiles/{filename}`
+
+```typescript
+// Uso del Avatar con imagen de perfil
+<Avatar
+  name={user.name}
+  profileImage={user.profileImage}
+  size="lg"
+/>
+```
+
 ---
 
 **Última actualización:** 31 Diciembre 2024
-**Versión del documento:** 2.5
+**Versión del documento:** 2.6
