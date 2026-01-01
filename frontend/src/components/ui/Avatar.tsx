@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { cn } from '../../lib/utils';
 
 interface AvatarProps {
   name: string;
+  profileImage?: string | null;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -41,9 +43,33 @@ function getColorFromName(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function Avatar({ name, size = 'md', className }: AvatarProps) {
+function getProfileImageUrl(profileImage: string): string {
+  const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+  return `${baseUrl}/uploads/profiles/${profileImage}`;
+}
+
+export function Avatar({ name, profileImage, size = 'md', className }: AvatarProps) {
+  const [imageError, setImageError] = useState(false);
   const initials = getInitials(name);
   const bgColor = getColorFromName(name);
+
+  const showImage = profileImage && !imageError;
+
+  if (showImage) {
+    return (
+      <img
+        src={getProfileImageUrl(profileImage)}
+        alt={name}
+        title={name}
+        className={cn(
+          'rounded-full object-cover',
+          sizeClasses[size],
+          className
+        )}
+        onError={() => setImageError(true)}
+      />
+    );
+  }
 
   return (
     <div
@@ -61,7 +87,7 @@ export function Avatar({ name, size = 'md', className }: AvatarProps) {
 }
 
 interface AvatarGroupProps {
-  users: Array<{ name: string }>;
+  users: Array<{ name: string; profileImage?: string | null }>;
   max?: number;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -76,6 +102,7 @@ export function AvatarGroup({ users, max = 3, size = 'sm' }: AvatarGroupProps) {
         <Avatar
           key={index}
           name={user.name}
+          profileImage={user.profileImage}
           size={size}
           className="ring-2 ring-white"
         />

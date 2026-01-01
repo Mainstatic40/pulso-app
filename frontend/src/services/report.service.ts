@@ -11,6 +11,7 @@ export interface HoursByUserData {
   userId: string;
   userName: string;
   userEmail: string;
+  userProfileImage?: string | null;
   totalHours: number;
   totalSessions: number;
 }

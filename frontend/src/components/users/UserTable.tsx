@@ -134,7 +134,7 @@ export function UserTable({ users, onEdit, onDelete, isLoading }: UserTableProps
               <tr key={user.id} className="hover:bg-gray-50">
                 <td className="whitespace-nowrap px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <Avatar name={user.name} size="sm" />
+                    <Avatar name={user.name} profileImage={user.profileImage} size="sm" />
                     <span className="font-medium text-gray-900">{user.name}</span>
                   </div>
                 </td>

@@ -26,6 +26,7 @@ const eventListSelect = {
       id: true,
       name: true,
       email: true,
+      profileImage: true,
     },
   },
   assignees: {
@@ -35,6 +36,7 @@ const eventListSelect = {
           id: true,
           name: true,
           email: true,
+          profileImage: true,
         },
       },
     },
@@ -67,6 +69,7 @@ const eventDetailSelect = {
       id: true,
       name: true,
       email: true,
+      profileImage: true,
     },
   },
   assignees: {
@@ -76,6 +79,7 @@ const eventDetailSelect = {
           id: true,
           name: true,
           email: true,
+          profileImage: true,
         },
       },
     },
@@ -100,6 +104,7 @@ const eventDetailSelect = {
               id: true,
               name: true,
               email: true,
+              profileImage: true,
             },
           },
           equipmentAssignments: {

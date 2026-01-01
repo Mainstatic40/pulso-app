@@ -592,7 +592,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                     key={assignee.user.id}
                     className="flex items-center gap-2 rounded-full bg-white border border-gray-200 py-1 pl-1 pr-3"
                   >
-                    <Avatar name={assignee.user.name} size="sm" />
+                    <Avatar name={assignee.user.name} profileImage={assignee.user.profileImage} size="sm" />
                     <span className="text-sm text-gray-700">{assignee.user.name}</span>
                   </div>
                 ))}
@@ -636,7 +636,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               ) : comments && comments.length > 0 ? (
                 comments.map((comment: CommentWithUser) => (
                   <div key={comment.id} className="flex gap-3">
-                    <Avatar name={comment.user.name} size="sm" />
+                    <Avatar name={comment.user.name} profileImage={comment.user.profileImage} size="sm" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-900">

@@ -1,9 +1,10 @@
-import { LogOut, User } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
+import { ProfileImageUpload } from '../users/ProfileImageUpload';
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
 
   const getRoleName = (role: string) => {
     const roles: Record<string, string> = {
@@ -23,9 +24,9 @@ export function Header() {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-              <User className="h-4 w-4 text-gray-600" />
-            </div>
+            {user && (
+              <ProfileImageUpload user={user} onUpdate={updateUser} />
+            )}
             <div className="hidden sm:block">
               <p className="font-medium text-gray-900">{user?.name}</p>
               <p className="text-xs text-gray-500">{getRoleName(user?.role || '')}</p>

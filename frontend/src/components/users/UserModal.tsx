@@ -20,7 +20,7 @@ export function UserModal({
   const title = user ? 'Editar usuario' : 'Nuevo usuario';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg">
       <UserForm
         user={user}
         onSubmit={onSubmit}

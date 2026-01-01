@@ -17,6 +17,7 @@ export interface User {
   name: string;
   email: string;
   rfidTag?: string;
+  profileImage?: string | null;
   role: UserRole;
   isActive: boolean;
   createdAt: string;
@@ -66,6 +67,7 @@ export interface EventShift {
     id: string;
     name: string;
     email: string;
+    profileImage?: string | null;
   };
   equipmentAssignments?: EquipmentAssignment[];
 }
@@ -118,12 +120,14 @@ export interface Event {
     id: string;
     name: string;
     email: string;
+    profileImage?: string | null;
   };
   assignees?: Array<{
     user: {
       id: string;
       name: string;
       email: string;
+      profileImage?: string | null;
     };
   }>;
   days?: EventDay[];

@@ -75,7 +75,7 @@ export function BecarioHoursCard({
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <Avatar name={data.userName} size="md" />
+          <Avatar name={data.userName} profileImage={data.userProfileImage} size="md" />
           <div>
             <h3 className="font-medium text-gray-900">{data.userName}</h3>
             <p className="text-sm text-gray-500">{data.userEmail}</p>

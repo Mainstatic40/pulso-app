@@ -78,20 +78,20 @@ export function EventCard({ event, onClick }: EventCardProps) {
   const daysCount = getDaysCount(event.startDatetime, event.endDatetime);
 
   // Get assignees from days/shifts or legacy assignees
-  const assignees: Array<{ name: string }> = [];
+  const assignees: Array<{ name: string; profileImage?: string | null }> = [];
   if (event.days && event.days.length > 0) {
     // Collect unique users from all shifts
-    const userMap = new Map<string, string>();
+    const userMap = new Map<string, { name: string; profileImage?: string | null }>();
     event.days.forEach((day) => {
       day.shifts?.forEach((shift) => {
         if (shift.user && !userMap.has(shift.userId)) {
-          userMap.set(shift.userId, shift.user.name);
+          userMap.set(shift.userId, { name: shift.user.name, profileImage: shift.user.profileImage });
         }
       });
     });
-    userMap.forEach((name) => assignees.push({ name }));
+    userMap.forEach((userData) => assignees.push(userData));
   } else if (event.assignees) {
-    event.assignees.forEach((a) => assignees.push({ name: a.user.name }));
+    event.assignees.forEach((a) => assignees.push({ name: a.user.name, profileImage: a.user.profileImage }));
   }
 
   const eventTypeInfo = event.eventType ? eventTypeConfig[event.eventType] : null;

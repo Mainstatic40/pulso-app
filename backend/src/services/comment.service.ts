@@ -15,6 +15,7 @@ const commentSelect = {
       id: true,
       name: true,
       email: true,
+      profileImage: true,
     },
   },
 } as const;

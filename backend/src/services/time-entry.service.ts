@@ -18,6 +18,7 @@ const timeEntrySelect = {
       id: true,
       name: true,
       email: true,
+      profileImage: true,
     },
   },
   event: {

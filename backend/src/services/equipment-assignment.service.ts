@@ -100,6 +100,7 @@ const assignmentSelect = {
       id: true,
       name: true,
       email: true,
+      profileImage: true,
     },
   },
   event: {
@@ -114,6 +115,7 @@ const assignmentSelect = {
     select: {
       id: true,
       name: true,
+      profileImage: true,
     },
   },
 } as const;

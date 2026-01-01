@@ -66,4 +66,20 @@ export const userService = {
     const response = await api.put<ApiResponse<User>>('/users/me', data);
     return response.data.data!;
   },
+
+  async uploadProfileImage(userId: string, file: File) {
+    const formData = new FormData();
+    formData.append('profileImage', file);
+    const response = await api.post<ApiResponse<User>>(`/users/${userId}/profile-image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data!;
+  },
+
+  async deleteProfileImage(userId: string) {
+    const response = await api.delete<ApiResponse<User>>(`/users/${userId}/profile-image`);
+    return response.data.data!;
+  },
 };

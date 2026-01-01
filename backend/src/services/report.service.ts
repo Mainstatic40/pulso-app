@@ -47,7 +47,7 @@ export const reportService = {
     const userIds = entries.map((e) => e.userId);
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, profileImage: true },
     });
 
     const userMap = new Map(users.map((u) => [u.id, u]));
@@ -58,6 +58,7 @@ export const reportService = {
         userId: entry.userId,
         userName: user?.name || 'Unknown',
         userEmail: user?.email || '',
+        userProfileImage: user?.profileImage || null,
         totalHours: Number(entry._sum.totalHours) || 0,
         totalSessions: entry._count.id,
       };

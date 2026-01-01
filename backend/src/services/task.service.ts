@@ -27,6 +27,7 @@ const taskSelect = {
       id: true,
       name: true,
       email: true,
+      profileImage: true,
     },
   },
   assignees: {
@@ -37,6 +38,7 @@ const taskSelect = {
           id: true,
           name: true,
           email: true,
+          profileImage: true,
         },
       },
     },
@@ -55,6 +57,7 @@ const taskWithCommentsSelect = {
           id: true,
           name: true,
           email: true,
+          profileImage: true,
         },
       },
     },

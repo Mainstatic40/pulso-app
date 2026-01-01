@@ -61,6 +61,7 @@ export function useAuth() {
     login,
     logout,
     refreshUser,
+    updateUser: setUser,
     isLoginLoading: loginMutation.isPending,
     loginError: loginMutation.error,
   };

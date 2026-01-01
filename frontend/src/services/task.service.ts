@@ -22,6 +22,7 @@ export interface TaskWithRelations {
     id: string;
     name: string;
     email: string;
+    profileImage?: string | null;
   };
   assignees?: Array<{
     assignedAt: string;
@@ -29,6 +30,7 @@ export interface TaskWithRelations {
       id: string;
       name: string;
       email: string;
+      profileImage?: string | null;
     };
   }>;
   comments?: Array<{
@@ -39,6 +41,7 @@ export interface TaskWithRelations {
       id: string;
       name: string;
       email: string;
+      profileImage?: string | null;
     };
   }>;
 }

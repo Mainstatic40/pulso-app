@@ -10,6 +10,7 @@ const userSelect = {
   name: true,
   email: true,
   rfidTag: true,
+  profileImage: true,
   role: true,
   isActive: true,
   createdAt: true,
@@ -21,6 +22,7 @@ export type UserResponse = {
   name: string;
   email: string;
   rfidTag: string | null;
+  profileImage: string | null;
   role: UserRole;
   isActive: boolean;
   createdAt: Date;
@@ -191,5 +193,43 @@ export const userService = {
     });
 
     return user;
+  },
+
+  async updateProfileImage(id: string, imagePath: string) {
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existingUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { profileImage: imagePath },
+      select: userSelect,
+    });
+
+    return user;
+  },
+
+  async deleteProfileImage(id: string) {
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existingUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { profileImage: null },
+      select: userSelect,
+    });
+
+    return { user, previousImage: existingUser.profileImage };
   },
 };

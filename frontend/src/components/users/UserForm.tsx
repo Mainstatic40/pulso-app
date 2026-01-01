@@ -1,9 +1,14 @@
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Trash2, Upload } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
+import { Avatar } from '../ui/Avatar';
+import { userService } from '../../services/user.service';
 import type { User } from '../../types';
 
 const createUserSchema = z.object({
@@ -37,7 +42,11 @@ interface UserFormProps {
   onSubmit: (data: UserFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  onUserUpdate?: (user: User) => void;
 }
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const roleOptions = [
   { value: 'admin', label: 'Administrador' },
@@ -45,8 +54,12 @@ const roleOptions = [
   { value: 'becario', label: 'Becario' },
 ];
 
-export function UserForm({ user, onSubmit, onCancel, isLoading }: UserFormProps) {
+export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: UserFormProps) {
   const isEditing = !!user;
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(user || null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const {
     register,
@@ -63,6 +76,62 @@ export function UserForm({ user, onSubmit, onCancel, isLoading }: UserFormProps)
       isActive: user?.isActive ?? true,
     },
   });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => userService.uploadProfileImage(user!.id, file),
+    onSuccess: (updatedUser) => {
+      setCurrentUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      onUserUpdate?.(updatedUser);
+      setImageError(null);
+    },
+    onError: (error: Error) => {
+      setImageError(error.message || 'Error al subir la imagen');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => userService.deleteProfileImage(user!.id),
+    onSuccess: (updatedUser) => {
+      setCurrentUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      onUserUpdate?.(updatedUser);
+      setImageError(null);
+    },
+    onError: (error: Error) => {
+      setImageError(error.message || 'Error al eliminar la imagen');
+    },
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageError(null);
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setImageError('Solo se permiten imágenes JPG, PNG o WebP');
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setImageError('La imagen no debe superar 20MB');
+      return;
+    }
+
+    uploadMutation.mutate(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteImage = () => {
+    if (window.confirm('¿Eliminar la foto de perfil?')) {
+      deleteMutation.mutate();
+    }
+  };
+
+  const isImageLoading = uploadMutation.isPending || deleteMutation.isPending;
 
   const handleFormSubmit = (data: UserFormData) => {
     // Clean up data before sending
@@ -87,7 +156,65 @@ export function UserForm({ user, onSubmit, onCancel, isLoading }: UserFormProps)
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+      {/* Profile Image Section - Only shown when editing */}
+      {isEditing && currentUser && (
+        <div className="flex flex-col items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div className="relative">
+            <Avatar
+              name={currentUser.name}
+              profileImage={currentUser.profileImage}
+              size="lg"
+              className="h-20 w-20 text-2xl"
+            />
+            {isImageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImageLoading}
+            >
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              {currentUser.profileImage ? 'Cambiar' : 'Subir foto'}
+            </Button>
+            {currentUser.profileImage && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleDeleteImage}
+                disabled={isImageLoading}
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                Eliminar
+              </Button>
+            )}
+          </div>
+
+          {imageError && (
+            <p className="text-sm text-red-600">{imageError}</p>
+          )}
+
+          <p className="text-xs text-gray-500">JPG, PNG o WebP. Máximo 20MB</p>
+        </div>
+      )}
+
       <Input
         label="Nombre completo"
         placeholder="Juan Pérez"
@@ -137,7 +264,7 @@ export function UserForm({ user, onSubmit, onCancel, isLoading }: UserFormProps)
         </label>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 mt-6">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>

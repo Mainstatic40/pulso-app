@@ -52,6 +52,7 @@ model User {
   email        String   @unique @db.VarChar(255)
   passwordHash String   @map("password_hash") @db.VarChar(255)
   rfidTag      String?  @unique @map("rfid_tag") @db.VarChar(50)
+  profileImage String?  @map("profile_image") @db.VarChar(255)
   role         UserRole @default(becario)
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")

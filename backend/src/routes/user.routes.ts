@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { userController } from '../controllers/user.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
+import { uploadProfileImage } from '../middlewares/upload.middleware';
 import {
   createUserSchema,
   updateUserSchema,
@@ -55,6 +56,23 @@ router.delete(
   authorize('admin'),
   validate(getUserSchema),
   userController.delete
+);
+
+// POST /api/users/:id/profile-image - Upload profile image
+// Users can update their own image, admins can update any user's image
+router.post(
+  '/:id/profile-image',
+  validate(getUserSchema),
+  uploadProfileImage,
+  userController.uploadProfileImage
+);
+
+// DELETE /api/users/:id/profile-image - Delete profile image
+// Users can delete their own image, admins can delete any user's image
+router.delete(
+  '/:id/profile-image',
+  validate(getUserSchema),
+  userController.deleteProfileImage
 );
 
 export default router;

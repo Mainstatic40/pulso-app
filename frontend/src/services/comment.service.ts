@@ -11,6 +11,7 @@ export interface CommentWithUser {
     id: string;
     name: string;
     email: string;
+    profileImage?: string | null;
   };
 }
 

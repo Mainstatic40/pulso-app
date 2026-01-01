@@ -51,7 +51,7 @@ function isOverdue(dateString: string, status: string): boolean {
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const overdue = isOverdue(task.dueDate, task.status);
-  const assignees = task.assignees?.map((a) => ({ name: a.user.name })) || [];
+  const assignees = task.assignees?.map((a) => ({ name: a.user.name, profileImage: a.user.profileImage })) || [];
 
   // Fetch equipment assignments for this task (no active filter - we filter by task title)
   const { data: assignmentsData } = useQuery({

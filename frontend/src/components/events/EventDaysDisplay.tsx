@@ -60,7 +60,7 @@ function ShiftCard({ shift }: ShiftCardProps) {
     <div className="rounded-lg border border-gray-200 bg-white p-3">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <Avatar name={shift.user?.name || 'Usuario'} size="sm" />
+          <Avatar name={shift.user?.name || 'Usuario'} profileImage={shift.user?.profileImage} size="sm" />
           <div>
             <p className="font-medium text-gray-900">{shift.user?.name || 'Sin asignar'}</p>
             <div className="flex items-center gap-2 text-sm text-gray-500">
