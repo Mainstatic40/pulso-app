@@ -81,6 +81,24 @@ const shiftOptions = [
   { value: 'both', label: 'Ambos' },
 ];
 
+// Quick task templates for common task types
+const QUICK_TASK_TEMPLATES = [
+  { value: '', label: 'Seleccionar...' },
+  { value: 'photo_editing', label: 'Edición de fotografía' },
+  { value: 'video_editing', label: 'Edición de video' },
+  { value: 'photography', label: 'Fotografía' },
+  { value: 'video_recording', label: 'Grabación de video' },
+  { value: 'employee_id_photo', label: 'Foto de credencial empleado' },
+];
+
+const QUICK_TASK_TITLES: Record<string, string> = {
+  photo_editing: 'Edición de fotografía',
+  video_editing: 'Edición de video',
+  photography: 'Fotografía',
+  video_recording: 'Grabación de video',
+  employee_id_photo: 'Foto de credencial empleado',
+};
+
 const DEFAULT_TIMES = {
   morningStart: '08:00',
   morningEnd: '12:00',
@@ -341,6 +359,13 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
   const showMorningShift = selectedShift === 'morning' || selectedShift === 'both';
   const showAfternoonShift = selectedShift === 'afternoon' || selectedShift === 'both';
 
+  // Handle quick task template selection
+  const handleQuickTaskSelect = (templateKey: string) => {
+    if (templateKey && QUICK_TASK_TITLES[templateKey]) {
+      setValue('title', QUICK_TASK_TITLES[templateKey]);
+    }
+  };
+
   const morningStartTime = watch('morningStartTime');
   const morningEndTime = watch('morningEndTime');
   const afternoonStartTime = watch('afternoonStartTime');
@@ -391,46 +416,38 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 p-6">
-      <Input
-        label="Título"
-        placeholder="Título de la tarea"
-        error={errors.title?.message}
-        {...register('title')}
-      />
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">
+          Título
+        </label>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              placeholder="Escribe un título o selecciona una plantilla →"
+              error={errors.title?.message}
+              {...register('title')}
+            />
+          </div>
+          <div className="w-48">
+            <Select
+              value=""
+              onChange={(e) => handleQuickTaskSelect(e.target.value)}
+              options={QUICK_TASK_TEMPLATES}
+              className="h-full"
+            />
+          </div>
+        </div>
+      </div>
 
-      <Textarea
-        label="Descripción"
-        placeholder="Describe la tarea..."
-        rows={3}
-        error={errors.description?.message}
-        {...register('description')}
-      />
-
-      <Textarea
-        label="Requisitos del cliente (opcional)"
-        placeholder="Requisitos específicos del cliente..."
-        rows={3}
-        error={errors.clientRequirements?.message}
-        {...register('clientRequirements')}
-      />
-
-      <div className="grid grid-cols-2 gap-4">
-        <Select
-          label="Prioridad"
-          options={priorityOptions}
-          error={errors.priority?.message}
-          {...register('priority')}
-        />
-
+      {/* 1. Fechas */}
+      <div className="grid grid-cols-3 gap-4">
         <Input
           type="date"
           label="Fecha límite"
           error={errors.dueDate?.message}
           {...register('dueDate')}
         />
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
         <Input
           type="date"
           label="Fecha de realización"
@@ -438,13 +455,22 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
         />
 
         <Select
+          label="Prioridad"
+          options={priorityOptions}
+          error={errors.priority?.message}
+          {...register('priority')}
+        />
+      </div>
+
+      {/* 2. Horario */}
+      <div>
+        <Select
           label="Turno"
           options={shiftOptions}
           {...register('shift')}
         />
       </div>
 
-      {/* Time fields based on shift */}
       {showMorningShift && (
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <div className="mb-3 flex items-center gap-2">
@@ -487,6 +513,25 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
         </div>
       )}
 
+      {/* 3. Descripción */}
+      <Textarea
+        label="Descripción"
+        placeholder="Describe la tarea..."
+        rows={3}
+        error={errors.description?.message}
+        {...register('description')}
+      />
+
+      {/* 4. Requisitos del cliente */}
+      <Textarea
+        label="Requisitos del cliente (opcional)"
+        placeholder="Requisitos específicos del cliente..."
+        rows={3}
+        error={errors.clientRequirements?.message}
+        {...register('clientRequirements')}
+      />
+
+      {/* 5. Asignados */}
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-700">
           Asignar a
@@ -526,11 +571,11 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
         </div>
       </div>
 
-      {/* Equipment Assignment Section - Only show if users assigned AND shift selected AND execution date set */}
+      {/* 6. Distribución de equipos */}
       {canAssignEquipment && assignedUsers.length > 0 && selectedShift && (
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">
-            Asignar equipos por turno
+            Distribución de equipos
           </label>
           {!executionDate ? (
             <p className="py-4 text-center text-sm text-gray-500 rounded-lg border border-gray-200 bg-gray-50">

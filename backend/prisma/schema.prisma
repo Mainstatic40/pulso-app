@@ -39,6 +39,13 @@ enum EquipmentStatus {
   maintenance
 }
 
+enum EventType {
+  civic
+  church
+  yearbook
+  congress
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String   @db.VarChar(100)
@@ -50,15 +57,16 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  timeEntries            TimeEntry[]
-  createdTasks           Task[]                @relation("TaskCreator")
-  assignedTasks          TaskAssignee[]
-  createdEvents          Event[]               @relation("EventCreator")
-  assignedEvents         EventAssignee[]
-  comments               Comment[]
-  weeklyLogs             WeeklyLog[]
-  equipmentAssignments   EquipmentAssignment[] @relation("EquipmentUser")
-  createdAssignments     EquipmentAssignment[] @relation("AssignmentCreator")
+  timeEntries          TimeEntry[]
+  createdTasks         Task[]                @relation("TaskCreator")
+  assignedTasks        TaskAssignee[]
+  createdEvents        Event[]               @relation("EventCreator")
+  assignedEvents       EventAssignee[]
+  eventShifts          EventShift[]
+  comments             Comment[]
+  weeklyLogs           WeeklyLog[]
+  equipmentAssignments EquipmentAssignment[] @relation("EquipmentUser")
+  createdAssignments   EquipmentAssignment[] @relation("AssignmentCreator")
 
   @@index([role])
   @@index([isActive])
@@ -126,20 +134,29 @@ model TaskAssignee {
 }
 
 model Event {
-  id                 String   @id @default(uuid())
-  name               String   @db.VarChar(200)
-  description        String   @db.Text
-  clientRequirements String?  @map("client_requirements") @db.Text
-  startDatetime      DateTime @map("start_datetime")
-  endDatetime        DateTime @map("end_datetime")
-  createdBy          String   @map("created_by")
-  createdAt          DateTime @default(now()) @map("created_at")
+  id                 String    @id @default(uuid())
+  name               String    @db.VarChar(200)
+  description        String    @db.Text
+  clientRequirements String?   @map("client_requirements") @db.Text
+  eventType          EventType @map("event_type")
+  startDatetime      DateTime  @map("start_datetime")
+  endDatetime        DateTime  @map("end_datetime")
+  // Preset times for yearbook events
+  morningStartTime   String?   @map("morning_start_time") @db.VarChar(5)
+  morningEndTime     String?   @map("morning_end_time") @db.VarChar(5)
+  afternoonStartTime String?   @map("afternoon_start_time") @db.VarChar(5)
+  afternoonEndTime   String?   @map("afternoon_end_time") @db.VarChar(5)
+  usePresetEquipment Boolean   @default(false) @map("use_preset_equipment")
+  createdBy          String    @map("created_by")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   creator              User                  @relation("EventCreator", fields: [createdBy], references: [id])
   assignees            EventAssignee[]
   timeEntries          TimeEntry[]
   equipmentAssignments EquipmentAssignment[]
+  days                 EventDay[]
 
+  @@index([eventType])
   @@index([startDatetime])
   @@index([endDatetime])
   @@index([createdBy])
@@ -155,6 +172,42 @@ model EventAssignee {
 
   @@id([eventId, userId])
   @@map("event_assignees")
+}
+
+model EventDay {
+  id        String   @id @default(uuid())
+  eventId   String   @map("event_id")
+  date      DateTime @db.Date
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  event  Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  shifts EventShift[]
+
+  @@unique([eventId, date])
+  @@index([eventId])
+  @@index([date])
+  @@map("event_days")
+}
+
+model EventShift {
+  id         String   @id @default(uuid())
+  eventDayId String   @map("event_day_id")
+  userId     String   @map("user_id")
+  startTime  String   @map("start_time") @db.VarChar(5)
+  endTime    String   @map("end_time") @db.VarChar(5)
+  shiftType  String?  @map("shift_type") @db.VarChar(20)
+  note       String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  eventDay             EventDay              @relation(fields: [eventDayId], references: [id], onDelete: Cascade)
+  user                 User                  @relation(fields: [userId], references: [id])
+  equipmentAssignments EquipmentAssignment[]
+
+  @@index([eventDayId])
+  @@index([userId])
+  @@map("event_shifts")
 }
 
 model Comment {
@@ -213,24 +266,27 @@ model Equipment {
 }
 
 model EquipmentAssignment {
-  id          String    @id @default(uuid())
-  equipmentId String    @map("equipment_id")
-  userId      String    @map("user_id")
-  eventId     String?   @map("event_id")
-  startTime   DateTime  @map("start_time")
-  endTime     DateTime? @map("end_time")
-  notes       String?   @db.Text
-  createdBy   String    @map("created_by")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  equipmentId  String    @map("equipment_id")
+  userId       String    @map("user_id")
+  eventId      String?   @map("event_id")
+  eventShiftId String?   @map("event_shift_id")
+  startTime    DateTime  @map("start_time")
+  endTime      DateTime? @map("end_time")
+  notes        String?   @db.Text
+  createdBy    String    @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
-  equipment Equipment @relation(fields: [equipmentId], references: [id])
-  user      User      @relation("EquipmentUser", fields: [userId], references: [id])
-  event     Event?    @relation(fields: [eventId], references: [id])
-  creator   User      @relation("AssignmentCreator", fields: [createdBy], references: [id])
+  equipment  Equipment   @relation(fields: [equipmentId], references: [id])
+  user       User        @relation("EquipmentUser", fields: [userId], references: [id])
+  event      Event?      @relation(fields: [eventId], references: [id])
+  eventShift EventShift? @relation(fields: [eventShiftId], references: [id])
+  creator    User        @relation("AssignmentCreator", fields: [createdBy], references: [id])
 
   @@index([equipmentId])
   @@index([userId])
   @@index([eventId])
+  @@index([eventShiftId])
   @@index([startTime])
   @@map("equipment_assignments")
 }

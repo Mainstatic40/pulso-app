@@ -1,35 +1,46 @@
 import api from '../lib/axios';
-import type { ApiResponse } from '../types';
+import type {
+  ApiResponse,
+  Event,
+  EventType,
+  EventDayInput,
+} from '../types';
 
-export interface EventWithRelations {
-  id: string;
-  name: string;
-  description: string;
-  clientRequirements?: string;
-  startDatetime: string;
-  endDatetime: string;
-  createdBy: string;
-  createdAt: string;
-  creator?: {
-    id: string;
-    name: string;
-    email: string;
+// Full event with all relations (for detail view)
+export type EventWithDetails = Event;
+
+// Event for list views (includes _count)
+export interface EventListItem extends Event {
+  _count?: {
+    days: number;
   };
-  assignees?: Array<{
-    user: {
-      id: string;
-      name: string;
-      email: string;
-    };
-  }>;
 }
+
+// Backward compatibility alias
+export type EventWithRelations = EventListItem;
 
 export interface CreateEventRequest {
   name: string;
   description?: string;
   clientRequirements?: string | null;
+  eventType: EventType;
   startDatetime: string;
   endDatetime: string;
+  // Preset times for yearbook events
+  morningStartTime?: string;
+  morningEndTime?: string;
+  afternoonStartTime?: string;
+  afternoonEndTime?: string;
+  usePresetEquipment?: boolean;
+  // Preset equipment IDs (for yearbook with preset)
+  presetCameraId?: string;
+  presetLensId?: string;
+  presetAdapterId?: string;
+  // Additional equipment (for yearbook - equipment without specific shift)
+  additionalEquipmentIds?: string[];
+  // Days with shifts (for multi-day events)
+  days?: EventDayInput[];
+  // Legacy: direct assignees (for backward compatibility)
   assigneeIds?: string[];
 }
 
@@ -37,8 +48,24 @@ export interface UpdateEventRequest {
   name?: string;
   description?: string;
   clientRequirements?: string | null;
+  eventType?: EventType;
   startDatetime?: string;
   endDatetime?: string;
+  // Preset times for yearbook events
+  morningStartTime?: string | null;
+  morningEndTime?: string | null;
+  afternoonStartTime?: string | null;
+  afternoonEndTime?: string | null;
+  usePresetEquipment?: boolean;
+  // Preset equipment IDs (for yearbook with preset)
+  presetCameraId?: string;
+  presetLensId?: string;
+  presetAdapterId?: string;
+  // Additional equipment (for yearbook - equipment without specific shift)
+  additionalEquipmentIds?: string[];
+  // Days with shifts (for multi-day events)
+  days?: EventDayInput[];
+  // Legacy: direct assignees
   assigneeIds?: string[];
 }
 
@@ -49,28 +76,29 @@ export const eventService = {
     dateFrom?: string;
     dateTo?: string;
     assigneeId?: string;
+    eventType?: EventType;
   }) {
-    const response = await api.get<ApiResponse<EventWithRelations[]>>('/events', { params });
+    const response = await api.get<ApiResponse<EventListItem[]>>('/events', { params });
     return response.data;
   },
 
   async getById(id: string) {
-    const response = await api.get<ApiResponse<EventWithRelations>>(`/events/${id}`);
+    const response = await api.get<ApiResponse<EventWithDetails>>(`/events/${id}`);
     return response.data.data!;
   },
 
   async getUpcoming() {
-    const response = await api.get<ApiResponse<EventWithRelations[]>>('/events/upcoming');
+    const response = await api.get<ApiResponse<EventListItem[]>>('/events/upcoming');
     return response.data.data!;
   },
 
   async create(data: CreateEventRequest) {
-    const response = await api.post<ApiResponse<EventWithRelations>>('/events', data);
+    const response = await api.post<ApiResponse<EventWithDetails>>('/events', data);
     return response.data.data!;
   },
 
   async update(id: string, data: UpdateEventRequest) {
-    const response = await api.put<ApiResponse<EventWithRelations>>(`/events/${id}`, data);
+    const response = await api.put<ApiResponse<EventWithDetails>>(`/events/${id}`, data);
     return response.data.data!;
   },
 

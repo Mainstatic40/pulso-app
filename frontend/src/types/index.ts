@@ -10,6 +10,8 @@ export type EquipmentCategory = 'camera' | 'lens' | 'adapter' | 'sd_card';
 
 export type EquipmentStatus = 'available' | 'in_use' | 'maintenance';
 
+export type EventType = 'civic' | 'church' | 'yearbook' | 'congress';
+
 export interface User {
   id: string;
   name: string;
@@ -42,16 +44,93 @@ export interface Task {
   comments?: Comment[];
 }
 
+// Equipment for a shift assignment
+export interface ShiftEquipment {
+  cameraId?: string;
+  lensId?: string;
+  adapterId?: string;
+  sdCardId?: string;
+}
+
+// A user's shift within an event day
+export interface EventShift {
+  id: string;
+  eventDayId: string;
+  userId: string;
+  startTime: string;
+  endTime: string;
+  shiftType?: 'morning' | 'afternoon' | null;
+  note?: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  equipmentAssignments?: EquipmentAssignment[];
+}
+
+// A single day within an event
+export interface EventDay {
+  id: string;
+  eventId: string;
+  date: string;
+  note?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  shifts: EventShift[];
+}
+
+// Input types for creating/updating
+export interface EventShiftInput {
+  userId: string;
+  startTime: string;
+  endTime: string;
+  shiftType?: 'morning' | 'afternoon' | null;
+  note?: string | null;
+  equipment?: ShiftEquipment;
+}
+
+export interface EventDayInput {
+  date: string;
+  note?: string | null;
+  shifts: EventShiftInput[];
+}
+
 export interface Event {
   id: string;
   name: string;
   description: string;
-  clientRequirements?: string;
+  clientRequirements?: string | null;
+  eventType: EventType;
   startDatetime: string;
   endDatetime: string;
+  // Preset times for yearbook events
+  morningStartTime?: string | null;
+  morningEndTime?: string | null;
+  afternoonStartTime?: string | null;
+  afternoonEndTime?: string | null;
+  usePresetEquipment?: boolean;
   createdBy: string;
   createdAt: string;
-  assignees?: User[];
+  // Relations
+  creator?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  assignees?: Array<{
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  }>;
+  days?: EventDay[];
+  // Count for list views
+  _count?: {
+    days: number;
+  };
 }
 
 export interface TimeEntry {
@@ -105,6 +184,7 @@ export interface EquipmentAssignment {
   equipmentId: string;
   userId: string;
   eventId?: string;
+  eventShiftId?: string;
   startTime: string;
   endTime?: string;
   notes?: string;

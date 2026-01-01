@@ -4,13 +4,13 @@ import { Plus, Search, Calendar } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Spinner } from '../components/ui/Spinner';
 import { Modal } from '../components/ui/Modal';
 import { EventCard, EventModal, EventForm } from '../components/events';
-import { eventService, type EventWithRelations, type CreateEventRequest, type UpdateEventRequest } from '../services/event.service';
-import { equipmentAssignmentService } from '../services/equipment-assignment.service';
+import { eventService, type EventWithRelations, type CreateEventRequest } from '../services/event.service';
 import { useAuthContext } from '../stores/auth.store.tsx';
-import type { EquipmentAssignments } from '../components/events/EventForm';
+import type { EventType } from '../types';
 
 function sortEvents(events: EventWithRelations[]): EventWithRelations[] {
   const now = new Date();
@@ -35,6 +35,14 @@ function sortEvents(events: EventWithRelations[]): EventWithRelations[] {
   });
 }
 
+const EVENT_TYPE_OPTIONS = [
+  { value: '', label: 'Todos los tipos' },
+  { value: 'civic', label: 'Cívico' },
+  { value: 'church', label: 'Iglesia' },
+  { value: 'yearbook', label: 'Anuario' },
+  { value: 'congress', label: 'Congreso' },
+];
+
 export function Events() {
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
@@ -42,6 +50,7 @@ export function Events() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [eventTypeFilter, setEventTypeFilter] = useState<EventType | ''>('');
   const [selectedEvent, setSelectedEvent] = useState<EventWithRelations | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -57,89 +66,9 @@ export function Events() {
       }),
   });
 
+  // Create event mutation - now simpler since equipment is handled within days/shifts
   const createEventMutation = useMutation({
-    mutationFn: async ({
-      eventData,
-      equipmentAssignments,
-    }: {
-      eventData: CreateEventRequest;
-      equipmentAssignments?: EquipmentAssignments;
-    }) => {
-      const event = await eventService.create(eventData);
-
-      // Create equipment assignments if any (new shift-based structure)
-      if (equipmentAssignments && Object.keys(equipmentAssignments).length > 0) {
-        console.log('Processing equipment assignments:', equipmentAssignments);
-
-        // Extract date part from event start datetime (already ISO format)
-        const eventDate = new Date(eventData.startDatetime);
-        const year = eventDate.getFullYear();
-        const month = String(eventDate.getMonth() + 1).padStart(2, '0');
-        const day = String(eventDate.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-
-        // Collect all assignment promises
-        const assignmentPromises: Promise<{ userId: string; shift: string; success: boolean; error?: unknown }>[] = [];
-
-        for (const [userId, userShifts] of Object.entries(equipmentAssignments)) {
-          console.log(`Processing user ${userId} with ${userShifts.odrenedequipos.length} shifts`);
-
-          for (const shift of userShifts.odrenedequipos) {
-            const equipmentIds = [
-              shift.cameraId,
-              shift.lensId,
-              shift.adapterId,
-              shift.sdCardId,
-            ].filter((id): id is string => !!id);
-
-            if (equipmentIds.length > 0) {
-              // Ensure time format is HH:mm (remove extra :00 if present)
-              const startTimeStr = shift.odrenHoraInicio.substring(0, 5);
-              const endTimeStr = shift.HoraFin.substring(0, 5);
-
-              // Construct ISO datetime strings
-              const startTime = new Date(`${dateStr}T${startTimeStr}:00`).toISOString();
-              const endTime = new Date(`${dateStr}T${endTimeStr}:00`).toISOString();
-
-              const shiftLabel = `${shift.odrenHoraInicio}-${shift.HoraFin}`;
-              console.log(`Creating assignment: user=${userId}, shift=${shiftLabel}, equipmentIds=`, equipmentIds);
-
-              // Add promise to array
-              assignmentPromises.push(
-                equipmentAssignmentService.create({
-                  equipmentIds,
-                  userId,
-                  eventId: event.id,
-                  startTime,
-                  endTime,
-                  notes: `Turno: ${shiftLabel}`,
-                })
-                .then(() => ({ userId, shift: shiftLabel, success: true }))
-                .catch((error) => ({ userId, shift: shiftLabel, success: false, error }))
-              );
-            }
-          }
-        }
-
-        // Execute all assignments in parallel
-        if (assignmentPromises.length > 0) {
-          console.log(`Executing ${assignmentPromises.length} equipment assignments...`);
-          const results = await Promise.all(assignmentPromises);
-
-          // Log results
-          const successful = results.filter(r => r.success);
-          const failed = results.filter(r => !r.success);
-
-          console.log(`Equipment assignments: ${successful.length} successful, ${failed.length} failed`);
-
-          if (failed.length > 0) {
-            console.error('Failed assignments:', failed);
-          }
-        }
-      }
-
-      return event;
-    },
+    mutationFn: (eventData: CreateEventRequest) => eventService.create(eventData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
@@ -151,29 +80,36 @@ export function Events() {
   const events = useMemo(() => {
     const allEvents = eventsResponse?.data || [];
     const filtered = allEvents.filter((event) => {
-      if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
-      return (
-        event.name.toLowerCase().includes(query) ||
-        event.description?.toLowerCase().includes(query)
-      );
+      // Filter by search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          event.name.toLowerCase().includes(query) ||
+          event.description?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Filter by event type
+      if (eventTypeFilter && event.eventType !== eventTypeFilter) {
+        return false;
+      }
+
+      return true;
     });
     return sortEvents(filtered);
-  }, [eventsResponse?.data, searchQuery]);
+  }, [eventsResponse?.data, searchQuery, eventTypeFilter]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setDateFrom('');
     setDateTo('');
+    setEventTypeFilter('');
   };
 
-  const hasFilters = searchQuery || dateFrom || dateTo;
+  const hasFilters = searchQuery || dateFrom || dateTo || eventTypeFilter;
 
-  const handleCreateEvent = (
-    data: CreateEventRequest | UpdateEventRequest,
-    equipmentAssignments?: EquipmentAssignments
-  ) => {
-    createEventMutation.mutate({ eventData: data as CreateEventRequest, equipmentAssignments });
+  const handleCreateEvent = (data: CreateEventRequest) => {
+    createEventMutation.mutate(data);
   };
 
   return (
@@ -190,36 +126,90 @@ export function Events() {
 
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Buscar eventos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          {/* Desktop: single row */}
+          <div className="hidden items-center gap-3 md:flex">
+            {/* Search */}
+            <div className="relative min-w-[300px] flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar eventos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Desde</span>
+
+            {/* Event Type */}
+            <Select
+              value={eventTypeFilter}
+              onChange={(e) => setEventTypeFilter(e.target.value as EventType | '')}
+              options={EVENT_TYPE_OPTIONS}
+              className="w-40"
+            />
+
+            {/* Date Range */}
+            <div className="flex items-center gap-1">
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
                 className="w-36"
+                title="Fecha inicio"
               />
-              <span className="text-sm text-gray-500">hasta</span>
+              <span className="text-gray-300">—</span>
               <Input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
                 className="w-36"
+                title="Fecha fin"
+              />
+            </div>
+
+            {/* Clear button */}
+            {hasFilters && (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                Limpiar
+              </Button>
+            )}
+          </div>
+
+          {/* Mobile: stacked layout */}
+          <div className="space-y-3 md:hidden">
+            {/* Search - full width */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar eventos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Filters row */}
+            <div className="grid grid-cols-2 gap-2">
+              <Select
+                value={eventTypeFilter}
+                onChange={(e) => setEventTypeFilter(e.target.value as EventType | '')}
+                options={EVENT_TYPE_OPTIONS}
+              />
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                title="Fecha inicio"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                title="Fecha fin"
               />
               {hasFilters && (
-                <Button variant="outline" size="sm" onClick={clearFilters}>
+                <Button variant="outline" size="sm" onClick={clearFilters} className="w-full">
                   Limpiar
                 </Button>
               )}
@@ -272,7 +262,7 @@ export function Events() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="Nuevo Evento"
-        size="lg"
+        size="2xl"
       >
         <EventForm
           onSubmit={handleCreateEvent}

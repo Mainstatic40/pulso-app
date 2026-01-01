@@ -1,763 +1,593 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
-import { Camera, Circle, Disc, CreditCard, Plus, Trash2, AlertTriangle, User } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock, Settings, Camera, Package } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
-import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
+import { EventTypeSelector } from './EventTypeSelector';
+import { EventDaysManager } from './EventDaysManager';
 import { userService } from '../../services/user.service';
 import { equipmentService } from '../../services/equipment.service';
-import { useAuthContext } from '../../stores/auth.store';
-import type { EventWithRelations, CreateEventRequest, UpdateEventRequest } from '../../services/event.service';
-import type { Equipment, EquipmentCategory, EquipmentAssignment } from '../../types';
-
-const eventSchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido').max(200, 'Máximo 200 caracteres'),
-  description: z.string().max(5000, 'Máximo 5000 caracteres').optional(),
-  clientRequirements: z.string().max(5000, 'Máximo 5000 caracteres').optional(),
-  startDatetime: z.string().min(1, 'La fecha de inicio es requerida'),
-  endDatetime: z.string().min(1, 'La fecha de fin es requerida'),
-  assigneeIds: z.array(z.string()).optional(),
-}).refine((data) => {
-  if (!data.startDatetime || !data.endDatetime) return true;
-  return new Date(data.endDatetime) > new Date(data.startDatetime);
-}, {
-  message: 'La fecha de fin debe ser posterior a la fecha de inicio',
-  path: ['endDatetime'],
-});
-
-type EventFormData = z.infer<typeof eventSchema>;
-
-// Shift-based types
-export interface EquipmentShift {
-  odrenequipoId: string;
-  odrenHoraInicio: string; // HH:mm
-  HoraFin: string; // HH:mm
-  cameraId?: string;
-  lensId?: string;
-  adapterId?: string;
-  sdCardId?: string;
-}
-
-export interface UserEquipmentShifts {
-  odrenedequipos: EquipmentShift[];
-}
-
-export type EquipmentAssignments = Record<string, UserEquipmentShifts>;
-
-// Legacy type for backwards compatibility
-export type UserEquipmentAssignment = {
-  cameraId?: string;
-  lensId?: string;
-  adapterId?: string;
-  sdCardId?: string;
-};
+import type { CreateEventRequest } from '../../services/event.service';
+import type { Event, EventType, EventDayInput, ShiftEquipment, Equipment } from '../../types';
 
 interface EventFormProps {
-  event?: EventWithRelations;
-  existingAssignments?: EquipmentAssignment[];
-  onSubmit: (data: CreateEventRequest | UpdateEventRequest, equipmentAssignments?: EquipmentAssignments) => void;
+  event?: Event;
+  onSubmit: (data: CreateEventRequest) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
-// Parse time slot from notes field (format: "Turno: HH:mm - HH:mm")
-function parseTimeSlotFromNotes(notes: string | null | undefined): { start: string; end: string } | null {
-  if (!notes) return null;
-  const match = notes.match(/Turno:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
-  if (match) {
-    return { start: match[1], end: match[2] };
-  }
-  return null;
-}
-
-// Extract time HH:mm from ISO datetime string
-function extractTimeFromISO(isoString: string): string {
-  const date = new Date(isoString);
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
-
-// Convert existing assignments to form structure
-function parseExistingAssignments(assignments: EquipmentAssignment[]): EquipmentAssignments {
-  const result: EquipmentAssignments = {};
-
-  // Group by user + time slot
-  const groupedAssignments = new Map<string, {
-    userId: string;
-    startTime: string;
-    endTime: string;
-    assignments: EquipmentAssignment[];
-  }>();
-
-  assignments.forEach((assignment) => {
-    if (!assignment.user || !assignment.equipment) return;
-
-    // Get time slot from notes or startTime
-    const parsedTime = parseTimeSlotFromNotes(assignment.notes);
-    let startTime: string;
-    let endTime: string;
-
-    if (parsedTime) {
-      startTime = parsedTime.start;
-      endTime = parsedTime.end;
-    } else {
-      startTime = extractTimeFromISO(assignment.startTime);
-      endTime = assignment.endTime ? extractTimeFromISO(assignment.endTime) : '--:--';
-    }
-
-    const key = `${assignment.userId}-${startTime}-${endTime}`;
-
-    if (!groupedAssignments.has(key)) {
-      groupedAssignments.set(key, {
-        userId: assignment.userId,
-        startTime,
-        endTime,
-        assignments: [],
-      });
-    }
-
-    groupedAssignments.get(key)!.assignments.push(assignment);
-  });
-
-  // Convert to EquipmentAssignments structure
-  groupedAssignments.forEach((group) => {
-    if (!result[group.userId]) {
-      result[group.userId] = { odrenedequipos: [] };
-    }
-
-    const shift: EquipmentShift = {
-      odrenequipoId: generateShiftId(),
-      odrenHoraInicio: group.startTime,
-      HoraFin: group.endTime,
-    };
-
-    // Add equipment by category
-    group.assignments.forEach((assignment) => {
-      if (!assignment.equipment) return;
-      const category = assignment.equipment.category;
-      if (category === 'camera') shift.cameraId = assignment.equipmentId;
-      else if (category === 'lens') shift.lensId = assignment.equipmentId;
-      else if (category === 'adapter') shift.adapterId = assignment.equipmentId;
-      else if (category === 'sd_card') shift.sdCardId = assignment.equipmentId;
-    });
-
-    result[group.userId].odrenedequipos.push(shift);
-  });
-
-  return result;
-}
-
-function toDatetimeLocal(isoString: string): string {
-  const date = new Date(isoString);
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60000);
-  return localDate.toISOString().slice(0, 16);
-}
-
-function extractTime(isoString: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
-}
-
-function generateShiftId(): string {
-  return `shift-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-}
-
-// Check if two time ranges overlap
-function timesOverlap(start1: string, end1: string, start2: string, end2: string): boolean {
-  // Overlap exists if: start1 < end2 AND start2 < end1
-  return start1 < end2 && start2 < end1;
-}
-
-const categoryConfig: Record<EquipmentCategory, { label: string; icon: React.ReactNode; key: keyof UserEquipmentAssignment }> = {
-  camera: { label: 'Cámara', icon: <Camera className="h-4 w-4" />, key: 'cameraId' },
-  lens: { label: 'Lente', icon: <Circle className="h-4 w-4" />, key: 'lensId' },
-  adapter: { label: 'Adaptador', icon: <Disc className="h-4 w-4" />, key: 'adapterId' },
-  sd_card: { label: 'SD', icon: <CreditCard className="h-4 w-4" />, key: 'sdCardId' },
+const DEFAULT_TIMES = {
+  morningStart: '08:00',
+  morningEnd: '12:00',
+  afternoonStart: '14:30',
+  afternoonEnd: '18:30',
 };
 
-interface OverlapWarning {
-  equipmentId: string;
-  equipmentName: string;
-  users: string[];
-  timeRange: string;
+const EVENT_TYPE_LABELS: Record<EventType, string> = {
+  civic: 'Evento Cívico',
+  church: 'Iglesia Universitaria',
+  yearbook: 'Foto de Anuario',
+  congress: 'Congreso',
+};
+
+// Extract date part (YYYY-MM-DD) from ISO string
+function extractDateFromISO(isoString: string): string {
+  if (!isoString) return '';
+  return isoString.split('T')[0];
 }
 
-export function EventForm({ event, existingAssignments, onSubmit, onCancel, isLoading }: EventFormProps) {
-  const { user } = useAuthContext();
+// Parse date string to Date object (noon to avoid timezone issues)
+function parseDateString(dateString: string): Date | null {
+  if (!dateString) return null;
+  return new Date(dateString + 'T12:00:00');
+}
+
+export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormProps) {
   const isEditing = !!event;
-  const canAssignEquipment = user?.role === 'admin' || user?.role === 'supervisor';
 
-  const [equipmentAssignments, setEquipmentAssignments] = useState<EquipmentAssignments>({});
-  const [isInitialized, setIsInitialized] = useState(false);
+  // Form state
+  const [eventType, setEventType] = useState<EventType | null>(event?.eventType || null);
+  const [name, setName] = useState(event?.name || '');
+  const [description, setDescription] = useState(event?.description || '');
+  const [clientRequirements, setClientRequirements] = useState(event?.clientRequirements || '');
+  const [startDate, setStartDate] = useState(
+    event?.startDatetime ? extractDateFromISO(event.startDatetime) : ''
+  );
+  const [endDate, setEndDate] = useState(
+    event?.endDatetime ? extractDateFromISO(event.endDatetime) : ''
+  );
 
-  const { data: usersResponse, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['users', { limit: 100 }],
-    queryFn: () => userService.getAll({ limit: 100 }),
-  });
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch,
-    setValue,
-  } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema),
-    defaultValues: {
-      name: event?.name || '',
-      description: event?.description || '',
-      clientRequirements: event?.clientRequirements || '',
-      startDatetime: event?.startDatetime ? toDatetimeLocal(event.startDatetime) : '',
-      endDatetime: event?.endDatetime ? toDatetimeLocal(event.endDatetime) : '',
-      assigneeIds: event?.assignees?.map((a) => a.user.id) || [],
-    },
-  });
-
-  const selectedAssignees = watch('assigneeIds') || [];
-  const startDatetime = watch('startDatetime');
-  const endDatetime = watch('endDatetime');
-
-  // Query available equipment for the event time range
-  // excludeTasks: true means we only check for conflicts with OTHER EVENTS, not tasks
-  const { data: availableEquipmentData, isLoading: isLoadingEquipment } = useQuery({
-    queryKey: ['equipment-available', 'event', startDatetime, endDatetime],
-    queryFn: async () => {
-      // Get available equipment for the event time range
-      // excludeTasks=true: only consider event assignments for conflicts
-      const available = await equipmentService.getAvailable({
-        startTime: new Date(startDatetime).toISOString(),
-        endTime: new Date(endDatetime).toISOString(),
-        excludeTasks: true,
-      });
-
-      // If editing, also include equipment already assigned to THIS event
-      if (event?.id && existingAssignments && existingAssignments.length > 0) {
-        const assignedEquipment = existingAssignments
-          .filter(a => a.equipment)
-          .map(a => ({
-            id: a.equipment!.id,
-            name: a.equipment!.name,
-            category: a.equipment!.category,
-            status: a.equipment!.status,
-            serialNumber: a.equipment!.serialNumber,
-            isActive: true,
-          } as Equipment));
-
-        // Merge: available + assigned (avoiding duplicates)
-        const merged = [...available];
-        assignedEquipment.forEach(eq => {
-          if (!merged.find(m => m.id === eq.id)) {
-            merged.push(eq);
-          }
-        });
-
-        return merged;
-      }
-
-      return available;
-    },
-    enabled: canAssignEquipment && !!startDatetime && !!endDatetime,
-  });
-
-  const users = usersResponse?.data || [];
-  const availableEquipment = availableEquipmentData || [];
-
-  // Initialize equipment assignments from existing data when editing
-  useEffect(() => {
-    console.log('EventForm - isEditing:', isEditing);
-    console.log('EventForm - existingAssignments:', existingAssignments?.length || 0, 'items');
-    console.log('EventForm - isInitialized:', isInitialized);
-
-    if (isEditing && existingAssignments && existingAssignments.length > 0 && !isInitialized) {
-      console.log('EventForm - Parsing existing assignments...');
-      const parsed = parseExistingAssignments(existingAssignments);
-      console.log('EventForm - Parsed result:', parsed);
-      setEquipmentAssignments(parsed);
-      setIsInitialized(true);
+  // Single day event toggle
+  const [isSingleDay, setIsSingleDay] = useState(() => {
+    if (event?.startDatetime && event?.endDatetime) {
+      return extractDateFromISO(event.startDatetime) === extractDateFromISO(event.endDatetime);
     }
-  }, [isEditing, existingAssignments, isInitialized]);
+    return false;
+  });
 
-  // Get IDs of equipment already assigned to this event (these should always be available)
-  const eventEquipmentIds = useMemo(() => {
-    if (!existingAssignments) return new Set<string>();
-    return new Set(existingAssignments.map(a => a.equipmentId));
-  }, [existingAssignments]);
+  // Yearbook-specific state
+  const [morningStartTime, setMorningStartTime] = useState(
+    event?.morningStartTime || DEFAULT_TIMES.morningStart
+  );
+  const [morningEndTime, setMorningEndTime] = useState(
+    event?.morningEndTime || DEFAULT_TIMES.morningEnd
+  );
+  const [afternoonStartTime, setAfternoonStartTime] = useState(
+    event?.afternoonStartTime || DEFAULT_TIMES.afternoonStart
+  );
+  const [afternoonEndTime, setAfternoonEndTime] = useState(
+    event?.afternoonEndTime || DEFAULT_TIMES.afternoonEnd
+  );
+  const [usePresetEquipment, setUsePresetEquipment] = useState(
+    event?.usePresetEquipment || false
+  );
+
+  // Preset equipment IDs (configurable)
+  const [presetCameraId, setPresetCameraId] = useState<string>('');
+  const [presetLensId, setPresetLensId] = useState<string>('');
+  const [presetAdapterId, setPresetAdapterId] = useState<string>('');
+
+  // Additional equipment (equipment taken without assigning to specific shift)
+  const [additionalEquipmentIds, setAdditionalEquipmentIds] = useState<string[]>([]);
+
+  // Days with shifts
+  const [days, setDays] = useState<EventDayInput[]>(() => {
+    if (event?.days && event.days.length > 0) {
+      return event.days.map((day) => ({
+        date: day.date.split('T')[0],
+        note: day.note,
+        shifts: day.shifts.map((shift) => ({
+          userId: shift.userId,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          shiftType: shift.shiftType as 'morning' | 'afternoon' | null,
+          note: shift.note,
+          equipment: shift.equipmentAssignments?.reduce((acc, ea) => {
+            if (ea.equipment) {
+              const category = ea.equipment.category;
+              if (category === 'camera') acc.cameraId = ea.equipmentId;
+              else if (category === 'lens') acc.lensId = ea.equipmentId;
+              else if (category === 'adapter') acc.adapterId = ea.equipmentId;
+              else if (category === 'sd_card') acc.sdCardId = ea.equipmentId;
+            }
+            return acc;
+          }, {} as ShiftEquipment),
+        })),
+      }));
+    }
+    return [];
+  });
+
+  // Validation errors
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Query users for assignment
+  const { data: usersResponse } = useQuery({
+    queryKey: ['users', { limit: 100, isActive: true }],
+    queryFn: () => userService.getAll({ limit: 100, isActive: true }),
+  });
+
+  // Query all equipment for preset selection and additional equipment
+  const { data: allEquipment } = useQuery({
+    queryKey: ['equipment', { isActive: true }],
+    queryFn: () => equipmentService.getAll({ isActive: true, limit: 100 }),
+  });
+
+  const users = useMemo(() => {
+    return (usersResponse?.data || []).map((u) => ({
+      id: u.id,
+      name: u.name,
+    }));
+  }, [usersResponse]);
 
   // Group equipment by category
   const equipmentByCategory = useMemo(() => {
-    const grouped: Record<EquipmentCategory, Equipment[]> = {
-      camera: [],
-      lens: [],
-      adapter: [],
-      sd_card: [],
+    const equipment = allEquipment?.data || [];
+    return {
+      cameras: equipment.filter((e) => e.category === 'camera'),
+      lenses: equipment.filter((e) => e.category === 'lens'),
+      adapters: equipment.filter((e) => e.category === 'adapter'),
+      sdCards: equipment.filter((e) => e.category === 'sd_card'),
+    };
+  }, [allEquipment]);
+
+  // Preset equipment for yearbook (now configurable)
+  const presetEquipment: ShiftEquipment = useMemo(() => {
+    return {
+      cameraId: presetCameraId || undefined,
+      lensId: presetLensId || undefined,
+      adapterId: presetAdapterId || undefined,
+    };
+  }, [presetCameraId, presetLensId, presetAdapterId]);
+
+  // Sync end date when single day is toggled or start date changes
+  useEffect(() => {
+    if (isSingleDay && startDate) {
+      setEndDate(startDate);
+    }
+  }, [isSingleDay, startDate]);
+
+  // Derived dates for EventDaysManager
+  const startDateObj = parseDateString(startDate);
+  const endDateObj = parseDateString(endDate);
+
+  // Validate form
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!eventType) {
+      newErrors.eventType = 'Selecciona un tipo de evento';
+    }
+    if (!name.trim()) {
+      newErrors.name = 'El nombre es requerido';
+    }
+    if (!startDate) {
+      newErrors.startDate = 'La fecha de inicio es requerida';
+    }
+    // For single day events, end date is auto-set
+    const effectiveEndDate = isSingleDay ? startDate : endDate;
+    if (!effectiveEndDate) {
+      newErrors.endDate = 'La fecha de fin es requerida';
+    }
+    if (startDate && effectiveEndDate && effectiveEndDate < startDate) {
+      newErrors.endDate = 'La fecha de fin debe ser igual o posterior al inicio';
+    }
+
+    // Check for at least one shift (optional - can be added later)
+    // const totalShifts = days.reduce((acc, day) => acc + day.shifts.length, 0);
+    // if (days.length > 0 && totalShifts === 0) {
+    //   newErrors.days = 'Agrega al menos un turno';
+    // }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle submit
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validate()) return;
+
+    // Use effective end date (same as start for single day events)
+    const effectiveEndDate = isSingleDay ? startDate : endDate;
+
+    const data: CreateEventRequest = {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      clientRequirements: clientRequirements.trim() || null,
+      eventType: eventType!,
+      // Send dates as YYYY-MM-DD, backend will handle time conversion
+      startDatetime: startDate,
+      endDatetime: effectiveEndDate,
+      // Yearbook fields
+      ...(eventType === 'yearbook' && {
+        morningStartTime,
+        morningEndTime,
+        afternoonStartTime,
+        afternoonEndTime,
+        usePresetEquipment,
+        // Include preset equipment IDs if using preset
+        ...(usePresetEquipment && {
+          presetCameraId: presetCameraId || undefined,
+          presetLensId: presetLensId || undefined,
+          presetAdapterId: presetAdapterId || undefined,
+        }),
+      }),
+      // Additional equipment IDs (for yearbook)
+      ...(eventType === 'yearbook' && additionalEquipmentIds.length > 0 && {
+        additionalEquipmentIds,
+      }),
+      // Days with shifts
+      days: days.map((day) => ({
+        date: day.date,
+        note: day.note,
+        shifts: day.shifts.filter((s) => s.userId).map((shift) => ({
+          userId: shift.userId,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          shiftType: shift.shiftType,
+          note: shift.note,
+          equipment: shift.equipment,
+        })),
+      })),
     };
 
-    availableEquipment.forEach((eq) => {
-      // Include if: available & active, OR already assigned to THIS event
-      const isAvailable = eq.status === 'available' && eq.isActive;
-      const isAssignedToThisEvent = eventEquipmentIds.has(eq.id);
-
-      if (isAvailable || isAssignedToThisEvent) {
-        const category = eq.category as EquipmentCategory;
-        if (grouped[category]) {
-          grouped[category].push(eq);
-        }
-      }
-    });
-
-    return grouped;
-  }, [availableEquipment, eventEquipmentIds]);
-
-  // Check for equipment overlaps (same equipment assigned to different users at overlapping times)
-  const overlapWarnings = useMemo((): OverlapWarning[] => {
-    const warnings: OverlapWarning[] = [];
-    const equipmentUsage: Map<string, Array<{
-      odrenequipoId: string;
-      userId: string;
-      userName: string;
-      start: string;
-      end: string
-    }>> = new Map();
-
-    // Collect all equipment usage
-    Object.entries(equipmentAssignments).forEach(([userId, userShifts]) => {
-      const userName = users.find(u => u.id === userId)?.name || 'Usuario';
-
-      userShifts.odrenedequipos.forEach((shift) => {
-        const equipmentIds = [shift.cameraId, shift.lensId, shift.adapterId, shift.sdCardId].filter(Boolean) as string[];
-
-        equipmentIds.forEach((eqId) => {
-          if (!equipmentUsage.has(eqId)) {
-            equipmentUsage.set(eqId, []);
-          }
-          equipmentUsage.get(eqId)!.push({
-            odrenequipoId: shift.odrenequipoId,
-            userId,
-            userName,
-            start: shift.odrenHoraInicio,
-            end: shift.HoraFin,
-          });
+    // DEBUG: Log what we're submitting
+    console.log('=== EventForm submitting ===');
+    console.log('Full data:', JSON.stringify(data, null, 2));
+    console.log('Days count:', data.days?.length);
+    console.log('Additional equipment:', additionalEquipmentIds);
+    data.days?.forEach((day, i) => {
+      console.log(`Day ${i + 1} (${day.date}):`, {
+        note: day.note,
+        shiftsCount: day.shifts?.length,
+      });
+      day.shifts?.forEach((shift, j) => {
+        console.log(`  Shift ${j + 1}:`, {
+          userId: shift.userId,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          shiftType: shift.shiftType,
+          equipment: shift.equipment,
         });
       });
     });
+    console.log('=== End EventForm data ===');
 
-    // Check for overlaps between different users
-    equipmentUsage.forEach((usages, equipmentId) => {
-      if (usages.length < 2) return;
-
-      for (let i = 0; i < usages.length; i++) {
-        for (let j = i + 1; j < usages.length; j++) {
-          const a = usages[i];
-          const b = usages[j];
-
-          // Only warn if different users have overlapping times
-          if (a.userId !== b.userId && timesOverlap(a.start, a.end, b.start, b.end)) {
-            const eq = availableEquipment.find(e => e.id === equipmentId);
-            const overlapStart = a.start > b.start ? a.start : b.start;
-            const overlapEnd = a.end < b.end ? a.end : b.end;
-
-            // Avoid duplicate warnings
-            const existingWarning = warnings.find(
-              w => w.equipmentId === equipmentId &&
-                   w.users.includes(a.userName) &&
-                   w.users.includes(b.userName)
-            );
-
-            if (!existingWarning) {
-              warnings.push({
-                equipmentId,
-                equipmentName: eq?.name || 'Equipo',
-                users: [a.userName, b.userName],
-                timeRange: `${overlapStart} - ${overlapEnd}`,
-              });
-            }
-          }
-        }
-      }
-    });
-
-    return warnings;
-  }, [equipmentAssignments, users, availableEquipment]);
-
-  // Get event time range for defaults
-  const eventTimeRange = useMemo(() => {
-    if (!startDatetime || !endDatetime) return null;
-    return {
-      start: extractTime(startDatetime),
-      end: extractTime(endDatetime),
-    };
-  }, [startDatetime, endDatetime]);
-
-  const handleFormSubmit = (data: EventFormData) => {
-    if (overlapWarnings.length > 0) {
-      const confirm = window.confirm(
-        'Hay equipos asignados a múltiples usuarios en horarios que se solapan. ¿Desea continuar de todos modos?'
-      );
-      if (!confirm) return;
-    }
-
-    const submitData = {
-      ...data,
-      clientRequirements: data.clientRequirements || null,
-      startDatetime: new Date(data.startDatetime).toISOString(),
-      endDatetime: new Date(data.endDatetime).toISOString(),
-      assigneeIds: data.assigneeIds || [],
-    };
-
-    // Filter equipment assignments to only include assigned users with shifts
-    const filteredAssignments: EquipmentAssignments = {};
-    selectedAssignees.forEach((userId) => {
-      const userShifts = equipmentAssignments[userId];
-      if (userShifts && userShifts.odrenedequipos.length > 0) {
-        const validShifts = userShifts.odrenedequipos.filter(
-          (shift) => shift.cameraId || shift.lensId || shift.adapterId || shift.sdCardId
-        );
-        if (validShifts.length > 0) {
-          filteredAssignments[userId] = { odrenedequipos: validShifts };
-        }
-      }
-    });
-
-    onSubmit(submitData, Object.keys(filteredAssignments).length > 0 ? filteredAssignments : undefined);
+    onSubmit(data);
   };
 
-  const toggleAssignee = (userId: string) => {
-    const current = selectedAssignees;
-    if (current.includes(userId)) {
-      setValue(
-        'assigneeIds',
-        current.filter((id) => id !== userId)
-      );
-      // Clear equipment assignments for removed user
-      setEquipmentAssignments((prev) => {
-        const updated = { ...prev };
-        delete updated[userId];
-        return updated;
-      });
-    } else {
-      setValue('assigneeIds', [...current, userId]);
-    }
-  };
+  // Step 1: Event type selection
+  if (!eventType) {
+    return (
+      <div className="p-6">
+        <h3 className="mb-4 text-lg font-medium text-gray-900">
+          Selecciona el tipo de evento
+        </h3>
+        <EventTypeSelector
+          value={eventType}
+          onChange={(type) => {
+            setEventType(type);
+            setErrors({});
+          }}
+        />
+        {errors.eventType && (
+          <p className="mt-2 text-sm text-red-600">{errors.eventType}</p>
+        )}
+        <div className="mt-6 flex justify-end">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  const addShift = (userId: string) => {
-    const defaultStart = eventTimeRange?.start || '08:00';
-    const defaultEnd = eventTimeRange?.end || '17:00';
-
-    setEquipmentAssignments((prev) => ({
-      ...prev,
-      [userId]: {
-        odrenedequipos: [
-          ...(prev[userId]?.odrenedequipos || []),
-          {
-            odrenequipoId: generateShiftId(),
-            odrenHoraInicio: defaultStart,
-            HoraFin: defaultEnd,
-          },
-        ],
-      },
-    }));
-  };
-
-  const removeShift = (userId: string, shiftId: string) => {
-    setEquipmentAssignments((prev) => ({
-      ...prev,
-      [userId]: {
-        odrenedequipos: prev[userId]?.odrenedequipos.filter((s) => s.odrenequipoId !== shiftId) || [],
-      },
-    }));
-  };
-
-  const updateShift = (
-    userId: string,
-    shiftId: string,
-    field: keyof EquipmentShift,
-    value: string
-  ) => {
-    setEquipmentAssignments((prev) => ({
-      ...prev,
-      [userId]: {
-        odrenedequipos: prev[userId]?.odrenedequipos.map((shift) =>
-          shift.odrenequipoId === shiftId
-            ? { ...shift, [field]: value || undefined }
-            : shift
-        ) || [],
-      },
-    }));
-  };
-
-  // Get available options for a category, considering time-based availability
-  const getAvailableOptionsForCategory = (
-    category: EquipmentCategory,
-    _currentUserId: string,
-    currentShift: EquipmentShift
-  ) => {
-    const categoryEquipment = equipmentByCategory[category];
-    const key = categoryConfig[category].key;
-
-    // Get equipment that's already used at overlapping times
-    const unavailableEquipmentIds = new Set<string>();
-
-    Object.entries(equipmentAssignments).forEach(([_userId, userShifts]) => {
-      userShifts.odrenedequipos.forEach((shift) => {
-        // Skip current shift
-        if (shift.odrenequipoId === currentShift.odrenequipoId) return;
-
-        const eqId = shift[key];
-        if (!eqId) return;
-
-        // Check if times overlap with current shift
-        if (timesOverlap(currentShift.odrenHoraInicio, currentShift.HoraFin, shift.odrenHoraInicio, shift.HoraFin)) {
-          unavailableEquipmentIds.add(eqId);
-        }
-      });
-    });
-
-    const currentValue = currentShift[key];
-
-    return [
-      { value: '', label: 'Sin asignar' },
-      ...categoryEquipment.map((eq) => {
-        const isUnavailable = unavailableEquipmentIds.has(eq.id) && eq.id !== currentValue;
-        return {
-          value: eq.id,
-          label: eq.serialNumber ? `${eq.name} (${eq.serialNumber})` : eq.name,
-          disabled: isUnavailable,
-        };
-      }),
-    ];
-  };
-
-  const assignedUsers = users.filter((u) => selectedAssignees.includes(u.id));
-
+  // Step 2: Full form
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 p-6">
-      <Input
-        label="Nombre del evento"
-        placeholder="Nombre del evento"
-        error={errors.name?.message}
-        {...register('name')}
-      />
+    <form onSubmit={handleSubmit} className="space-y-6 p-6">
+      {/* Event Type Header - Click to change */}
+      {!isEditing && (
+        <button
+          type="button"
+          onClick={() => setEventType(null)}
+          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="font-medium">{EVENT_TYPE_LABELS[eventType]}</span>
+          <span className="text-gray-400">— cambiar tipo</span>
+        </button>
+      )}
 
-      <Textarea
-        label="Descripción"
-        placeholder="Describe el evento..."
-        rows={3}
-        error={errors.description?.message}
-        {...register('description')}
-      />
+      {isEditing && (
+        <div className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700">
+          {EVENT_TYPE_LABELS[eventType]}
+        </div>
+      )}
 
-      <Textarea
-        label="Requisitos del cliente (opcional)"
-        placeholder="Requisitos específicos del cliente..."
-        rows={3}
-        error={errors.clientRequirements?.message}
-        {...register('clientRequirements')}
-      />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Basic Info */}
+      <div className="space-y-4">
         <Input
-          type="datetime-local"
-          label="Fecha y hora de inicio"
-          error={errors.startDatetime?.message}
-          {...register('startDatetime')}
+          label="Nombre del evento *"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ej: Ceremonia de Graduación 2024"
+          error={errors.name}
         />
 
-        <Input
-          type="datetime-local"
-          label="Fecha y hora de fin"
-          error={errors.endDatetime?.message}
-          {...register('endDatetime')}
+        <Textarea
+          label="Descripción"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Describe el evento..."
+          rows={3}
+        />
+
+        <Textarea
+          label="Requisitos del cliente"
+          value={clientRequirements}
+          onChange={(e) => setClientRequirements(e.target.value)}
+          placeholder="Requisitos específicos del cliente..."
+          rows={2}
         />
       </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
-          Asignar personal
-        </label>
-        <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-300 p-2">
-          {isLoadingUsers ? (
-            <p className="py-2 text-center text-sm text-gray-500">
-              Cargando usuarios...
+      {/* Dates */}
+      <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <Calendar className="h-4 w-4" />
+            Fechas del evento
+          </div>
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isSingleDay}
+              onChange={(e) => setIsSingleDay(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+            />
+            <span className="text-sm text-gray-600">Evento de un solo día</span>
+          </label>
+        </div>
+        <div className={`grid gap-4 ${isSingleDay ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+          <Input
+            type="date"
+            label={isSingleDay ? 'Fecha del evento *' : 'Fecha de inicio *'}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            error={errors.startDate}
+          />
+          {!isSingleDay && (
+            <Input
+              type="date"
+              label="Fecha de fin *"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              error={errors.endDate}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Yearbook-specific settings */}
+      {eventType === 'yearbook' && (
+        <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-blue-800">
+            <Settings className="h-4 w-4" />
+            Configuración de Anuario
+          </div>
+
+          {/* Time presets */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div>
+              <label className="mb-1 flex items-center gap-1 text-xs text-gray-600">
+                <Clock className="h-3 w-3" />
+                Mañana inicio
+              </label>
+              <Input
+                type="time"
+                value={morningStartTime}
+                onChange={(e) => setMorningStartTime(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 text-xs text-gray-600">Mañana fin</label>
+              <Input
+                type="time"
+                value={morningEndTime}
+                onChange={(e) => setMorningEndTime(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 flex items-center gap-1 text-xs text-gray-600">
+                <Clock className="h-3 w-3" />
+                Tarde inicio
+              </label>
+              <Input
+                type="time"
+                value={afternoonStartTime}
+                onChange={(e) => setAfternoonStartTime(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 text-xs text-gray-600">Tarde fin</label>
+              <Input
+                type="time"
+                value={afternoonEndTime}
+                onChange={(e) => setAfternoonEndTime(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Preset equipment toggle and config */}
+          <div className="border-t border-blue-200 pt-4">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={usePresetEquipment}
+                onChange={(e) => setUsePresetEquipment(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div>
+                <span className="text-sm font-medium text-gray-700">
+                  Usar equipo preset
+                </span>
+                <p className="text-xs text-gray-500">
+                  El mismo equipo para todos los turnos (solo SD seleccionable por turno)
+                </p>
+              </div>
+            </label>
+
+            {/* Preset equipment selectors */}
+            {usePresetEquipment && (
+              <div className="mt-3 grid grid-cols-1 gap-3 rounded-lg bg-white p-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 flex items-center gap-1 text-xs font-medium text-blue-600">
+                    <Camera className="h-3 w-3" />
+                    Cámara preset
+                  </label>
+                  <Select
+                    value={presetCameraId}
+                    onChange={(e) => setPresetCameraId(e.target.value)}
+                    options={[
+                      { value: '', label: 'Seleccionar...' },
+                      ...equipmentByCategory.cameras.map((eq) => ({
+                        value: eq.id,
+                        label: eq.serialNumber ? `${eq.name} (${eq.serialNumber})` : eq.name,
+                      })),
+                    ]}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 text-xs font-medium text-purple-600">
+                    Lente preset
+                  </label>
+                  <Select
+                    value={presetLensId}
+                    onChange={(e) => setPresetLensId(e.target.value)}
+                    options={[
+                      { value: '', label: 'Seleccionar...' },
+                      ...equipmentByCategory.lenses.map((eq) => ({
+                        value: eq.id,
+                        label: eq.serialNumber ? `${eq.name} (${eq.serialNumber})` : eq.name,
+                      })),
+                    ]}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 text-xs font-medium text-orange-600">
+                    Adaptador preset
+                  </label>
+                  <Select
+                    value={presetAdapterId}
+                    onChange={(e) => setPresetAdapterId(e.target.value)}
+                    options={[
+                      { value: '', label: 'Seleccionar...' },
+                      ...equipmentByCategory.adapters.map((eq) => ({
+                        value: eq.id,
+                        label: eq.serialNumber ? `${eq.name} (${eq.serialNumber})` : eq.name,
+                      })),
+                    ]}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Additional equipment */}
+          <div className="border-t border-blue-200 pt-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Package className="h-4 w-4" />
+              Equipo adicional
+            </div>
+            <p className="mb-3 text-xs text-gray-500">
+              Equipo que se llevará al evento sin asignar a un turno específico
             </p>
-          ) : users.length === 0 ? (
-            <p className="py-2 text-center text-sm text-gray-500">
-              No hay usuarios disponibles
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {users.map((user) => (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(allEquipment?.data || []).map((eq) => (
                 <label
-                  key={user.id}
-                  className="flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-gray-50"
+                  key={eq.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white p-2 hover:bg-gray-50"
                 >
                   <input
                     type="checkbox"
-                    checked={selectedAssignees.includes(user.id)}
-                    onChange={() => toggleAssignee(user.id)}
-                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    checked={additionalEquipmentIds.includes(eq.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setAdditionalEquipmentIds([...additionalEquipmentIds, eq.id]);
+                      } else {
+                        setAdditionalEquipmentIds(additionalEquipmentIds.filter((id) => id !== eq.id));
+                      }
+                    }}
+                    className="h-3 w-3 rounded border-gray-300 text-blue-600"
                   />
-                  <span className="text-sm text-gray-900">{user.name}</span>
-                  <span className="text-xs text-gray-500">({user.email})</span>
+                  <span className="text-xs text-gray-700 truncate" title={eq.name}>
+                    {eq.name}
+                  </span>
                 </label>
               ))}
             </div>
-          )}
+            {additionalEquipmentIds.length > 0 && (
+              <p className="mt-2 text-xs text-blue-600">
+                {additionalEquipmentIds.length} equipo(s) seleccionado(s)
+              </p>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Days and Shifts Manager */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Días y turnos del evento
+        </label>
+        <EventDaysManager
+          eventType={eventType}
+          startDate={startDateObj}
+          endDate={endDateObj}
+          days={days}
+          onChange={setDays}
+          users={users}
+          morningStartTime={morningStartTime}
+          morningEndTime={morningEndTime}
+          afternoonStartTime={afternoonStartTime}
+          afternoonEndTime={afternoonEndTime}
+          usePresetEquipment={usePresetEquipment}
+          presetEquipment={presetEquipment}
+        />
+        {errors.days && (
+          <p className="text-sm text-red-600">{errors.days}</p>
+        )}
       </div>
 
-      {/* Overlap Warnings */}
-      {overlapWarnings.length > 0 && (
-        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3">
-          <div className="flex items-center gap-2 text-yellow-800">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-sm font-medium">Conflictos de equipos detectados</span>
-          </div>
-          <ul className="mt-2 space-y-1 text-sm text-yellow-700">
-            {overlapWarnings.map((warning, idx) => (
-              <li key={idx}>
-                <strong>{warning.equipmentName}</strong> asignado a {warning.users.join(' y ')} en horario solapado ({warning.timeRange})
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Equipment Assignment Section with Shifts - Vertical Layout */}
-      {canAssignEquipment && assignedUsers.length > 0 && (
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Asignar equipos por turnos
-          </label>
-          {!startDatetime || !endDatetime ? (
-            <p className="py-4 text-center text-sm text-gray-500 rounded-lg border border-gray-200 bg-gray-50">
-              Selecciona las fechas del evento para ver equipos disponibles
-            </p>
-          ) : isLoadingEquipment ? (
-            <p className="py-2 text-center text-sm text-gray-500">
-              Cargando equipos disponibles...
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {assignedUsers.map((assignedUser) => {
-                const userShifts = equipmentAssignments[assignedUser.id]?.odrenedequipos || [];
-
-                return (
-                  <div
-                    key={assignedUser.id}
-                    className="rounded-lg border border-gray-300 bg-gray-50 p-4"
-                  >
-                    {/* User header */}
-                    <div className="mb-4 flex items-center gap-2">
-                      <User className="h-5 w-5 text-gray-600" />
-                      <h4 className="text-base font-semibold text-gray-900">
-                        {assignedUser.name}
-                      </h4>
-                    </div>
-
-                    {/* Shifts list */}
-                    <div className="space-y-4">
-                      {userShifts.map((shift, index) => (
-                        <div
-                          key={shift.odrenequipoId}
-                          className="rounded-lg border border-gray-200 bg-white p-4"
-                        >
-                          {/* Shift header */}
-                          <div className="mb-3 flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700">
-                              Turno {index + 1}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeShift(assignedUser.id, shift.odrenequipoId)}
-                              className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                              title="Eliminar turno"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-
-                          {/* Time inputs */}
-                          <div className="mb-4 grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-gray-600">
-                                Hora inicio
-                              </label>
-                              <input
-                                type="time"
-                                value={shift.odrenHoraInicio}
-                                onChange={(e) =>
-                                  updateShift(assignedUser.id, shift.odrenequipoId, 'odrenHoraInicio', e.target.value)
-                                }
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-gray-600">
-                                Hora fin
-                              </label>
-                              <input
-                                type="time"
-                                value={shift.HoraFin}
-                                onChange={(e) =>
-                                  updateShift(assignedUser.id, shift.odrenequipoId, 'HoraFin', e.target.value)
-                                }
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Equipment selects - vertical full width */}
-                          <div className="space-y-3">
-                            {(Object.keys(categoryConfig) as EquipmentCategory[]).map((category) => {
-                              const config = categoryConfig[category];
-                              const options = getAvailableOptionsForCategory(category, assignedUser.id, shift);
-                              const currentValue = shift[config.key] || '';
-
-                              return (
-                                <div key={category}>
-                                  <label className="mb-1 flex items-center gap-2 text-xs font-medium text-gray-600">
-                                    {config.icon}
-                                    <span>{config.label}</span>
-                                  </label>
-                                  <Select
-                                    value={currentValue}
-                                    onChange={(e) =>
-                                      updateShift(assignedUser.id, shift.odrenequipoId, config.key, e.target.value)
-                                    }
-                                    options={options}
-                                    className="w-full"
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-
-                      {/* Add shift button */}
-                      <button
-                        type="button"
-                        onClick={() => addShift(assignedUser.id)}
-                        className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Agregar turno
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* Actions */}
       <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar

@@ -699,6 +699,9 @@ VITE_API_URL=http://localhost:3000/api
 - [x] Sistema de reportes
 - [x] Exportación a Excel
 - [x] Gestión de equipos (CRUD + asignaciones con validación de turnos)
+- [x] Eventos multi-día con tipos (civic, church, yearbook, congress)
+- [x] Asignación rápida en eventos yearbook (asignar persona a múltiples días)
+- [x] Plantillas rápidas de tareas (edición foto/video, fotografía, grabación, credencial)
 - [ ] App móvil (React Native)
 - [ ] Testing y corrección de bugs
 - [ ] Despliegue
@@ -767,5 +770,45 @@ function parseDateSafe(val: string): Date {
 
 ---
 
-**Última actualización:** 28 Diciembre 2024
-**Versión del documento:** 2.4
+## 📝 Notas de Implementación
+
+### Formulario de Tareas (TaskForm)
+El formulario de tareas tiene el siguiente orden de campos:
+1. **Título** - Con selector de plantillas rápidas (dropdown)
+2. **Fechas** - Fecha límite, Fecha de realización, Prioridad (en una fila)
+3. **Horario** - Selector de turno + campos de hora según turno
+4. **Descripción** - Textarea
+5. **Requisitos del cliente** - Textarea opcional
+6. **Asignados** - Lista de usuarios con checkboxes
+7. **Distribución de equipos** - Solo visible cuando hay usuarios asignados y turno seleccionado
+
+**Plantillas rápidas de tareas:**
+- Edición de fotografía
+- Edición de video
+- Fotografía
+- Grabación de video
+- Foto de credencial empleado
+
+### Eventos de Tipo Yearbook (Foto de Anuario)
+Los eventos de tipo `yearbook` tienen funcionalidades especiales:
+- **Asignación rápida**: Permite asignar la misma persona a múltiples días consecutivos
+- **Turnos predefinidos**: Mañana y tarde con horarios configurables
+- **Equipo preset**: Opción para preconfigurar cámara, lente y adaptador
+- **Equipo adicional**: Equipos sin turno específico (solo yearbook)
+
+### Manejo de Fechas
+Para evitar problemas de timezone, todas las fechas DATE se procesan usando mediodía (T12:00:00):
+```typescript
+// Backend - event.schema.ts
+function parseStartDate(val: string): Date {
+  if (dateOnlyRegex.test(val)) {
+    return new Date(val + 'T12:00:00');
+  }
+  return new Date(val);
+}
+```
+
+---
+
+**Última actualización:** 31 Diciembre 2024
+**Versión del documento:** 2.5

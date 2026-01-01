@@ -1,55 +1,15 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Clock, FileText, User, Trash2, Edit2, Camera } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Calendar, FileText, Trash2, Edit2, Flag, Church, Camera, Mic2, Users } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
-import { EventForm, type EquipmentAssignments } from './EventForm';
-import { eventService, type EventWithRelations, type UpdateEventRequest } from '../../services/event.service';
-import { equipmentAssignmentService } from '../../services/equipment-assignment.service';
+import { Spinner } from '../ui/Spinner';
+import { EventForm } from './EventForm';
+import { EventDaysDisplay } from './EventDaysDisplay';
+import { eventService, type EventWithRelations, type EventWithDetails, type CreateEventRequest, type UpdateEventRequest } from '../../services/event.service';
 import { useAuthContext } from '../../stores/auth.store.tsx';
-import type { EquipmentCategory, EquipmentAssignment } from '../../types';
-
-const categoryConfig: Record<EquipmentCategory, { label: string; color: string; order: number }> = {
-  camera: { label: 'Cámara', color: 'bg-blue-100 text-blue-800', order: 1 },
-  lens: { label: 'Lente', color: 'bg-purple-100 text-purple-800', order: 2 },
-  adapter: { label: 'Adaptador', color: 'bg-orange-100 text-orange-800', order: 3 },
-  sd_card: { label: 'SD', color: 'bg-green-100 text-green-800', order: 4 },
-};
-
-interface EquipmentItem {
-  id: string;
-  name: string;
-  category: EquipmentCategory;
-}
-
-interface AssignmentBlock {
-  odrenequipoId: string; // Unique key for this block
-  odrenHoraInicio: string; // HH:mm
-  HoraFin: string; // HH:mm
-  userId: string;
-  userName: string;
-  equipment: EquipmentItem[];
-}
-
-// Parse time slot from notes field (format: "Turno: HH:mm - HH:mm")
-function parseTimeSlotFromNotes(notes: string | null | undefined): { start: string; end: string } | null {
-  if (!notes) return null;
-  const match = notes.match(/Turno:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
-  if (match) {
-    return { start: match[1], end: match[2] };
-  }
-  return null;
-}
-
-// Extract time from ISO datetime string
-function extractTimeFromISO(isoString: string): string {
-  const date = new Date(isoString);
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
+import type { EventType } from '../../types';
 
 interface EventModalProps {
   event: EventWithRelations | null;
@@ -58,7 +18,10 @@ interface EventModalProps {
 }
 
 function formatFullDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('es-MX', {
+  // Extract date part to avoid timezone issues
+  const datePart = dateString.split('T')[0];
+  const date = new Date(datePart + 'T12:00:00');
+  return date.toLocaleDateString('es-MX', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -66,24 +29,26 @@ function formatFullDate(dateString: string): string {
   });
 }
 
-function formatTime(dateString: string): string {
-  return new Date(dateString).toLocaleTimeString('es-MX', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+function getDaysCount(start: string, end: string): number {
+  const startPart = start.split('T')[0];
+  const endPart = end.split('T')[0];
+
+  // Si son el mismo día, retornar 1
+  if (startPart === endPart) {
+    return 1;
+  }
+
+  const startDate = new Date(startPart + 'T12:00:00');
+  const endDate = new Date(endPart + 'T12:00:00');
+  const diffMs = endDate.getTime() - startDate.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(1, diffDays);
 }
 
-function formatDuration(start: string, end: string): string {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const diffMs = endDate.getTime() - startDate.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (diffHours === 0) return `${diffMinutes} minutos`;
-  if (diffMinutes === 0) return `${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
-  return `${diffHours}h ${diffMinutes}m`;
+function isSameDay(start: string, end: string): boolean {
+  const startPart = start.split('T')[0];
+  const endPart = end.split('T')[0];
+  return startPart === endPart;
 }
 
 function getEventStatus(start: string, end: string): 'today' | 'upcoming' | 'past' | 'ongoing' {
@@ -102,8 +67,31 @@ function getEventStatus(start: string, end: string): 'today' | 'upcoming' | 'pas
 const statusConfig = {
   ongoing: { label: 'En curso', variant: 'success' as const },
   today: { label: 'Hoy', variant: 'warning' as const },
-  upcoming: { label: 'Proximo', variant: 'info' as const },
+  upcoming: { label: 'Próximo', variant: 'info' as const },
   past: { label: 'Pasado', variant: 'default' as const },
+};
+
+const eventTypeConfig: Record<EventType, { label: string; icon: React.ReactNode; color: string }> = {
+  civic: {
+    label: 'Evento Cívico',
+    icon: <Flag className="h-4 w-4" />,
+    color: 'bg-blue-100 text-blue-800',
+  },
+  church: {
+    label: 'Iglesia Universitaria',
+    icon: <Church className="h-4 w-4" />,
+    color: 'bg-purple-100 text-purple-800',
+  },
+  yearbook: {
+    label: 'Foto de Anuario',
+    icon: <Camera className="h-4 w-4" />,
+    color: 'bg-amber-100 text-amber-800',
+  },
+  congress: {
+    label: 'Congreso',
+    icon: <Mic2 className="h-4 w-4" />,
+    color: 'bg-green-100 text-green-800',
+  },
 };
 
 export function EventModal({ event, isOpen, onClose }: EventModalProps) {
@@ -114,173 +102,29 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   const isAdmin = user?.role === 'admin';
   const canEdit = user?.role === 'admin' || user?.role === 'supervisor';
 
-  // Query equipment assignments for this event
-  const { data: assignmentsData } = useQuery({
-    queryKey: ['equipment-assignments', { eventId: event?.id }],
-    queryFn: () => equipmentAssignmentService.getAll({ eventId: event!.id, limit: 100 }),
-    enabled: !!event?.id && isOpen,
+  // Fetch full event details when modal opens
+  const { data: eventDetails, isLoading: isLoadingDetails } = useQuery({
+    queryKey: ['event', event?.id],
+    queryFn: () => eventService.getById(event!.id),
+    enabled: isOpen && !!event?.id,
+    staleTime: 0, // Always refetch to get fresh data
   });
 
-  // Create individual assignment blocks (user + time slot + equipment)
-  const assignmentBlocks = useMemo((): AssignmentBlock[] => {
-    const assignments = assignmentsData?.data || [];
-    const blocksMap = new Map<string, AssignmentBlock>();
+  // Use full details when available, otherwise fall back to list data
+  const fullEvent: EventWithDetails | null = eventDetails || event;
 
-    assignments.forEach((assignment: EquipmentAssignment) => {
-      if (!assignment.user || !assignment.equipment) return;
-
-      // Try to get time slot from notes, fallback to startTime
-      const parsedTime = parseTimeSlotFromNotes(assignment.notes);
-      let startTime: string;
-      let endTime: string;
-
-      if (parsedTime) {
-        startTime = parsedTime.start;
-        endTime = parsedTime.end;
-      } else {
-        startTime = extractTimeFromISO(assignment.startTime);
-        endTime = assignment.endTime ? extractTimeFromISO(assignment.endTime) : '--:--';
-      }
-
-      // Create unique key for this block: odrenequipoId + odrenHoraInicio + HoraFin
-      const blockKey = `${assignment.userId}-${startTime}-${endTime}`;
-
-      // Get or create block
-      if (!blocksMap.has(blockKey)) {
-        blocksMap.set(blockKey, {
-          odrenequipoId: blockKey,
-          odrenHoraInicio: startTime,
-          HoraFin: endTime,
-          userId: assignment.user.id,
-          userName: assignment.user.name,
-          equipment: [],
-        });
-      }
-
-      // Add equipment to block
-      blocksMap.get(blockKey)!.equipment.push({
-        id: assignment.equipment.id,
-        name: assignment.equipment.name,
-        category: assignment.equipment.category,
-      });
-    });
-
-    // Convert to array
-    const result = Array.from(blocksMap.values());
-
-    // Sort by start time
-    result.sort((a, b) => a.odrenHoraInicio.localeCompare(b.odrenHoraInicio));
-
-    // Sort equipment within each block by category order
-    result.forEach(block => {
-      block.equipment.sort((a, b) =>
-        categoryConfig[a.category].order - categoryConfig[b.category].order
-      );
-    });
-
-    return result;
-  }, [assignmentsData]);
-
-  // Debug: Log assignments data
-  console.log('EventModal - Event ID:', event?.id);
-  console.log('EventModal - Assignments received:', assignmentsData?.data?.length || 0, 'items');
-  console.log('EventModal - Assignment blocks:', assignmentBlocks.length, 'blocks');
+  // Reset editing state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsEditing(false);
+    }
+  }, [isOpen]);
 
   const updateEventMutation = useMutation({
-    mutationFn: async ({
-      eventData,
-      equipmentAssignments,
-    }: {
-      eventData: UpdateEventRequest;
-      equipmentAssignments?: EquipmentAssignments;
-    }) => {
-      const updatedEvent = await eventService.update(event!.id, eventData);
-
-      // Step 1: Return all existing equipment assignments for this event
-      const existingAssignments = assignmentsData?.data || [];
-      for (const assignment of existingAssignments) {
-        try {
-          await equipmentAssignmentService.returnEquipment(assignment.id);
-        } catch (error) {
-          console.error('Error returning equipment:', error);
-        }
-      }
-
-      // Step 2: Create new equipment assignments if any
-      if (equipmentAssignments && Object.keys(equipmentAssignments).length > 0) {
-        console.log('Processing equipment assignments for update:', equipmentAssignments);
-
-        // Extract date part from event start datetime
-        const eventDate = new Date(eventData.startDatetime || event!.startDatetime);
-        const year = eventDate.getFullYear();
-        const month = String(eventDate.getMonth() + 1).padStart(2, '0');
-        const day = String(eventDate.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-
-        // Collect all assignment promises
-        const assignmentPromises: Promise<{ userId: string; shift: string; success: boolean; error?: unknown }>[] = [];
-
-        for (const [userId, userShifts] of Object.entries(equipmentAssignments)) {
-          console.log(`Processing user ${userId} with ${userShifts.odrenedequipos.length} shifts`);
-
-          for (const shift of userShifts.odrenedequipos) {
-            const equipmentIds = [
-              shift.cameraId,
-              shift.lensId,
-              shift.adapterId,
-              shift.sdCardId,
-            ].filter((id): id is string => !!id);
-
-            if (equipmentIds.length > 0) {
-              // Ensure time format is HH:mm (remove extra :00 if present)
-              const startTimeStr = shift.odrenHoraInicio.substring(0, 5);
-              const endTimeStr = shift.HoraFin.substring(0, 5);
-
-              // Construct ISO datetime strings
-              const startTime = new Date(`${dateStr}T${startTimeStr}:00`).toISOString();
-              const endTime = new Date(`${dateStr}T${endTimeStr}:00`).toISOString();
-
-              const shiftLabel = `${shift.odrenHoraInicio}-${shift.HoraFin}`;
-              console.log(`Creating assignment: user=${userId}, shift=${shiftLabel}, equipmentIds=`, equipmentIds);
-
-              // Add promise to array
-              assignmentPromises.push(
-                equipmentAssignmentService.create({
-                  equipmentIds,
-                  userId,
-                  eventId: event!.id,
-                  startTime,
-                  endTime,
-                  notes: `Turno: ${shiftLabel}`,
-                })
-                .then(() => ({ userId, shift: shiftLabel, success: true }))
-                .catch((error) => ({ userId, shift: shiftLabel, success: false, error }))
-              );
-            }
-          }
-        }
-
-        // Execute all assignments in parallel
-        if (assignmentPromises.length > 0) {
-          console.log(`Executing ${assignmentPromises.length} equipment assignments...`);
-          const results = await Promise.all(assignmentPromises);
-
-          // Log results
-          const successful = results.filter(r => r.success);
-          const failed = results.filter(r => !r.success);
-
-          console.log(`Equipment assignments: ${successful.length} successful, ${failed.length} failed`);
-
-          if (failed.length > 0) {
-            console.error('Failed assignments:', failed);
-          }
-        }
-      }
-
-      return updatedEvent;
-    },
+    mutationFn: (data: UpdateEventRequest) => eventService.update(event!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', event?.id] });
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       queryClient.invalidateQueries({ queryKey: ['equipment-assignments'] });
       setIsEditing(false);
@@ -296,7 +140,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   });
 
   const handleDelete = () => {
-    if (window.confirm('Estas seguro de que deseas eliminar este evento?')) {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este evento?')) {
       deleteEventMutation.mutate();
     }
   };
@@ -306,24 +150,50 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
     onClose();
   };
 
-  const handleUpdateEvent = (
-    data: UpdateEventRequest,
-    equipmentAssignments?: EquipmentAssignments
-  ) => {
-    updateEventMutation.mutate({ eventData: data, equipmentAssignments });
+  const handleUpdateEvent = (data: CreateEventRequest | UpdateEventRequest) => {
+    updateEventMutation.mutate(data as UpdateEventRequest);
   };
 
   if (!isOpen || !event) return null;
 
-  const status = getEventStatus(event.startDatetime, event.endDatetime);
+  // Show loading state while fetching details
+  if (isLoadingDetails && !eventDetails) {
+    return (
+      <Modal isOpen={isOpen} onClose={handleClose} title="Cargando..." size="2xl">
+        <div className="flex items-center justify-center py-12">
+          <Spinner size="lg" />
+        </div>
+      </Modal>
+    );
+  }
+
+  if (!fullEvent) return null;
+
+  const status = getEventStatus(fullEvent.startDatetime, fullEvent.endDatetime);
   const statusInfo = statusConfig[status];
+  const eventTypeInfo = fullEvent.eventType ? eventTypeConfig[fullEvent.eventType] : null;
+
+  // Count total shifts
+  const totalShifts = fullEvent.days?.reduce((acc, day) => acc + (day.shifts?.length || 0), 0) || 0;
+
+  // DEBUG: Log event data
+  console.log('=== EventModal fullEvent ===');
+  console.log('Event ID:', fullEvent.id);
+  console.log('Days count:', fullEvent.days?.length || 0);
+  console.log('Total shifts:', totalShifts);
+  fullEvent.days?.forEach((day, i) => {
+    console.log(`Day ${i + 1}:`, {
+      date: day.date,
+      shiftsCount: day.shifts?.length || 0,
+    });
+  });
+  console.log('=== End EventModal ===');
 
   if (isEditing) {
     return (
-      <Modal isOpen={isOpen} onClose={handleClose} title="Editar Evento" size="lg">
+      <Modal isOpen={isOpen} onClose={handleClose} title="Editar Evento" size="2xl">
         <EventForm
-          event={event}
-          existingAssignments={assignmentsData?.data}
+          event={fullEvent}
           onSubmit={handleUpdateEvent}
           onCancel={() => setIsEditing(false)}
           isLoading={updateEventMutation.isPending}
@@ -333,15 +203,21 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Detalle del Evento" size="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Detalle del Evento" size="2xl">
       <div className="p-6">
-        {/* Header */}
+        {/* 1. Header - Nombre */}
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">{event.name}</h2>
-            <Badge variant={statusInfo.variant} className="mt-2">
-              {statusInfo.label}
-            </Badge>
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-gray-900">{fullEvent.name}</h2>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+              {eventTypeInfo && (
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${eventTypeInfo.color}`}>
+                  {eventTypeInfo.icon}
+                  {eventTypeInfo.label}
+                </span>
+              )}
+            </div>
           </div>
           {canEdit && (
             <div className="flex gap-2">
@@ -362,135 +238,90 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
           )}
         </div>
 
-        {/* Description */}
-        {event.description && (
-          <div className="mt-6">
-            <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <FileText className="h-4 w-4" />
-              Descripcion
-            </h3>
-            <p className="mt-2 whitespace-pre-wrap text-gray-600">{event.description}</p>
-          </div>
-        )}
-
-        {/* Date and Time */}
-        <div className="mt-6 space-y-3">
+        {/* 2. Date - Fecha */}
+        <div className="mt-6">
           <div className="flex items-center gap-3 text-gray-600">
             <Calendar className="h-5 w-5 text-gray-400" />
             <div>
-              <p className="font-medium">{formatFullDate(event.startDatetime)}</p>
-              {formatFullDate(event.startDatetime) !== formatFullDate(event.endDatetime) && (
+              <p className="font-medium">{formatFullDate(fullEvent.startDatetime)}</p>
+              {!isSameDay(fullEvent.startDatetime, fullEvent.endDatetime) && (
                 <p className="text-sm text-gray-500">
-                  hasta {formatFullDate(event.endDatetime)}
+                  hasta {formatFullDate(fullEvent.endDatetime)} ({getDaysCount(fullEvent.startDatetime, fullEvent.endDatetime)} días)
                 </p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3 text-gray-600">
-            <Clock className="h-5 w-5 text-gray-400" />
-            <div>
-              <p>
-                {formatTime(event.startDatetime)} - {formatTime(event.endDatetime)}
-              </p>
-              <p className="text-sm text-gray-500">
-                Duracion: {formatDuration(event.startDatetime, event.endDatetime)}
-              </p>
-            </div>
-          </div>
         </div>
 
-        {/* Client Requirements */}
-        {event.clientRequirements && (
+        {/* 3. Description - Descripción */}
+        {fullEvent.description && (
+          <div className="mt-6">
+            <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <FileText className="h-4 w-4" />
+              Descripción
+            </h3>
+            <p className="mt-2 whitespace-pre-wrap text-gray-600">{fullEvent.description}</p>
+          </div>
+        )}
+
+        {/* 4. Client Requirements - Requisitos */}
+        {fullEvent.clientRequirements && (
           <div className="mt-6 rounded-lg bg-yellow-50 p-4">
             <h3 className="flex items-center gap-2 text-sm font-medium text-yellow-800">
               <FileText className="h-4 w-4" />
               Requisitos del Cliente
             </h3>
             <p className="mt-2 whitespace-pre-wrap text-yellow-700">
-              {event.clientRequirements}
+              {fullEvent.clientRequirements}
             </p>
           </div>
         )}
 
-        {/* Assignees */}
-        <div className="mt-6">
-          <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <User className="h-4 w-4" />
-            Personal Asignado ({event.assignees?.length || 0})
-          </h3>
-          {event.assignees && event.assignees.length > 0 ? (
-            <div className="mt-3 space-y-2">
-              {event.assignees.map((assignee) => (
-                <div
-                  key={assignee.user.id}
-                  className="flex items-center gap-3 rounded-lg bg-gray-50 p-3"
-                >
-                  <Avatar name={assignee.user.name} size="md" />
-                  <div>
-                    <p className="font-medium text-gray-900">{assignee.user.name}</p>
-                    <p className="text-sm text-gray-500">{assignee.user.email}</p>
-                  </div>
-                </div>
-              ))}
+        {/* 5. Days and Shifts - Turnos */}
+        {fullEvent.days && fullEvent.days.length > 0 && (
+          <div className="mt-6">
+            <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Users className="h-4 w-4" />
+              {isSameDay(fullEvent.startDatetime, fullEvent.endDatetime)
+                ? `Turnos (${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'})`
+                : `Días y Turnos (${fullEvent.days.length} ${fullEvent.days.length === 1 ? 'día' : 'días'}, ${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'})`
+              }
+            </h3>
+            <div className="mt-3">
+              <EventDaysDisplay days={fullEvent.days} />
             </div>
-          ) : (
-            <p className="mt-2 text-sm text-gray-500">Sin personal asignado</p>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Equipment Distribution */}
-        <div className="mt-6">
-          <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <Camera className="h-4 w-4" />
-            Distribución de Equipos
-          </h3>
-
-          {assignmentBlocks.length > 0 ? (
-            <div className="mt-3 space-y-3">
-              {assignmentBlocks.map((block) => (
-                <div
-                  key={block.odrenequipoId}
-                  className="rounded-lg border border-gray-200 bg-white p-4"
-                >
-                  {/* User Name */}
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <span className="font-semibold text-gray-900">
-                      {block.userName}
-                    </span>
-                  </div>
-
-                  {/* Time Slot */}
-                  <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{block.odrenHoraInicio} - {block.HoraFin}</span>
-                  </div>
-
-                  {/* Equipment List */}
-                  <div className="mt-3 space-y-1.5">
-                    {block.equipment.map((eq) => (
-                      <div
-                        key={eq.id}
-                        className="flex items-center gap-2 text-sm text-gray-700"
-                      >
-                        <span className="text-gray-400">•</span>
-                        <span>{eq.name}</span>
-                      </div>
-                    ))}
-                  </div>
+        {/* Yearbook-specific info */}
+        {fullEvent.eventType === 'yearbook' && (
+          <div className="mt-6 rounded-lg bg-blue-50 p-4">
+            <h3 className="text-sm font-medium text-blue-800">Configuración de Anuario</h3>
+            <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-blue-700">
+              {fullEvent.morningStartTime && fullEvent.morningEndTime && (
+                <div>
+                  <span className="font-medium">Mañana:</span> {fullEvent.morningStartTime} - {fullEvent.morningEndTime}
                 </div>
-              ))}
+              )}
+              {fullEvent.afternoonStartTime && fullEvent.afternoonEndTime && (
+                <div>
+                  <span className="font-medium">Tarde:</span> {fullEvent.afternoonStartTime} - {fullEvent.afternoonEndTime}
+                </div>
+              )}
+              {fullEvent.usePresetEquipment && (
+                <div className="col-span-2">
+                  <span className="font-medium">Equipo preset:</span> Activado
+                </div>
+              )}
             </div>
-          ) : (
-            <p className="mt-3 text-sm text-gray-500">Sin equipos asignados</p>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Creator info */}
-        {event.creator && (
+        {fullEvent.creator && (
           <div className="mt-6 border-t border-gray-200 pt-4">
             <p className="text-xs text-gray-500">
-              Creado por {event.creator.name}
+              Creado por {fullEvent.creator.name}
             </p>
           </div>
         )}
