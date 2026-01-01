@@ -204,8 +204,6 @@ export const equipmentAssignmentService = {
     ]);
 
     // Debug log
-    console.log(`[Assignments] Query params: active=${active}, today=${today}`);
-    console.log(`[Assignments] Found ${assignments.length} assignments (total: ${total})`);
     assignments.forEach(a => {
       console.log(`  - ${a.equipment?.name}: ${a.startTime} -> ${a.endTime || 'null'} (user: ${a.user?.name})`);
     });
@@ -235,13 +233,9 @@ export const equipmentAssignmentService = {
   },
 
   async create(input: CreateAssignmentInput, creatorId: string) {
-    console.log('[Backend] Equipment assignment create() called');
-    console.log('[Backend] Input received:', JSON.stringify(input, null, 2));
-    console.log('[Backend] Creator ID:', creatorId);
 
     const { equipmentIds, userId, eventId, startTime, endTime, notes } = input;
 
-    console.log('[Backend] Parsed values:');
     console.log('  - equipmentIds:', equipmentIds, '(length:', equipmentIds?.length, ')');
     console.log('  - userId:', userId);
     console.log('  - startTime:', startTime, '(type:', typeof startTime, ')');

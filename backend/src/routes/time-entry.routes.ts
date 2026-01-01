@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { timeEntryController } from '../controllers/time-entry.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import {
   listTimeEntriesSchema,
@@ -67,6 +67,7 @@ router.post(
 // POST /api/time-entries - Create manual time entry (admin/supervisor only)
 router.post(
   '/',
+  authorize('admin', 'supervisor'),
   validate(createTimeEntrySchema),
   timeEntryController.create
 );
@@ -74,6 +75,7 @@ router.post(
 // PUT /api/time-entries/:id - Update time entry (admin/supervisor only)
 router.put(
   '/:id',
+  authorize('admin', 'supervisor'),
   validate(updateTimeEntrySchema),
   timeEntryController.update
 );
@@ -81,6 +83,7 @@ router.put(
 // DELETE /api/time-entries/:id - Delete time entry (admin/supervisor only)
 router.delete(
   '/:id',
+  authorize('admin', 'supervisor'),
   validate(deleteTimeEntrySchema),
   timeEntryController.delete
 );

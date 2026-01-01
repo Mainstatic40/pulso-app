@@ -132,19 +132,16 @@ export const attachmentController = {
     try {
       const { id } = req.params;
 
-      console.log('[Attachment Download] Requested ID:', id);
 
       const attachment = await attachmentService.findById(id);
 
       if (!attachment) {
-        console.log('[Attachment Download] Attachment not found in DB');
         return res.status(404).json({
           success: false,
           error: { message: 'Attachment not found' },
         });
       }
 
-      console.log('[Attachment Download] Found attachment:', {
         id: attachment.id,
         filename: attachment.filename,
         storedName: attachment.storedName,
@@ -152,18 +149,15 @@ export const attachmentController = {
       });
 
       const filePath = attachmentService.getFilePath(attachment.storedName);
-      console.log('[Attachment Download] File path:', filePath);
 
       // Check if file exists
       if (!fs.existsSync(filePath)) {
-        console.log('[Attachment Download] File does NOT exist on disk');
         return res.status(404).json({
           success: false,
           error: { message: 'File not found on server' },
         });
       }
 
-      console.log('[Attachment Download] File exists, sending...');
 
       // Set headers for download
       res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.filename)}"`);
@@ -179,7 +173,6 @@ export const attachmentController = {
             });
           }
         } else {
-          console.log('[Attachment Download] File sent successfully');
         }
       });
     } catch (error) {

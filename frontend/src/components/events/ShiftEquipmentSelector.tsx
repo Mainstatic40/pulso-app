@@ -114,15 +114,10 @@ export function ShiftEquipmentSelector({
   // Handle equipment change
   const handleChange = (key: keyof ShiftEquipment, value: string) => {
     // DEBUG: Log equipment selection
-    console.log('=== ShiftEquipmentSelector handleChange ===');
-    console.log('Key:', key, 'Value:', value);
-    console.log('Current equipment:', equipment);
     const newEquipment = {
       ...equipment,
       [key]: value || undefined,
     };
-    console.log('New equipment:', newEquipment);
-    console.log('=== End ShiftEquipmentSelector ===');
 
     onChange(newEquipment);
   };

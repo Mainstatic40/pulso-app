@@ -30,6 +30,11 @@ export const commentService = {
     return response.data.data!;
   },
 
+  async update(commentId: string, data: CreateCommentRequest) {
+    const response = await api.put<ApiResponse<CommentWithUser>>(`/comments/${commentId}`, data);
+    return response.data.data!;
+  },
+
   async delete(commentId: string) {
     const response = await api.delete<ApiResponse<{ message: string }>>(`/comments/${commentId}`);
     return response.data.data!;

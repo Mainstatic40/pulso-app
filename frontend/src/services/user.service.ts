@@ -26,10 +26,8 @@ export const userService = {
     isActive?: boolean;
     search?: string;
   }) {
-    console.log('[userService.getAll] Fetching users with params:', params);
     try {
       const response = await api.get<ApiResponse<User[]>>('/users', { params });
-      console.log('[userService.getAll] Response:', response.data);
       return response.data;
     } catch (error) {
       console.error('[userService.getAll] Error:', error);

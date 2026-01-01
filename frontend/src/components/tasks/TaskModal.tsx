@@ -143,34 +143,10 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     const assignments = assignmentsData?.data || [];
     const taskNotePrefix = `Tarea: ${task.title}`;
 
-    // Debug: Log all assignments and what we're searching for
-    console.log('[TaskModal] Equipment assignments debug:', {
-      taskTitle: task.title,
-      searchingFor: taskNotePrefix,
-      totalAssignments: assignments.length,
-      allAssignmentNotes: assignments.map((a: EquipmentAssignment) => ({
-        id: a.id,
-        notes: a.notes,
-        equipmentName: a.equipment?.name,
-        userName: a.user?.name,
-      })),
-    });
-
     // Filter assignments where notes starts with "Tarea: {title}"
     const taskAssignments = assignments.filter(
       (a: EquipmentAssignment) => a.notes?.startsWith(taskNotePrefix)
     );
-
-    // Debug: Log filtered assignments
-    console.log('[TaskModal] Filtered assignments for this task:', {
-      count: taskAssignments.length,
-      assignments: taskAssignments.map((a: EquipmentAssignment) => ({
-        id: a.id,
-        notes: a.notes,
-        equipmentName: a.equipment?.name,
-        userName: a.user?.name,
-      })),
-    });
 
     const userMap = new Map<string, EquipmentByUserAndShift>();
 

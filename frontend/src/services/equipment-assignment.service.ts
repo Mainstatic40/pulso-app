@@ -33,8 +33,6 @@ export const equipmentAssignmentService = {
     });
 
     // Debug log
-    console.log('[Frontend] Assignments query:', params);
-    console.log('[Frontend] Received:', response.data.data?.length, 'assignments');
     response.data.data?.forEach(a => {
       console.log(`  - ${a.equipment?.name}: ${a.startTime} -> ${a.endTime || 'null'}`);
     });
@@ -48,10 +46,7 @@ export const equipmentAssignmentService = {
   },
 
   async create(data: CreateAssignmentRequest) {
-    console.log('[EquipmentAssignmentService] Creating assignment with data:', JSON.stringify(data, null, 2));
-    console.log('[EquipmentAssignmentService] Data validation:');
     console.log('  - equipmentIds array?', Array.isArray(data.equipmentIds), 'length:', data.equipmentIds?.length);
-    console.log('  - userId valid UUID?', /^[0-9a-f-]{36}$/i.test(data.userId || ''));
     console.log('  - startTime valid date?', !isNaN(new Date(data.startTime).getTime()), data.startTime);
     console.log('  - endTime valid date?', data.endTime ? !isNaN(new Date(data.endTime).getTime()) : 'N/A', data.endTime);
 
@@ -60,7 +55,6 @@ export const equipmentAssignmentService = {
         '/equipment-assignments',
         data
       );
-      console.log('[EquipmentAssignmentService] Assignment created successfully');
       return response.data.data!;
     } catch (error: unknown) {
       console.error('[EquipmentAssignmentService] Error creating assignment:', error);

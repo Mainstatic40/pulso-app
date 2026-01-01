@@ -68,10 +68,8 @@ export const weeklyLogService = {
   },
 
   async create(data: CreateWeeklyLogRequest) {
-    console.log('[weeklyLogService.create] Sending data:', JSON.stringify(data, null, 2));
     try {
       const response = await api.post<ApiResponse<WeeklyLogWithUser>>('/weekly-logs', data);
-      console.log('[weeklyLogService.create] Response:', response.data);
       return response.data.data!;
     } catch (error: any) {
       console.error('[weeklyLogService.create] Error:', error.response?.data || error.message);

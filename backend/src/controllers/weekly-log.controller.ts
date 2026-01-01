@@ -78,9 +78,7 @@ export const weeklyLogController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      console.log('[WeeklyLog.create] Received body:', req.body);
       const input = req.body as CreateWeeklyLogInput;
-      console.log('[WeeklyLog.create] Parsed input:', {
         weekStart: input.weekStart,
         weekStartDay: input.weekStart?.getDay?.(),
         weekEnd: input.weekEnd,

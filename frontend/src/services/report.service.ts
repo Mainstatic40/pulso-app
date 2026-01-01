@@ -85,6 +85,16 @@ export const reportService = {
     return response.data.data || [];
   },
 
+  async getWeeklyLogsReport(filters: ReportFilters) {
+    const params: Record<string, string> = {};
+    if (filters.dateFrom) params.dateFrom = filters.dateFrom;
+    if (filters.dateTo) params.dateTo = filters.dateTo;
+    if (filters.userId) params.userId = filters.userId;
+
+    const response = await api.get<ApiResponse<unknown[]>>('/reports/weekly-logs', { params });
+    return response.data.data || [];
+  },
+
   async exportToExcel(type: 'hours' | 'tasks' | 'productivity', filters: ReportFilters) {
     const params: Record<string, string> = {};
     if (filters.dateFrom) params.dateFrom = filters.dateFrom;

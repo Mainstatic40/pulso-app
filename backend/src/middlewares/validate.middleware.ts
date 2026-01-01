@@ -23,8 +23,6 @@ export function validate(schema: AnyZodObject) {
           message: err.message,
         }));
 
-        console.log('[Validate] Validation error:', JSON.stringify(errors, null, 2));
-        console.log('[Validate] Request body was:', req.body);
 
         res.status(400).json({
           success: false,

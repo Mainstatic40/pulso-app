@@ -101,10 +101,8 @@ export const taskService = {
   },
 
   async create(data: CreateTaskRequest) {
-    console.log('[taskService.create] Sending data:', JSON.stringify(data, null, 2));
     try {
       const response = await api.post<ApiResponse<TaskWithRelations>>('/tasks', data);
-      console.log('[taskService.create] Response:', response.data);
       return response.data.data!;
     } catch (error) {
       console.error('[taskService.create] Error:', error);

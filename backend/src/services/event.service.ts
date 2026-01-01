@@ -243,17 +243,11 @@ export const eventService = {
     const { assigneeIds, days, additionalEquipmentIds, ...eventData } = input;
 
     // DEBUG: Log incoming data
-    console.log('=== event.service.create ===');
-    console.log('Input:', JSON.stringify(input, null, 2));
-    console.log('Days received:', days?.length || 0);
-    console.log('Additional equipment:', additionalEquipmentIds?.length || 0);
     days?.forEach((day, i) => {
-      console.log(`Day ${i + 1} (${day.date}):`, {
         note: day.note,
         shiftsCount: day.shifts?.length || 0,
       });
       day.shifts?.forEach((shift, j) => {
-        console.log(`  Shift ${j + 1}:`, {
           userId: shift.userId,
           startTime: shift.startTime,
           endTime: shift.endTime,
@@ -262,7 +256,6 @@ export const eventService = {
         });
       });
     });
-    console.log('=== End event.service input ===');
 
     // Validate assignees exist
     if (assigneeIds && assigneeIds.length > 0) {
