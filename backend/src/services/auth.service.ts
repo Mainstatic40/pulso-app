@@ -18,6 +18,7 @@ export interface AuthResponse {
     email: string;
     role: string;
     rfidTag: string | null;
+    profileImage: string | null;
     isActive: boolean;
     createdAt: Date;
   };
@@ -71,6 +72,7 @@ export const authService = {
         email: user.email,
         role: user.role,
         rfidTag: user.rfidTag,
+        profileImage: user.profileImage,
         isActive: user.isActive,
         createdAt: user.createdAt,
       },
@@ -116,6 +118,7 @@ export const authService = {
         email: true,
         role: true,
         rfidTag: true,
+        profileImage: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

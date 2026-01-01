@@ -68,7 +68,7 @@ const taskWithCommentsSelect = {
 type TaskWithRelations = Prisma.TaskGetPayload<{ select: typeof taskSelect }>;
 
 export const taskService = {
-  async findAll(query: ListTasksQuery): Promise<PaginatedResult<TaskWithRelations>> {
+  async findAll(query: ListTasksQuery, userId: string, userRole: string): Promise<PaginatedResult<TaskWithRelations>> {
     const { page = 1, limit = 10, status, priority, assigneeId, createdBy, dueDateFrom, dueDateTo } = query;
     const skip = (page - 1) * limit;
 
@@ -78,7 +78,16 @@ export const taskService = {
     if (priority) where.priority = priority;
     if (createdBy) where.createdBy = createdBy;
 
-    if (assigneeId) {
+    // Becarios only see tasks assigned to them
+    // Admin and supervisor see all tasks
+    if (userRole === 'becario') {
+      where.assignees = {
+        some: {
+          userId: userId,
+        },
+      };
+    } else if (assigneeId) {
+      // Admin/supervisor can filter by assignee if they want
       where.assignees = {
         some: {
           userId: assigneeId,

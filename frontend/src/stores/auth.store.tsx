@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User } from '../types';
+import { authService } from '../services/auth.service';
 
 interface AuthState {
   user: User | null;
@@ -26,7 +27,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (storedUser && accessToken) {
       try {
-        setUserState(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUserState(parsedUser);
+
+        // Refresh user data from server to get latest info (like profileImage)
+        authService.getMe().then((freshUser) => {
+          setUserState(freshUser);
+          localStorage.setItem('user', JSON.stringify(freshUser));
+        }).catch(() => {
+          // If refresh fails, keep using stored data
+          // Token might be expired - will be handled by axios interceptor
+        });
       } catch {
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');

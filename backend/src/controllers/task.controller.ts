@@ -11,7 +11,8 @@ export const taskController = {
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
       const query = req.query as unknown as ListTasksQuery;
-      const result = await taskService.findAll(query);
+      const { userId, role } = req.user!;
+      const result = await taskService.findAll(query, userId, role);
 
       res.json({
         success: true,
