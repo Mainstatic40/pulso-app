@@ -142,12 +142,6 @@ export const attachmentController = {
         });
       }
 
-        id: attachment.id,
-        filename: attachment.filename,
-        storedName: attachment.storedName,
-        mimeType: attachment.mimeType,
-      });
-
       const filePath = attachmentService.getFilePath(attachment.storedName);
 
       // Check if file exists
@@ -172,7 +166,6 @@ export const attachmentController = {
               error: { message: 'Error sending file' },
             });
           }
-        } else {
         }
       });
     } catch (error) {

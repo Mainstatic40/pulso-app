@@ -11,6 +11,7 @@ import {
   BarChart3,
   Camera,
   MessageCircle,
+  CreditCard,
 } from 'lucide-react';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import { cn } from '../../lib/utils';
@@ -26,6 +27,7 @@ const navItems = [
   { to: '/chat', icon: MessageCircle, label: 'Chat', roles: ['admin', 'supervisor', 'becario'], hasBadge: true },
   { to: '/weekly-log', icon: BookOpen, label: 'Bitacora Semanal', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/users', icon: Users, label: 'Usuarios', roles: ['admin', 'supervisor'] },
+  { to: '/rfid', icon: CreditCard, label: 'Credenciales RFID', roles: ['admin', 'supervisor'] },
   { to: '/reports', icon: BarChart3, label: 'Reportes', roles: ['admin', 'supervisor'] },
 ];
 

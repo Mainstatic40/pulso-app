@@ -11,8 +11,26 @@ const priorityConfig = {
   low: { label: 'Baja', dot: 'bg-green-500' },
 } as const;
 
-function formatDueDate(dateString: string): { text: string; isUrgent: boolean } {
-  const dueDate = new Date(dateString + 'T12:00:00');
+function formatDueDate(dateValue: string | Date | null | undefined): { text: string; isUrgent: boolean } {
+  if (!dateValue) {
+    return { text: 'Sin fecha', isUrgent: false };
+  }
+
+  // Handle both string and Date objects
+  let dueDate: Date;
+  if (typeof dateValue === 'string') {
+    // Extract just the date part (YYYY-MM-DD) to avoid timezone issues
+    const datePart = dateValue.split('T')[0];
+    dueDate = new Date(datePart + 'T12:00:00');
+  } else {
+    dueDate = new Date(dateValue);
+  }
+
+  // Check for invalid date
+  if (isNaN(dueDate.getTime())) {
+    return { text: 'Fecha inválida', isUrgent: false };
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 

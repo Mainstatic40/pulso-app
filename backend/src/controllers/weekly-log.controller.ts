@@ -79,11 +79,6 @@ export const weeklyLogController = {
   async create(req: Request, res: Response, next: NextFunction) {
     try {
       const input = req.body as CreateWeeklyLogInput;
-        weekStart: input.weekStart,
-        weekStartDay: input.weekStart?.getDay?.(),
-        weekEnd: input.weekEnd,
-        weekEndDay: input.weekEnd?.getDay?.(),
-      });
       const log = await weeklyLogService.create(input, req.user!.userId);
 
       res.status(201).json({

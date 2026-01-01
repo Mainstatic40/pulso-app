@@ -19,6 +19,7 @@ import checklistRoutes from './routes/checklist.routes';
 import attachmentRoutes from './routes/attachment.routes';
 import conversationRoutes from './routes/conversation.routes';
 import notificationRoutes from './routes/notification.routes';
+import rfidRoutes from './routes/rfid.routes';
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/search', searchRoutes);
 app.use('/api/attachments', attachmentRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/rfid', rfidRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

@@ -15,6 +15,7 @@ import { Users } from './pages/Users';
 import { Reports } from './pages/Reports';
 import { Equipment } from './pages/Equipment';
 import { Chat } from './pages/Chat';
+import { RfidManagement } from './pages/RfidManagement';
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
             <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor']} />}>
               <Route element={<Layout />}>
                 <Route path="/users" element={<Users />} />
+                <Route path="/rfid" element={<RfidManagement />} />
                 <Route path="/reports" element={<Reports />} />
               </Route>
             </Route>

@@ -242,21 +242,6 @@ export const eventService = {
   async create(input: CreateEventInput, creatorId: string): Promise<EventWithDetails> {
     const { assigneeIds, days, additionalEquipmentIds, ...eventData } = input;
 
-    // DEBUG: Log incoming data
-    days?.forEach((day, i) => {
-        note: day.note,
-        shiftsCount: day.shifts?.length || 0,
-      });
-      day.shifts?.forEach((shift, j) => {
-          userId: shift.userId,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
-          shiftType: shift.shiftType,
-          equipment: shift.equipment,
-        });
-      });
-    });
-
     // Validate assignees exist
     if (assigneeIds && assigneeIds.length > 0) {
       const users = await prisma.user.findMany({
