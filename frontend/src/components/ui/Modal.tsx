@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -56,7 +57,7 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
@@ -85,6 +86,7 @@ export function Modal({
         )}
         <div className="max-h-[calc(100vh-120px)] overflow-y-auto">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

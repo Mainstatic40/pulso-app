@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera, Clock, Sun, Sunset } from 'lucide-react';
+import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera, Clock, Sun, Sunset, Users, ClipboardList } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
@@ -48,16 +48,14 @@ interface TaskModalProps {
   onClose: () => void;
 }
 
-function formatDate(dateString: string): string {
-  // Fix timezone issue: extract just the date part (YYYY-MM-DD) and use noon to avoid UTC shift
-  // This handles both "2025-12-29" and "2025-12-29T00:00:00.000Z" formats
-  const datePart = dateString.split('T')[0]; // Extract YYYY-MM-DD
-  const dateToFormat = new Date(datePart + 'T12:00:00'); // Use noon local time
+function formatDateShort(dateString: string): string {
+  const datePart = dateString.split('T')[0];
+  const dateToFormat = new Date(datePart + 'T12:00:00');
 
   return dateToFormat.toLocaleDateString('es-MX', {
-    weekday: 'long',
+    weekday: 'short',
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
   });
 }
@@ -376,7 +374,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
   if (isEditing && task) {
     return (
-      <Modal isOpen={isOpen} onClose={handleClose} title="Editar Tarea" size="lg">
+      <Modal isOpen={isOpen} onClose={handleClose} title="Editar Tarea" size="2xl">
         <TaskForm
           task={task}
           existingAssignments={existingAssignmentsForForm}
@@ -389,14 +387,14 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Detalle de Tarea" size="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Detalle de Tarea" size="2xl">
       {isLoadingTask ? (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
       ) : task ? (
-        <div className="p-6">
-          {/* Header */}
+        <div className="p-6 space-y-4">
+          {/* 1. Header */}
           <div className="flex items-start justify-between gap-4">
             <h2 className="text-xl font-semibold text-gray-900">{task.title}</h2>
             {isAdminOrSupervisor && (
@@ -416,8 +414,8 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             )}
           </div>
 
-          {/* Status and Priority */}
-          <div className="mt-4 flex flex-wrap items-center gap-4">
+          {/* 2. Estado y Prioridad */}
+          <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">Estado:</span>
               {user && (
@@ -436,88 +434,47 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </div>
           </div>
 
-          {/* Description */}
-          {task.description && (
-            <div className="mt-6">
-              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <FileText className="h-4 w-4" />
-                Descripción
-              </h3>
-              <p className="mt-2 whitespace-pre-wrap text-gray-600">{task.description}</p>
-            </div>
-          )}
-
-          {/* Assignees */}
-          {task.assignees && task.assignees.length > 0 && (
-            <div className="mt-6">
-              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <User className="h-4 w-4" />
-                Asignados
-              </h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {task.assignees.map((assignee) => (
-                  <div
-                    key={assignee.user.id}
-                    className="flex items-center gap-2 rounded-full bg-gray-100 py-1 pl-1 pr-3"
-                  >
-                    <Avatar name={assignee.user.name} size="sm" />
-                    <span className="text-sm text-gray-700">{assignee.user.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Due Date and Execution Date together */}
-          <div className="mt-6 flex items-center gap-2 text-gray-600">
-            <Calendar className="h-4 w-4" />
-            <span className="text-sm">
-              Fecha límite: <strong>{formatDate(task.dueDate)}</strong>
-            </span>
-          </div>
-          {task.executionDate && (
-            <div className="mt-2 flex items-center gap-2 text-gray-600">
+          {/* 3. Sección de Fechas */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Calendar className="h-4 w-4" />
-              <span className="text-sm">
-                Fecha de ejecución: <strong>{formatDate(task.executionDate)}</strong>
-              </span>
+              Fechas
+            </h3>
+            <div className="mt-3 grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500">Fecha límite</p>
+                <p className="mt-1 font-medium text-gray-900">{formatDateShort(task.dueDate)}</p>
+              </div>
+              {task.executionDate && (
+                <div>
+                  <p className="text-xs text-gray-500">Fecha de ejecución</p>
+                  <p className="mt-1 font-medium text-gray-900">{formatDateShort(task.executionDate)}</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Client Requirements */}
-          {task.clientRequirements && (
-            <div className="mt-6 rounded-lg bg-yellow-50 p-4">
-              <h3 className="flex items-center gap-2 text-sm font-medium text-yellow-800">
-                <FileText className="h-4 w-4" />
-                Requisitos del Cliente
-              </h3>
-              <p className="mt-2 whitespace-pre-wrap text-yellow-700">
-                {task.clientRequirements}
-              </p>
-            </div>
-          )}
-
-          {/* Shift Information - only times */}
+          {/* 4. Sección de Horario */}
           {task.shift && (task.morningStartTime || task.afternoonStartTime) && (
-            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <h3 className="flex items-center gap-2 text-sm font-medium text-blue-800">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Clock className="h-4 w-4" />
                 Horario
               </h3>
-              <div className="mt-3 flex flex-wrap gap-4">
+              <div className="mt-3 space-y-2">
                 {(task.shift === 'morning' || task.shift === 'both') && task.morningStartTime && task.morningEndTime && (
                   <div className="flex items-center gap-2">
                     <Sun className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm text-blue-700">
-                      <strong>Mañana:</strong> {task.morningStartTime} - {task.morningEndTime}
+                    <span className="text-sm text-gray-700">
+                      Mañana: <strong>{task.morningStartTime} - {task.morningEndTime}</strong>
                     </span>
                   </div>
                 )}
                 {(task.shift === 'afternoon' || task.shift === 'both') && task.afternoonStartTime && task.afternoonEndTime && (
                   <div className="flex items-center gap-2">
                     <Sunset className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm text-blue-700">
-                      <strong>Tarde:</strong> {task.afternoonStartTime} - {task.afternoonEndTime}
+                    <span className="text-sm text-gray-700">
+                      Tarde: <strong>{task.afternoonStartTime} - {task.afternoonEndTime}</strong>
                     </span>
                   </div>
                 )}
@@ -525,18 +482,42 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </div>
           )}
 
-          {/* Equipment Assignments by User and Shift */}
+          {/* 5. Sección de Descripción */}
+          {task.description && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <FileText className="h-4 w-4" />
+                Descripción
+              </h3>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">{task.description}</p>
+            </div>
+          )}
+
+          {/* 6. Sección de Requisitos del Cliente */}
+          {task.clientRequirements && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                <ClipboardList className="h-4 w-4" />
+                Requisitos del Cliente
+              </h3>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-amber-700">
+                {task.clientRequirements}
+              </p>
+            </div>
+          )}
+
+          {/* 7. Sección de Distribución de Equipos */}
           {equipmentByUserAndShift.length > 0 && (
-            <div className="mt-6">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Camera className="h-4 w-4" />
                 Distribución de Equipos
               </h3>
-              <div className="mt-3 space-y-3">
+              <div className="mt-3 space-y-4">
                 {equipmentByUserAndShift.map((userEquipment) => (
                   <div
                     key={userEquipment.userId}
-                    className="rounded-lg border border-gray-200 p-3"
+                    className="rounded-lg border border-gray-200 bg-white p-3"
                   >
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-500" />
@@ -548,23 +529,19 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                       <div className="mt-3">
                         <div className="flex items-center gap-2 text-sm">
                           <Sun className="h-4 w-4 text-amber-500" />
-                          <span className="font-medium text-gray-700">Mañana</span>
-                          {userEquipment.morningTimeRange && (
-                            <span className="text-xs text-gray-500">
-                              ({userEquipment.morningTimeRange})
-                            </span>
-                          )}
+                          <span className="text-gray-600">
+                            Mañana {userEquipment.morningTimeRange && `(${userEquipment.morningTimeRange})`}
+                          </span>
                         </div>
-                        <div className="mt-2 ml-6 flex flex-wrap gap-2">
+                        <div className="mt-2 flex flex-wrap gap-1">
                           {userEquipment.shifts.morning.map((eq) => {
                             const config = categoryConfig[eq.category];
                             return (
                               <span
                                 key={eq.id}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.color}`}
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}
                               >
-                                <span className="text-[10px]">{config.label}:</span>
-                                {eq.name}
+                                {config.label}: {eq.name}
                               </span>
                             );
                           })}
@@ -577,23 +554,19 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                       <div className="mt-3">
                         <div className="flex items-center gap-2 text-sm">
                           <Sunset className="h-4 w-4 text-orange-500" />
-                          <span className="font-medium text-gray-700">Tarde</span>
-                          {userEquipment.afternoonTimeRange && (
-                            <span className="text-xs text-gray-500">
-                              ({userEquipment.afternoonTimeRange})
-                            </span>
-                          )}
+                          <span className="text-gray-600">
+                            Tarde {userEquipment.afternoonTimeRange && `(${userEquipment.afternoonTimeRange})`}
+                          </span>
                         </div>
-                        <div className="mt-2 ml-6 flex flex-wrap gap-2">
+                        <div className="mt-2 flex flex-wrap gap-1">
                           {userEquipment.shifts.afternoon.map((eq) => {
                             const config = categoryConfig[eq.category];
                             return (
                               <span
                                 key={eq.id}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.color}`}
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}
                               >
-                                <span className="text-[10px]">{config.label}:</span>
-                                {eq.name}
+                                {config.label}: {eq.name}
                               </span>
                             );
                           })}
@@ -606,7 +579,28 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </div>
           )}
 
-          {/* Comments Section */}
+          {/* 8. Sección de Personas Asignadas */}
+          {task.assignees && task.assignees.length > 0 && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <Users className="h-4 w-4" />
+                Asignados
+              </h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {task.assignees.map((assignee) => (
+                  <div
+                    key={assignee.user.id}
+                    className="flex items-center gap-2 rounded-full bg-white border border-gray-200 py-1 pl-1 pr-3"
+                  >
+                    <Avatar name={assignee.user.name} size="sm" />
+                    <span className="text-sm text-gray-700">{assignee.user.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 9. Comments Section */}
           <div className="mt-8 border-t border-gray-200 pt-6">
             <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <MessageSquare className="h-4 w-4" />

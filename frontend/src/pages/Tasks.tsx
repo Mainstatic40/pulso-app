@@ -258,7 +258,7 @@ export function Tasks() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="Nueva Tarea"
-        size="lg"
+        size="2xl"
       >
         <TaskForm
           onSubmit={handleCreateTask}
