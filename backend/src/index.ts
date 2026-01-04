@@ -20,6 +20,7 @@ import attachmentRoutes from './routes/attachment.routes';
 import conversationRoutes from './routes/conversation.routes';
 import notificationRoutes from './routes/notification.routes';
 import rfidRoutes from './routes/rfid.routes';
+import equipmentLoanRoutes from './routes/equipment-loan.routes';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/attachments', attachmentRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rfid', rfidRoutes);
+app.use('/api/equipment-loans', equipmentLoanRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

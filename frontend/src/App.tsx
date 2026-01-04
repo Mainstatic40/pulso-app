@@ -14,6 +14,7 @@ import { WeeklyLog } from './pages/WeeklyLog';
 import { Users } from './pages/Users';
 import { Reports } from './pages/Reports';
 import { Equipment } from './pages/Equipment';
+import { EquipmentLoans } from './pages/EquipmentLoans';
 import { Chat } from './pages/Chat';
 import { RfidManagement } from './pages/RfidManagement';
 
@@ -36,6 +37,7 @@ function App() {
                 <Route path="/events" element={<Events />} />
                 <Route path="/calendar" element={<Calendar />} />
                 <Route path="/equipment" element={<Equipment />} />
+                <Route path="/equipment-loans" element={<EquipmentLoans />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/weekly-log" element={<WeeklyLog />} />
               </Route>

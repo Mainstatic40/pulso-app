@@ -204,6 +204,7 @@ export interface Equipment {
   status: EquipmentStatus;
   description?: string;
   serialNumber?: string;
+  rfidTag?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

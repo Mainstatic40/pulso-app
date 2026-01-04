@@ -64,4 +64,21 @@ export const equipmentService = {
     const response = await api.get<ApiResponse<Equipment[]>>('/equipment/available', { params });
     return response.data.data || [];
   },
+
+  async getWithoutRfid(): Promise<Equipment[]> {
+    const response = await api.get<ApiResponse<Equipment[]>>('/equipment', {
+      params: { withoutRfid: true, limit: 100 },
+    });
+    return response.data.data || [];
+  },
+
+  async linkRfid(equipmentId: string, rfidTag: string) {
+    const response = await api.post<ApiResponse<Equipment>>(`/equipment/${equipmentId}/link-rfid`, { rfidTag });
+    return response.data.data!;
+  },
+
+  async unlinkRfid(equipmentId: string) {
+    const response = await api.delete<ApiResponse<Equipment>>(`/equipment/${equipmentId}/unlink-rfid`);
+    return response.data.data!;
+  },
 };

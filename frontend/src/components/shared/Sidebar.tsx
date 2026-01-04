@@ -10,6 +10,7 @@ import {
   Users,
   BarChart3,
   Camera,
+  Package,
   MessageCircle,
   CreditCard,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/events', icon: Calendar, label: 'Eventos', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/calendar', icon: CalendarDays, label: 'Calendario', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/equipment', icon: Camera, label: 'Equipos', roles: ['admin', 'supervisor', 'becario'] },
+  { to: '/equipment-loans', icon: Package, label: 'Uso Equipos', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/chat', icon: MessageCircle, label: 'Chat', roles: ['admin', 'supervisor', 'becario'], hasBadge: true },
   { to: '/weekly-log', icon: BookOpen, label: 'Bitacora Semanal', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/users', icon: Users, label: 'Usuarios', roles: ['admin', 'supervisor'] },

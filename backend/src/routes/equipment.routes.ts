@@ -70,4 +70,18 @@ router.delete(
   equipmentController.delete
 );
 
+// POST /api/equipment/:id/link-rfid - Link RFID to equipment (admin/supervisor)
+router.post(
+  '/:id/link-rfid',
+  authorize('admin', 'supervisor'),
+  equipmentController.linkRfid
+);
+
+// DELETE /api/equipment/:id/unlink-rfid - Unlink RFID from equipment (admin/supervisor)
+router.delete(
+  '/:id/unlink-rfid',
+  authorize('admin', 'supervisor'),
+  equipmentController.unlinkRfid
+);
+
 export default router;

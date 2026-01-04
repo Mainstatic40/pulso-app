@@ -13,4 +13,7 @@ export const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  rfid: {
+    apiKey: process.env.RFID_API_KEY || 'pulso-rfid-secret-key-2024',
+  },
 };

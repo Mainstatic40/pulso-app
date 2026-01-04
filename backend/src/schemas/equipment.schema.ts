@@ -19,6 +19,10 @@ export const listEquipmentSchema = z.object({
       .string()
       .optional()
       .transform((val) => (val === 'true' ? true : val === 'false' ? false : undefined)),
+    withoutRfid: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true'),
   }),
 });
 

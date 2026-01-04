@@ -109,4 +109,41 @@ export const equipmentController = {
       next(error);
     }
   },
+
+  async linkRfid(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { rfidTag } = req.body;
+
+      if (!rfidTag) {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'rfidTag es requerido' },
+        });
+      }
+
+      const equipment = await equipmentService.linkRfidToEquipment(id, rfidTag.toUpperCase());
+
+      res.json({
+        success: true,
+        data: equipment,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async unlinkRfid(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const equipment = await equipmentService.unlinkRfidFromEquipment(id);
+
+      res.json({
+        success: true,
+        data: equipment,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 };

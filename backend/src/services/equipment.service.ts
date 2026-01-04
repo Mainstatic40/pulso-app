@@ -73,6 +73,7 @@ const equipmentSelect = {
   status: true,
   description: true,
   serialNumber: true,
+  rfidTag: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -121,7 +122,7 @@ export const equipmentService = {
     // Sincronizar estados antes de devolver la lista
     await syncEquipmentStatuses();
 
-    const { page = 1, limit = 10, category, status, isActive } = query;
+    const { page = 1, limit = 10, category, status, isActive, withoutRfid } = query;
     const skip = (page - 1) * limit;
 
     const where: Prisma.EquipmentWhereInput = {};
@@ -129,6 +130,7 @@ export const equipmentService = {
     if (category) where.category = category;
     if (status) where.status = status;
     if (isActive !== undefined) where.isActive = isActive;
+    if (withoutRfid) where.rfidTag = null;
 
     const [equipment, total] = await Promise.all([
       prisma.equipment.findMany({
@@ -287,6 +289,68 @@ export const equipmentService = {
       equipment.status === EquipmentStatus.available &&
       equipment.assignments.length === 0
     );
+  },
+
+  // Vincular RFID a equipo
+  async linkRfidToEquipment(equipmentId: string, rfidTag: string) {
+    const existingEquipment = await prisma.equipment.findUnique({
+      where: { id: equipmentId },
+    });
+
+    if (!existingEquipment) {
+      throw new NotFoundError('Equipo no encontrado');
+    }
+
+    // Verificar que el RFID no esté en uso por otro equipo
+    const equipmentWithRfid = await prisma.equipment.findUnique({
+      where: { rfidTag },
+    });
+
+    if (equipmentWithRfid && equipmentWithRfid.id !== equipmentId) {
+      throw new ValidationError(`Este RFID ya está asignado al equipo: ${equipmentWithRfid.name}`);
+    }
+
+    // Verificar que el RFID no esté asignado a un usuario
+    const userWithRfid = await prisma.user.findUnique({
+      where: { rfidTag },
+    });
+
+    if (userWithRfid) {
+      throw new ValidationError(`Este RFID ya está asignado al usuario: ${userWithRfid.name}`);
+    }
+
+    // Eliminar de pendientes si existe
+    await prisma.pendingRfid.deleteMany({
+      where: { rfidTag },
+    });
+
+    // Actualizar equipo
+    const equipment = await prisma.equipment.update({
+      where: { id: equipmentId },
+      data: { rfidTag },
+      select: equipmentSelect,
+    });
+
+    return equipment;
+  },
+
+  // Desvincular RFID de equipo
+  async unlinkRfidFromEquipment(equipmentId: string) {
+    const existingEquipment = await prisma.equipment.findUnique({
+      where: { id: equipmentId },
+    });
+
+    if (!existingEquipment) {
+      throw new NotFoundError('Equipo no encontrado');
+    }
+
+    const equipment = await prisma.equipment.update({
+      where: { id: equipmentId },
+      data: { rfidTag: null },
+      select: equipmentSelect,
+    });
+
+    return equipment;
   },
 
   /**

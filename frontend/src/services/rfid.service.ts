@@ -12,15 +12,16 @@ export interface RfidUser {
 }
 
 export interface RfidScanResult {
-  action: 'clock_in' | 'clock_out';
-  user: { id: string; name: string; email: string };
+  action: 'clock_in' | 'clock_out' | 'pending';
+  user: { id: string; name: string; email: string } | null;
   timeEntry: {
     id: string;
     clockIn: string;
     clockOut: string | null;
     totalHours: number | null;
-  };
+  } | null;
   message: string;
+  rfidTag?: string;
 }
 
 export interface RfidCheckResult {
@@ -28,10 +29,21 @@ export interface RfidCheckResult {
   user: { id: string; name: string; email: string } | null;
 }
 
+export interface PendingRfid {
+  id: string;
+  rfidTag: string;
+  scannedAt: string;
+  note?: string;
+}
+
 export const rfidService = {
-  // Simular escaneo RFID (para pruebas)
+  // Simular escaneo RFID (para pruebas desde el navegador)
   async scan(rfidTag: string): Promise<RfidScanResult> {
-    const response = await api.post<ApiResponse<RfidScanResult>>('/rfid/scan', { rfidTag });
+    const response = await api.post<ApiResponse<RfidScanResult>>(
+      '/rfid/scan',
+      { rfidTag },
+      { headers: { 'x-api-key': 'pulso-rfid-secret-key-2024' } }
+    );
     return response.data.data!;
   },
 
@@ -57,5 +69,16 @@ export const rfidService = {
   async checkRfidTag(rfidTag: string): Promise<RfidCheckResult> {
     const response = await api.get<ApiResponse<RfidCheckResult>>(`/rfid/check/${rfidTag}`);
     return response.data.data!;
+  },
+
+  // Obtener credenciales pendientes
+  async getPending(): Promise<PendingRfid[]> {
+    const response = await api.get<ApiResponse<PendingRfid[]>>('/rfid/pending');
+    return response.data.data!;
+  },
+
+  // Eliminar credencial pendiente
+  async deletePending(rfidTag: string): Promise<void> {
+    await api.delete(`/rfid/pending/${encodeURIComponent(rfidTag)}`);
   },
 };

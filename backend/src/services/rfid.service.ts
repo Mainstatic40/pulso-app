@@ -14,7 +14,31 @@ export const rfidService = {
     });
 
     if (!user) {
-      throw new NotFoundError('RFID no registrado en el sistema');
+      // En lugar de error, registrar como pendiente
+      const existingPending = await prisma.pendingRfid.findUnique({
+        where: { rfidTag },
+      });
+
+      if (!existingPending) {
+        // Crear nuevo pendiente
+        await prisma.pendingRfid.create({
+          data: { rfidTag },
+        });
+      } else {
+        // Actualizar fecha de escaneo
+        await prisma.pendingRfid.update({
+          where: { rfidTag },
+          data: { scannedAt: new Date() },
+        });
+      }
+
+      return {
+        action: 'pending' as const,
+        user: null,
+        timeEntry: null,
+        message: 'Credencial registrada - Pendiente de asignar',
+        rfidTag: rfidTag,
+      };
     }
 
     if (!user.isActive) {
@@ -91,6 +115,11 @@ export const rfidService = {
       throw new ValidationError(`Este RFID ya está asignado a ${userWithRfid.name}`);
     }
 
+    // Eliminar de pendientes si existe
+    await prisma.pendingRfid.deleteMany({
+      where: { rfidTag },
+    });
+
     // Actualizar usuario
     const user = await prisma.user.update({
       where: { id: userId },
@@ -145,5 +174,27 @@ export const rfidService = {
       isAssigned: !!user,
       user: user || null,
     };
+  },
+
+  // Obtener credenciales pendientes
+  async getPendingRfids() {
+    return prisma.pendingRfid.findMany({
+      orderBy: { scannedAt: 'desc' },
+    });
+  },
+
+  // Eliminar credencial pendiente (cuando se descarta)
+  async deletePendingRfid(rfidTag: string) {
+    const pending = await prisma.pendingRfid.findUnique({
+      where: { rfidTag },
+    });
+
+    if (!pending) {
+      throw new NotFoundError('Credencial pendiente no encontrada');
+    }
+
+    return prisma.pendingRfid.delete({
+      where: { rfidTag },
+    });
   },
 };

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Edit2, Trash2, User, Calendar, Hash } from 'lucide-react';
+import { Edit2, Trash2, User, Calendar, Hash, CreditCard, Link as LinkIcon, Unlink, Loader2, Info } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { Spinner } from '../ui/Spinner';
 import { EquipmentForm } from './EquipmentForm';
 import { EquipmentStatusBadge } from './EquipmentStatusBadge';
@@ -30,8 +31,11 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
+  const [newRfidTag, setNewRfidTag] = useState('');
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
 
   const isAdmin = user?.role === 'admin';
+  const canManageRfid = user?.role === 'admin' || user?.role === 'supervisor';
 
   const { data: equipment, isLoading } = useQuery({
     queryKey: ['equipment', equipmentId],
@@ -55,6 +59,33 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
     },
   });
 
+  const linkRfidMutation = useMutation({
+    mutationFn: (rfidTag: string) => equipmentService.linkRfid(equipmentId!, rfidTag),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-without-rfid'] });
+      setNewRfidTag('');
+    },
+  });
+
+  const unlinkRfidMutation = useMutation({
+    mutationFn: () => equipmentService.unlinkRfid(equipmentId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-without-rfid'] });
+      setShowUnlinkConfirm(false);
+    },
+  });
+
+  const handleLinkRfid = () => {
+    if (!newRfidTag.trim()) return;
+    linkRfidMutation.mutate(newRfidTag.trim().toUpperCase());
+  };
+
+  const handleUnlinkRfid = () => {
+    unlinkRfidMutation.mutate();
+  };
+
   const handleDelete = () => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este equipo?')) {
       deleteMutation.mutate();
@@ -63,6 +94,8 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
 
   const handleClose = () => {
     setIsEditing(false);
+    setNewRfidTag('');
+    setShowUnlinkConfirm(false);
     onClose();
   };
 
@@ -156,6 +189,89 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* RFID Tag Section */}
+          {canManageRfid && (
+            <div className="mt-6">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <CreditCard className="h-4 w-4" />
+                RFID Tag
+              </h3>
+              <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                {equipment.rfidTag ? (
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-lg font-semibold text-gray-900">
+                      {equipment.rfidTag}
+                    </span>
+                    {showUnlinkConfirm ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">¿Desvincular?</span>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={handleUnlinkRfid}
+                          disabled={unlinkRfidMutation.isPending}
+                        >
+                          {unlinkRfidMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            'Sí'
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowUnlinkConfirm(false)}
+                        >
+                          No
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowUnlinkConfirm(true)}
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Unlink className="mr-1 h-3 w-3" />
+                        Desvincular
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-500">Sin RFID asignado</p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={newRfidTag}
+                        onChange={(e) => setNewRfidTag(e.target.value)}
+                        placeholder="Ingresa el tag RFID..."
+                        className="flex-1"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleLinkRfid}
+                        disabled={!newRfidTag.trim() || linkRfidMutation.isPending}
+                      >
+                        {linkRfidMutation.isPending ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : (
+                          <LinkIcon className="mr-1 h-3 w-3" />
+                        )}
+                        Vincular
+                      </Button>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-gray-500">
+                      <Info className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                      <span>
+                        También puedes escanear el RFID en el lector y asignarlo desde la página de Credenciales RFID.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

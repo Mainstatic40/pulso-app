@@ -9,6 +9,8 @@ PULSO es un sistema de gestión de horas de trabajo y tareas para una oficina de
 - Asignación de equipos a tareas por turno y usuario
 - Gestión de eventos especiales con asignación de personal
 - Gestión de equipos con asignación por turnos no solapados
+- **Sistema RFID completo** para registro de horas y tracking de equipos
+- **Historial de uso de equipos** mediante escaneo RFID
 - Calendario nativo con vistas de mes, semana y dia
 - Bitácora semanal para que los becarios documenten su progreso
 - Reportes exportables a Excel
@@ -89,6 +91,8 @@ pulso-app/
 │   │   │   ├── WeeklyLog.tsx
 │   │   │   ├── Users.tsx
 │   │   │   ├── Equipment.tsx
+│   │   │   ├── EquipmentLoans.tsx  # Historial de uso de equipos
+│   │   │   ├── RfidManagement.tsx  # Gestión de credenciales RFID pendientes
 │   │   │   └── Reports.tsx
 │   │   ├── hooks/            # Custom hooks
 │   │   ├── services/         # Llamadas a API (axios)
@@ -218,6 +222,7 @@ model User {
   weeklyLogs           WeeklyLog[]
   equipmentAssignments EquipmentAssignment[] @relation("EquipmentUser")
   createdAssignments   EquipmentAssignment[] @relation("AssignmentCreator")
+  equipmentUsageLogs   EquipmentUsageLog[]
 
   @@index([role])
   @@index([isActive])
@@ -403,11 +408,13 @@ model Equipment {
   status       EquipmentStatus   @default(available)
   description  String?           @db.Text
   serialNumber String?           @map("serial_number") @db.VarChar(100)
+  rfidTag      String?           @unique @map("rfid_tag") @db.VarChar(50)
   isActive     Boolean           @default(true) @map("is_active")
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
 
-  assignments EquipmentAssignment[]
+  assignments   EquipmentAssignment[]
+  usageLogItems EquipmentUsageLogItem[]
 
   @@index([category])
   @@index([status])
@@ -439,6 +446,42 @@ model EquipmentAssignment {
   @@index([eventShiftId])
   @@index([startTime])
   @@map("equipment_assignments")
+}
+
+model PendingRfid {
+  id          String   @id @default(uuid())
+  rfidTag     String   @unique @map("rfid_tag") @db.VarChar(50)
+  description String?  @db.Text
+  scannedAt   DateTime @default(now()) @map("scanned_at")
+
+  @@index([scannedAt])
+  @@map("pending_rfids")
+}
+
+model EquipmentUsageLog {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  loggedAt DateTime @default(now()) @map("logged_at")
+
+  user  User                    @relation(fields: [userId], references: [id])
+  items EquipmentUsageLogItem[]
+
+  @@index([userId])
+  @@index([loggedAt])
+  @@map("equipment_usage_logs")
+}
+
+model EquipmentUsageLogItem {
+  id          String @id @default(uuid())
+  logId       String @map("log_id")
+  equipmentId String @map("equipment_id")
+
+  log       EquipmentUsageLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  equipment Equipment         @relation(fields: [equipmentId], references: [id])
+
+  @@index([logId])
+  @@index([equipmentId])
+  @@map("equipment_usage_log_items")
 }
 ```
 
@@ -538,6 +581,24 @@ POST   /api/equipment-assignments              # Crear asignación(es)
 PUT    /api/equipment-assignments/:id          # Actualizar asignación
 POST   /api/equipment-assignments/:id/return   # Devolver equipo
 DELETE /api/equipment-assignments/:id          # Eliminar asignación
+```
+
+### Historial de Uso de Equipos (RFID)
+```
+POST   /api/equipment-loans/scan                        # Escaneo RFID desde ESP32 (público con API key)
+GET    /api/equipment-loans/history                     # Historial de uso (filtros: userId, startDate, endDate)
+GET    /api/equipment-loans/equipment/:equipmentId/history  # Historial de un equipo específico
+GET    /api/equipment-loans/session                     # Ver sesión activa de escaneo
+```
+
+### Credenciales RFID Pendientes
+```
+GET    /api/rfid/pending                       # Listar tags RFID pendientes de asignar
+DELETE /api/rfid/pending/:id                   # Eliminar tag pendiente
+POST   /api/users/:id/rfid                     # Vincular RFID a usuario
+DELETE /api/users/:id/rfid                     # Desvincular RFID de usuario
+POST   /api/equipment/:id/rfid                 # Vincular RFID a equipo
+DELETE /api/equipment/:id/rfid                 # Desvincular RFID de equipo
 ```
 
 ### Reportes
@@ -789,6 +850,64 @@ Funcionalidad para exportar tareas como imagen:
 3. Click en "Descargar PNG"
 4. Se genera imagen con resolución 2x
 
+### Sistema RFID y Credenciales
+
+Sistema completo de gestión de credenciales RFID para usuarios y equipos:
+
+**Flujo de escaneo RFID:**
+1. ESP32 envía tag RFID a `/api/equipment-loans/scan` con API key
+2. Sistema identifica si es usuario o equipo
+3. Si es usuario: inicia sesión de uso de equipos (3 min timeout)
+4. Si es equipo: registra uso del equipo en la sesión activa
+5. Tags desconocidos se guardan como `PendingRfid`
+
+**Sesión de uso de equipos:**
+- Una sola sesión activa a la vez (en memoria)
+- Timeout de 3 minutos después del último escaneo de equipo
+- Al cerrar sesión, se crea `EquipmentUsageLog` con todos los equipos escaneados
+
+**Gestión de RFID pendientes (RfidManagement.tsx):**
+- Toggle para asignar a Usuario o Equipo
+- Lista de tags pendientes con opción de eliminar
+- Selector de usuario/equipo para vincular
+- Se elimina automáticamente de pendientes al vincular
+
+**RFID en equipos (EquipmentModal.tsx):**
+- Sección RFID en el modal de edición
+- Muestra tag actual o permite vincular uno nuevo
+- Input manual de tag RFID
+- Opción de desvincular
+
+**Backend:**
+- `rfid.controller.ts` - Endpoints para gestión de pendientes
+- `equipment-loan.service.ts` - Lógica de sesiones y logging
+- Variable de entorno: `RFID_API_KEY` para autenticar ESP32
+
+### Historial de Uso de Equipos
+
+Vista simplificada del uso de equipos (EquipmentLoans.tsx):
+
+**Características:**
+- Historial agrupado por fecha (Hoy, Ayer, fechas anteriores)
+- Cards por log con avatar del usuario y equipos usados
+- Filtros por usuario y rango de fechas
+- Polling cada 10 segundos para actualizaciones
+- Iconos por categoría de equipo (📷 cámara, 🔭 lente, 💾 SD, 🔌 adaptador)
+
+**Estructura de datos:**
+```typescript
+interface EquipmentUsageLog {
+  id: string;
+  userId: string;
+  loggedAt: string;
+  user: { id: string; name: string; profileImage?: string };
+  items: Array<{
+    id: string;
+    equipment: { id: string; name: string; category: string };
+  }>;
+}
+```
+
 ---
 
 ## 🔧 Comandos Útiles
@@ -999,8 +1118,14 @@ app.use(cors({
 - [x] Tablero Kanban con drag & drop
 - [x] Exportar tarea como imagen PNG
 
+### Fase 5 (Sistema RFID) ✅
+- [x] Sistema RFID para tracking de equipos
+- [x] Gestión de credenciales RFID pendientes
+- [x] Asignación de RFID a usuarios y equipos
+- [x] Historial de uso de equipos con filtros
+- [x] Sesiones de escaneo con timeout automático
+
 ### Pendiente
-- [ ] Integración RFID (endpoint listo, pendiente hardware)
 - [ ] App móvil (React Native)
 - [ ] Testing automatizado
 - [ ] Despliegue en producción
@@ -1020,6 +1145,7 @@ JWT_SECRET=your-super-secret-jwt-key-min-32-chars
 JWT_REFRESH_SECRET=your-refresh-secret-key-min-32-chars
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
+RFID_API_KEY=your-rfid-api-key-for-esp32
 
 # Frontend
 VITE_API_URL=http://localhost:3000/api
@@ -1027,5 +1153,5 @@ VITE_API_URL=http://localhost:3000/api
 
 ---
 
-**Última actualización:** 1 Enero 2026
-**Versión del documento:** 3.1
+**Última actualización:** 4 Enero 2026
+**Versión del documento:** 3.2

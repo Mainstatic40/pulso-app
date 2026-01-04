@@ -73,6 +73,7 @@ model User {
   conversationParticipants ConversationParticipant[]
   messages                 Message[]
   notifications            Notification[]
+  equipmentUsageLogs       EquipmentUsageLog[]
 
   @@index([role])
   @@index([isActive])
@@ -277,11 +278,13 @@ model Equipment {
   status       EquipmentStatus   @default(available)
   description  String?           @db.Text
   serialNumber String?           @map("serial_number") @db.VarChar(100)
+  rfidTag      String?           @unique @map("rfid_tag") @db.VarChar(50)
   isActive     Boolean           @default(true) @map("is_active")
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
 
-  assignments EquipmentAssignment[]
+  assignments    EquipmentAssignment[]
+  usageLogItems  EquipmentUsageLogItem[]
 
   @@index([category])
   @@index([status])
@@ -414,4 +417,40 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+model PendingRfid {
+  id        String   @id @default(uuid())
+  rfidTag   String   @unique @map("rfid_tag") @db.VarChar(50)
+  scannedAt DateTime @default(now()) @map("scanned_at")
+  note      String?  @db.VarChar(255)
+
+  @@index([scannedAt])
+  @@map("pending_rfids")
+}
+
+model EquipmentUsageLog {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  loggedAt DateTime @default(now()) @map("logged_at")
+
+  user  User                    @relation(fields: [userId], references: [id])
+  items EquipmentUsageLogItem[]
+
+  @@index([userId])
+  @@index([loggedAt])
+  @@map("equipment_usage_logs")
+}
+
+model EquipmentUsageLogItem {
+  id          String @id @default(uuid())
+  logId       String @map("log_id")
+  equipmentId String @map("equipment_id")
+
+  log       EquipmentUsageLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  equipment Equipment         @relation(fields: [equipmentId], references: [id])
+
+  @@index([logId])
+  @@index([equipmentId])
+  @@map("equipment_usage_log_items")
 }

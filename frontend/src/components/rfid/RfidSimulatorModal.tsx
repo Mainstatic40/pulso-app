@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Wifi, CheckCircle, XCircle, Clock, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { Wifi, CheckCircle, XCircle, Clock, LogIn, LogOut, Loader2, AlertTriangle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -33,6 +33,8 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
       setError(null);
       // Invalidate time entries to update dashboard
       queryClient.invalidateQueries({ queryKey: ['time-entries'] });
+      // Invalidate pending RFIDs in case this was a new pending scan
+      queryClient.invalidateQueries({ queryKey: ['rfid-pending'] });
     },
     onError: (err: Error & { response?: { data?: { error?: { message?: string } } } }) => {
       setError(err.response?.data?.error?.message || err.message || 'Error al escanear RFID');
@@ -111,7 +113,25 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
         </div>
 
         {/* Result */}
-        {result && (
+        {result && result.action === 'pending' && (
+          <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-6 w-6 text-amber-600" />
+              <div className="flex-1">
+                <p className="font-semibold text-amber-800">Credencial Pendiente</p>
+                <div className="mt-2 space-y-1 text-sm">
+                  <p className="text-gray-700">
+                    <span className="font-medium">RFID:</span> {result.rfidTag}
+                  </p>
+                  <p className="text-gray-600">{result.message}</p>
+                </div>
+              </div>
+              <Clock className="h-5 w-5 text-amber-500" />
+            </div>
+          </div>
+        )}
+
+        {result && (result.action === 'clock_in' || result.action === 'clock_out') && (
           <div className={`rounded-lg border-2 p-4 ${
             result.action === 'clock_in'
               ? 'border-green-200 bg-green-50'
@@ -131,16 +151,16 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
                 </p>
                 <div className="mt-2 space-y-1 text-sm">
                   <p className="text-gray-700">
-                    <span className="font-medium">Usuario:</span> {result.user.name}
+                    <span className="font-medium">Usuario:</span> {result.user?.name}
                   </p>
                   <p className="text-gray-700">
                     <span className="font-medium">Hora:</span> {formatTime(
                       result.action === 'clock_in'
-                        ? result.timeEntry.clockIn
-                        : result.timeEntry.clockOut!
+                        ? result.timeEntry!.clockIn
+                        : result.timeEntry!.clockOut!
                     )}
                   </p>
-                  {result.action === 'clock_out' && result.timeEntry.totalHours && (
+                  {result.action === 'clock_out' && result.timeEntry?.totalHours && (
                     <p className="text-gray-700">
                       <span className="font-medium">Total horas:</span> {result.timeEntry.totalHours.toFixed(2)}h
                     </p>

@@ -10,6 +10,9 @@ import {
   Unlink,
   Loader2,
   AlertTriangle,
+  Clock,
+  Trash2,
+  Camera,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -18,13 +21,36 @@ import { Select } from '../components/ui/Select';
 import { Avatar } from '../components/ui/Avatar';
 import { Spinner } from '../components/ui/Spinner';
 import { RfidSimulatorModal } from '../components/rfid/RfidSimulatorModal';
-import { rfidService, type RfidUser } from '../services/rfid.service';
+import { rfidService, type RfidUser, type PendingRfid } from '../services/rfid.service';
+import { equipmentService } from '../services/equipment.service';
+import type { Equipment } from '../types';
+
+// Helper function for relative time
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'hace unos segundos';
+  if (diffMins < 60) return `hace ${diffMins} minuto${diffMins === 1 ? '' : 's'}`;
+  if (diffHours < 24) return `hace ${diffHours} hora${diffHours === 1 ? '' : 's'}`;
+  return `hace ${diffDays} día${diffDays === 1 ? '' : 's'}`;
+}
+
+type AssignmentType = 'user' | 'equipment';
 
 export function RfidManagement() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [newRfidTag, setNewRfidTag] = useState('');
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [unlinkConfirm, setUnlinkConfirm] = useState<string | null>(null);
+  const [discardConfirm, setDiscardConfirm] = useState<string | null>(null);
+  const [pendingUserSelections, setPendingUserSelections] = useState<Record<string, string>>({});
+  const [pendingEquipmentSelections, setPendingEquipmentSelections] = useState<Record<string, string>>({});
+  const [pendingAssignmentTypes, setPendingAssignmentTypes] = useState<Record<string, AssignmentType>>({});
   const queryClient = useQueryClient();
 
   // Fetch users with RFID status
@@ -33,14 +59,41 @@ export function RfidManagement() {
     queryFn: () => rfidService.getUsersWithRfid(),
   });
 
-  // Link RFID mutation
+  // Fetch equipment without RFID
+  const { data: equipmentWithoutRfid = [] } = useQuery({
+    queryKey: ['equipment-without-rfid'],
+    queryFn: () => equipmentService.getWithoutRfid(),
+  });
+
+  // Fetch pending RFIDs with polling every 10 seconds
+  const { data: pendingRfids } = useQuery({
+    queryKey: ['rfid-pending'],
+    queryFn: () => rfidService.getPending(),
+    refetchInterval: 10000,
+  });
+
+  // Link RFID to user mutation
   const linkMutation = useMutation({
     mutationFn: ({ userId, rfidTag }: { userId: string; rfidTag: string }) =>
       rfidService.linkRfid(userId, rfidTag),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rfid-users'] });
+      queryClient.invalidateQueries({ queryKey: ['rfid-pending'] });
       setSelectedUserId('');
       setNewRfidTag('');
+      setPendingUserSelections({});
+    },
+  });
+
+  // Link RFID to equipment mutation
+  const linkEquipmentMutation = useMutation({
+    mutationFn: ({ equipmentId, rfidTag }: { equipmentId: string; rfidTag: string }) =>
+      equipmentService.linkRfid(equipmentId, rfidTag),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment-without-rfid'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['rfid-pending'] });
+      setPendingEquipmentSelections({});
     },
   });
 
@@ -53,13 +106,62 @@ export function RfidManagement() {
     },
   });
 
+  // Delete pending mutation
+  const deletePendingMutation = useMutation({
+    mutationFn: (rfidTag: string) => rfidService.deletePending(rfidTag),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rfid-pending'] });
+      setDiscardConfirm(null);
+    },
+  });
+
   const handleLink = () => {
     if (!selectedUserId || !newRfidTag.trim()) return;
     linkMutation.mutate({ userId: selectedUserId, rfidTag: newRfidTag.trim() });
   };
 
+  const handleLinkPending = (rfidTag: string) => {
+    const assignmentType = pendingAssignmentTypes[rfidTag] || 'user';
+
+    if (assignmentType === 'user') {
+      const userId = pendingUserSelections[rfidTag];
+      if (!userId) return;
+      linkMutation.mutate({ userId, rfidTag });
+    } else {
+      const equipmentId = pendingEquipmentSelections[rfidTag];
+      if (!equipmentId) return;
+      linkEquipmentMutation.mutate({ equipmentId, rfidTag });
+    }
+  };
+
+  const getAssignmentType = (rfidTag: string): AssignmentType => {
+    return pendingAssignmentTypes[rfidTag] || 'user';
+  };
+
+  const setAssignmentType = (rfidTag: string, type: AssignmentType) => {
+    setPendingAssignmentTypes((prev) => ({ ...prev, [rfidTag]: type }));
+    // Clear selections when switching type
+    if (type === 'user') {
+      setPendingEquipmentSelections((prev) => {
+        const updated = { ...prev };
+        delete updated[rfidTag];
+        return updated;
+      });
+    } else {
+      setPendingUserSelections((prev) => {
+        const updated = { ...prev };
+        delete updated[rfidTag];
+        return updated;
+      });
+    }
+  };
+
   const handleUnlink = (userId: string) => {
     unlinkMutation.mutate(userId);
+  };
+
+  const handleDiscard = (rfidTag: string) => {
+    deletePendingMutation.mutate(rfidTag);
   };
 
   // Filter users without RFID for the select dropdown
@@ -173,6 +275,185 @@ export function RfidManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pending RFIDs Section */}
+      {(pendingRfids || []).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-5 w-5 text-amber-600" />
+              Credenciales Pendientes de Asignar
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                {pendingRfids?.length || 0}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {(pendingRfids || []).map((pending: PendingRfid) => {
+                const assignmentType = getAssignmentType(pending.rfidTag);
+                const isLinkingUser = linkMutation.isPending;
+                const isLinkingEquipment = linkEquipmentMutation.isPending;
+                const isLinking = isLinkingUser || isLinkingEquipment;
+
+                return (
+                  <div
+                    key={pending.id}
+                    className="rounded-lg border border-amber-200 bg-amber-50 p-4"
+                  >
+                    {/* Header with RFID tag */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-5 w-5 text-amber-600" />
+                        <span className="font-mono text-lg font-semibold text-gray-900">
+                          {pending.rfidTag}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        Escaneada: {formatRelativeTime(pending.scannedAt)}
+                      </span>
+                    </div>
+
+                    {/* Assignment type toggle */}
+                    <div className="mb-3">
+                      <span className="text-sm text-gray-600 mr-3">Asignar a:</span>
+                      <div className="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setAssignmentType(pending.rfidTag, 'user')}
+                          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                            assignmentType === 'user'
+                              ? 'bg-[#CC0000] text-white'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <User className="h-4 w-4" />
+                          Usuario
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAssignmentType(pending.rfidTag, 'equipment')}
+                          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                            assignmentType === 'equipment'
+                              ? 'bg-[#CC0000] text-white'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Camera className="h-4 w-4" />
+                          Equipo
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Selection and actions */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {assignmentType === 'user' ? (
+                        <Select
+                          value={pendingUserSelections[pending.rfidTag] || ''}
+                          onChange={(e) =>
+                            setPendingUserSelections((prev) => ({
+                              ...prev,
+                              [pending.rfidTag]: e.target.value,
+                            }))
+                          }
+                          options={[
+                            { value: '', label: 'Seleccionar usuario...' },
+                            ...usersWithoutRfid.map((u: RfidUser) => ({
+                              value: u.id,
+                              label: u.name,
+                            })),
+                          ]}
+                          className="min-w-[200px]"
+                        />
+                      ) : (
+                        <Select
+                          value={pendingEquipmentSelections[pending.rfidTag] || ''}
+                          onChange={(e) =>
+                            setPendingEquipmentSelections((prev) => ({
+                              ...prev,
+                              [pending.rfidTag]: e.target.value,
+                            }))
+                          }
+                          options={[
+                            { value: '', label: 'Seleccionar equipo...' },
+                            ...equipmentWithoutRfid.map((eq: Equipment) => ({
+                              value: eq.id,
+                              label: eq.name,
+                            })),
+                          ]}
+                          className="min-w-[200px]"
+                        />
+                      )}
+
+                      <Button
+                        size="sm"
+                        onClick={() => handleLinkPending(pending.rfidTag)}
+                        disabled={
+                          isLinking ||
+                          (assignmentType === 'user'
+                            ? !pendingUserSelections[pending.rfidTag]
+                            : !pendingEquipmentSelections[pending.rfidTag])
+                        }
+                      >
+                        {isLinking ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : (
+                          <LinkIcon className="mr-1 h-3 w-3" />
+                        )}
+                        Asignar
+                      </Button>
+
+                      {discardConfirm === pending.rfidTag ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">¿Descartar?</span>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleDiscard(pending.rfidTag)}
+                            disabled={deletePendingMutation.isPending}
+                          >
+                            {deletePendingMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              'Sí'
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDiscardConfirm(null)}
+                          >
+                            No
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setDiscardConfirm(pending.rfidTag)}
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          Descartar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Info message */}
+              <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>
+                  Estas credenciales fueron escaneadas pero no están asignadas.
+                  Selecciona si vincularla a un usuario o a un equipo.
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Users List */}
       <Card>
