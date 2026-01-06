@@ -16,6 +16,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Rutas públicas que no deben redirigir a login
+const PUBLIC_ROUTES = ['/login', '/solicitar', '/mis-solicitudes'];
+
+function isPublicRoute(): boolean {
+  const path = window.location.pathname;
+  return PUBLIC_ROUTES.some(route => path.startsWith(route));
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -42,17 +50,23 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return api(originalRequest);
         } catch {
-          // Refresh failed, clear tokens and redirect
+          // Refresh failed, clear tokens
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
-          window.location.href = '/login';
+          // Solo redirigir si NO estamos en una ruta pública
+          if (!isPublicRoute()) {
+            window.location.href = '/login';
+          }
         }
       } else {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        // Solo redirigir si NO estamos en una ruta pública
+        if (!isPublicRoute()) {
+          window.location.href = '/login';
+        }
       }
     }
 

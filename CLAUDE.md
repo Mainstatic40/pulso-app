@@ -11,6 +11,7 @@ PULSO es un sistema de gestión de horas de trabajo y tareas para una oficina de
 - Gestión de equipos con asignación por turnos no solapados
 - **Sistema RFID completo** para registro de horas y tracking de equipos
 - **Historial de uso de equipos** mediante escaneo RFID
+- **Portal público de solicitudes de cobertura de eventos**
 - Calendario nativo con vistas de mes, semana y dia
 - Bitácora semanal para que los becarios documenten su progreso
 - Reportes exportables a Excel
@@ -93,7 +94,12 @@ pulso-app/
 │   │   │   ├── Equipment.tsx
 │   │   │   ├── EquipmentLoans.tsx  # Historial de uso de equipos
 │   │   │   ├── RfidManagement.tsx  # Gestión de credenciales RFID pendientes
-│   │   │   └── Reports.tsx
+│   │   │   ├── EventRequests.tsx   # Gestión de solicitudes de eventos (admin)
+│   │   │   ├── Reports.tsx
+│   │   │   └── public/             # Páginas públicas (sin auth)
+│   │   │       ├── SolicitorPortal.tsx    # Portal de acceso para solicitantes
+│   │   │       ├── EventRequestForm.tsx   # Formulario de solicitud
+│   │   │       └── MyEventRequests.tsx    # Ver mis solicitudes
 │   │   ├── hooks/            # Custom hooks
 │   │   ├── services/         # Llamadas a API (axios)
 │   │   ├── stores/           # Estado global (auth.store.tsx)
@@ -599,6 +605,32 @@ POST   /api/users/:id/rfid                     # Vincular RFID a usuario
 DELETE /api/users/:id/rfid                     # Desvincular RFID de usuario
 POST   /api/equipment/:id/rfid                 # Vincular RFID a equipo
 DELETE /api/equipment/:id/rfid                 # Desvincular RFID de equipo
+```
+
+### Solicitudes de Eventos (Público)
+```
+GET    /api/event-requests/public/validate/:code    # Validar código de acceso
+POST   /api/event-requests/public/submit/:code      # Enviar solicitud
+GET    /api/event-requests/public/my-requests/:token # Ver mis solicitudes por token
+POST   /api/event-requests/public/recover-access    # Solicitar recuperación de token
+PUT    /api/event-requests/public/update/:id        # Editar solicitud (si cambios solicitados)
+GET    /api/event-requests/public/status/:code      # Ver estado de solicitud
+```
+
+### Solicitudes de Eventos (Admin)
+```
+GET    /api/event-requests                     # Listar todas las solicitudes
+GET    /api/event-requests/pending             # Listar pendientes
+GET    /api/event-requests/stats               # Estadísticas
+GET    /api/event-requests/config              # Obtener configuración
+PUT    /api/event-requests/config              # Actualizar configuración
+GET    /api/event-requests/recovery            # Solicitudes de recuperación pendientes
+POST   /api/event-requests/recovery/:id/sent   # Marcar recuperación como enviada
+DELETE /api/event-requests/recovery/:id        # Eliminar solicitud de recuperación
+GET    /api/event-requests/:id                 # Ver detalle
+POST   /api/event-requests/:id/approve         # Aprobar solicitud
+POST   /api/event-requests/:id/reject          # Rechazar solicitud
+POST   /api/event-requests/:id/request-changes # Solicitar cambios
 ```
 
 ### Reportes
@@ -1125,6 +1157,18 @@ app.use(cors({
 - [x] Historial de uso de equipos con filtros
 - [x] Sesiones de escaneo con timeout automático
 
+### Fase 6 (Portal Público y Seguridad) ✅
+- [x] Portal público de solicitudes de eventos
+- [x] Formulario de solicitud con código de acceso
+- [x] Sistema de tokens de 6 dígitos para solicitantes
+- [x] Recuperación manual de tokens (admin)
+- [x] Gestión de solicitudes (aprobar/rechazar/solicitar cambios)
+- [x] Eventos ordenados: próximos primero, pasados al final
+- [x] Seguridad: Helmet (headers HTTP)
+- [x] Seguridad: Rate limiting (general, login, formulario público)
+- [x] Seguridad: CORS restrictivo en producción
+- [x] Seguridad: Trust proxy para Cloudflare
+
 ### Pendiente
 - [ ] App móvil (React Native)
 - [ ] Testing automatizado
@@ -1153,5 +1197,5 @@ VITE_API_URL=http://localhost:3000/api
 
 ---
 
-**Última actualización:** 4 Enero 2026
-**Versión del documento:** 3.2
+**Última actualización:** 6 Enero 2026
+**Versión del documento:** 3.3

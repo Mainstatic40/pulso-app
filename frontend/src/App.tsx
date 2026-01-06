@@ -17,6 +17,10 @@ import { Equipment } from './pages/Equipment';
 import { EquipmentLoans } from './pages/EquipmentLoans';
 import { Chat } from './pages/Chat';
 import { RfidManagement } from './pages/RfidManagement';
+import { EventRequests } from './pages/EventRequests';
+import { SolicitorPortal } from './pages/public/SolicitorPortal';
+import { EventRequestForm } from './pages/public/EventRequestForm';
+import { MyEventRequests } from './pages/public/MyEventRequests';
 
 function App() {
   return (
@@ -26,6 +30,9 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/solicitar/:accessCode" element={<SolicitorPortal />} />
+            <Route path="/solicitar/:accessCode/nuevo" element={<EventRequestForm />} />
+            <Route path="/mis-solicitudes/:token" element={<MyEventRequests />} />
 
             {/* Protected routes with Layout */}
             <Route element={<ProtectedRoute />}>
@@ -49,6 +56,7 @@ function App() {
                 <Route path="/users" element={<Users />} />
                 <Route path="/rfid" element={<RfidManagement />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/solicitudes" element={<EventRequests />} />
               </Route>
             </Route>
 

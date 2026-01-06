@@ -13,10 +13,12 @@ import {
   Package,
   MessageCircle,
   CreditCard,
+  FileText,
 } from 'lucide-react';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import { cn } from '../../lib/utils';
 import { conversationService } from '../../services/conversation.service';
+import { eventRequestService } from '../../services/event-request.service';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'supervisor', 'becario'] },
@@ -30,11 +32,13 @@ const navItems = [
   { to: '/weekly-log', icon: BookOpen, label: 'Bitacora Semanal', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/users', icon: Users, label: 'Usuarios', roles: ['admin', 'supervisor'] },
   { to: '/rfid', icon: CreditCard, label: 'Credenciales RFID', roles: ['admin', 'supervisor'] },
+  { to: '/solicitudes', icon: FileText, label: 'Solicitudes', roles: ['admin', 'supervisor'], hasPendingBadge: true },
   { to: '/reports', icon: BarChart3, label: 'Reportes', roles: ['admin', 'supervisor'] },
 ];
 
 export function Sidebar() {
   const { user } = useAuthContext();
+  const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
 
   // Fetch unread message count with polling
   const { data: unreadData } = useQuery({
@@ -43,7 +47,16 @@ export function Sidebar() {
     refetchInterval: 30000, // Poll every 30 seconds
   });
 
+  // Fetch pending event requests count
+  const { data: eventRequestStats } = useQuery({
+    queryKey: ['event-requests-stats'],
+    queryFn: eventRequestService.getStats,
+    refetchInterval: 60000, // Poll every minute
+    enabled: isAdminOrSupervisor,
+  });
+
   const unreadCount = unreadData?.unreadCount || 0;
+  const pendingRequestsCount = eventRequestStats?.pending || 0;
 
   const filteredNavItems = navItems.filter((item) =>
     item.roles.includes(user?.role || '')
@@ -75,6 +88,11 @@ export function Sidebar() {
             {item.hasBadge && unreadCount > 0 && (
               <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-medium text-white">
                 {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+            {item.hasPendingBadge && pendingRequestsCount > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-yellow-500 px-1.5 text-xs font-medium text-white">
+                {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
               </span>
             )}
           </NavLink>

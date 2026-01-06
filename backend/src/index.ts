@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { config } from './config';
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
@@ -21,12 +23,68 @@ import conversationRoutes from './routes/conversation.routes';
 import notificationRoutes from './routes/notification.routes';
 import rfidRoutes from './routes/rfid.routes';
 import equipmentLoanRoutes from './routes/equipment-loan.routes';
+import eventRequestRoutes from './routes/event-request.routes';
 
 const app = express();
 
-// Middlewares
+// Confiar en proxy (Cloudflare)
+app.set('trust proxy', 1);
+
+// Seguridad: Headers HTTP
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Permitir cargar imagenes
+}));
+
+// Ocultar que usamos Express
+app.disable('x-powered-by');
+
+// Rate limiting general
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // 100 requests por IP
+  message: { success: false, error: { message: 'Demasiadas solicitudes, intenta mas tarde' } }
+});
+app.use(generalLimiter);
+
+// Rate limiting estricto para login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Solo 5 intentos
+  message: { success: false, error: { message: 'Demasiados intentos de login, intenta en 15 minutos' } }
+});
+app.use('/api/auth/login', loginLimiter);
+
+// Rate limiting para formulario publico
+const publicFormLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 10, // 10 solicitudes por hora
+  message: { success: false, error: { message: 'Has enviado demasiadas solicitudes, intenta mas tarde' } }
+});
+app.use('/api/event-requests/public/submit', publicFormLimiter);
+
+// CORS
+const allowedOrigins = [
+  'https://pulsoumedia.com',
+  'https://api.pulsoumedia.com',
+  // Solo en desarrollo:
+  ...(process.env.NODE_ENV !== 'production' ? [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    config.frontendUrl,
+    'http://100.105.8.14:5173'
+  ] : [])
+];
+
 app.use(cors({
-  origin: config.frontendUrl,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -59,6 +117,7 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rfid', rfidRoutes);
 app.use('/api/equipment-loans', equipmentLoanRoutes);
+app.use('/api/event-requests', eventRequestRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
@@ -66,6 +125,6 @@ app.use(notFoundHandler);
 // Error handler
 app.use(errorHandler);
 
-app.listen(config.port, () => {
-  console.log(`Server running on http://localhost:${config.port}`);
+app.listen(config.port, '0.0.0.0', () => {
+  console.log(`Server running on http://0.0.0.0:${config.port}`);
 });

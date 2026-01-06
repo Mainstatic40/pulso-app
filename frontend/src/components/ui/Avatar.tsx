@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { cn } from '../../lib/utils';
+import { cn, getImageUrl } from '../../lib/utils';
 
 interface AvatarProps {
   name: string;
@@ -45,8 +45,8 @@ function getColorFromName(name: string): string {
 }
 
 function getProfileImageUrl(profileImage: string): string {
-  const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
-  return `${baseUrl}/uploads/profiles/${profileImage}`;
+  // getImageUrl ya maneja todos los casos: URL completa, path con /uploads/, o solo nombre de archivo
+  return getImageUrl(profileImage) || '';
 }
 
 export function Avatar({ name, profileImage, size = 'md', className }: AvatarProps) {

@@ -189,15 +189,30 @@ export const eventService = {
       prisma.event.findMany({
         where,
         select: eventListSelect,
-        skip,
-        take: limit,
         orderBy: { startDatetime: 'asc' },
       }),
       prisma.event.count({ where }),
     ]);
 
+    // Separar en proximos y pasados
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcoming = events.filter(e => new Date(e.startDatetime) >= today);
+    const past = events.filter(e => new Date(e.startDatetime) < today);
+
+    // Proximos ordenados ascendente (el mas cercano primero)
+    // Pasados ordenados descendente (el mas reciente primero)
+    const sortedEvents = [
+      ...upcoming.sort((a, b) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime()),
+      ...past.sort((a, b) => new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime())
+    ];
+
+    // Aplicar paginacion despues del ordenamiento
+    const paginatedEvents = sortedEvents.slice(skip, skip + limit);
+
     return {
-      data: events,
+      data: paginatedEvents,
       meta: {
         total,
         page,

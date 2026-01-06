@@ -180,6 +180,7 @@ model Event {
   equipmentAssignments EquipmentAssignment[]
   days                 EventDay[]
   attachments          Attachment[]
+  eventRequests        EventRequest[]
 
   @@index([eventType])
   @@index([startDatetime])
@@ -453,4 +454,85 @@ model EquipmentUsageLogItem {
   @@index([logId])
   @@index([equipmentId])
   @@map("equipment_usage_log_items")
+}
+
+// ============ SOLICITUDES DE EVENTOS ============
+
+model EventRequestConfig {
+  id         String   @id @default(uuid())
+  accessCode String   @unique @map("access_code") @db.VarChar(50)
+  isActive   Boolean  @default(true) @map("is_active")
+  rateLimit  Int      @default(5) @map("rate_limit")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("event_request_config")
+}
+
+model SolicitorToken {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  token     String   @unique @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("solicitor_tokens")
+}
+
+model EventRequest {
+  id                       String    @id @default(uuid())
+  code                     String    @unique @db.VarChar(20)
+  status                   String    @default("pending") @db.VarChar(20)
+  // Organización
+  tipoOrganizacion         String    @map("tipo_organizacion") @db.VarChar(20)
+  facultad                 String?   @db.VarChar(50)
+  facultadCarrera          String?   @map("facultad_carrera") @db.VarChar(100)
+  departamentoNombre       String?   @map("departamento_nombre") @db.VarChar(200)
+  // Solicitante
+  solicitanteNombre        String    @map("solicitante_nombre") @db.VarChar(200)
+  solicitanteCargo         String    @map("solicitante_cargo") @db.VarChar(50)
+  solicitanteEmail         String    @map("solicitante_email") @db.VarChar(200)
+  solicitanteTelefono      String    @map("solicitante_telefono") @db.VarChar(50)
+  // Evento
+  eventoNombre             String    @map("evento_nombre") @db.VarChar(300)
+  eventoTipo               String    @map("evento_tipo") @db.VarChar(100)
+  eventoTipoOtro           String?   @map("evento_tipo_otro") @db.VarChar(200)
+  eventoFecha              DateTime  @map("evento_fecha")
+  eventoHoraInicio         String    @map("evento_hora_inicio") @db.VarChar(10)
+  eventoHoraFin            String    @map("evento_hora_fin") @db.VarChar(10)
+  eventoUbicacion          String    @map("evento_ubicacion") @db.VarChar(300)
+  eventoAsistentes         Int?      @map("evento_asistentes")
+  // Servicios
+  servicioFotografia       Boolean   @default(false) @map("servicio_fotografia")
+  servicioVideo            Boolean   @default(false) @map("servicio_video")
+  // Detalles
+  descripcion              String?   @db.Text
+  requerimientosEspeciales String?   @map("requerimientos_especiales") @db.Text
+  notasInternas            String?   @map("notas_internas") @db.Text
+  mensajeSolicitante       String?   @map("mensaje_solicitante") @db.Text
+  eventId                  String?   @map("event_id")
+  ipAddress                String?   @map("ip_address") @db.VarChar(50)
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  respondedAt              DateTime? @map("responded_at")
+  respondedBy              String?   @map("responded_by")
+
+  event Event? @relation(fields: [eventId], references: [id])
+
+  @@index([status])
+  @@index([solicitanteEmail])
+  @@index([createdAt])
+  @@map("event_requests")
+}
+
+model TokenRecoveryRequest {
+  id        String    @id @default(uuid())
+  email     String    @db.VarChar(200)
+  token     String?   @db.VarChar(50)
+  status    String    @default("pending") @db.VarChar(20)
+  createdAt DateTime  @default(now()) @map("created_at")
+  sentAt    DateTime? @map("sent_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("token_recovery_requests")
 }

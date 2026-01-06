@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Calendar } from 'lucide-react';
+import { Plus, Search, Calendar, Clock } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -12,27 +12,28 @@ import { eventService, type EventWithRelations, type CreateEventRequest } from '
 import { useAuthContext } from '../stores/auth.store.tsx';
 import type { EventType } from '../types';
 
-function sortEvents(events: EventWithRelations[]): EventWithRelations[] {
-  const now = new Date();
+function groupEventsByStatus(events: EventWithRelations[]) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  return [...events].sort((a, b) => {
-    const aStart = new Date(a.startDatetime);
-    const bStart = new Date(b.startDatetime);
-    const aEnd = new Date(a.endDatetime);
-    const bEnd = new Date(b.endDatetime);
+  const upcoming: EventWithRelations[] = [];
+  const past: EventWithRelations[] = [];
 
-    const aOngoing = now >= aStart && now <= aEnd;
-    const bOngoing = now >= bStart && now <= bEnd;
-    if (aOngoing && !bOngoing) return -1;
-    if (!aOngoing && bOngoing) return 1;
-
-    const aUpcoming = aStart > now;
-    const bUpcoming = bStart > now;
-    if (aUpcoming && !bUpcoming) return -1;
-    if (!aUpcoming && bUpcoming) return 1;
-
-    return aStart.getTime() - bStart.getTime();
+  events.forEach(event => {
+    const eventDate = new Date(event.startDatetime);
+    if (eventDate >= today) {
+      upcoming.push(event);
+    } else {
+      past.push(event);
+    }
   });
+
+  // Proximos: el mas cercano primero
+  upcoming.sort((a, b) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime());
+  // Pasados: el mas reciente primero
+  past.sort((a, b) => new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime());
+
+  return { upcoming, past };
 }
 
 const EVENT_TYPE_OPTIONS = [
@@ -77,7 +78,7 @@ export function Events() {
     },
   });
 
-  const events = useMemo(() => {
+  const { upcoming, past } = useMemo(() => {
     const allEvents = eventsResponse?.data || [];
     const filtered = allEvents.filter((event) => {
       // Filter by search query
@@ -96,8 +97,10 @@ export function Events() {
 
       return true;
     });
-    return sortEvents(filtered);
+    return groupEventsByStatus(filtered);
   }, [eventsResponse?.data, searchQuery, eventTypeFilter]);
+
+  const hasEvents = upcoming.length > 0 || past.length > 0;
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -222,7 +225,7 @@ export function Events() {
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
-      ) : events.length === 0 ? (
+      ) : !hasEvents ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Calendar className="mx-auto h-12 w-12 text-gray-400" />
@@ -241,14 +244,44 @@ export function Events() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              onClick={() => setSelectedEvent(event)}
-            />
-          ))}
+        <div className="space-y-8">
+          {/* Eventos Proximos */}
+          {upcoming.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-green-600" />
+                Proximos Eventos ({upcoming.length})
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {upcoming.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={() => setSelectedEvent(event)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Eventos Pasados */}
+          {past.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-500 mb-4 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-gray-400" />
+                Eventos Pasados ({past.length})
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 opacity-75">
+                {past.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={() => setSelectedEvent(event)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
