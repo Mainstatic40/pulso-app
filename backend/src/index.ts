@@ -38,31 +38,7 @@ app.use(helmet({
 // Ocultar que usamos Express
 app.disable('x-powered-by');
 
-// Rate limiting general
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // 100 requests por IP
-  message: { success: false, error: { message: 'Demasiadas solicitudes, intenta mas tarde' } }
-});
-app.use(generalLimiter);
-
-// Rate limiting estricto para login
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // Solo 5 intentos
-  message: { success: false, error: { message: 'Demasiados intentos de login, intenta en 15 minutos' } }
-});
-app.use('/api/auth/login', loginLimiter);
-
-// Rate limiting para formulario publico
-const publicFormLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hora
-  max: 10, // 10 solicitudes por hora
-  message: { success: false, error: { message: 'Has enviado demasiadas solicitudes, intenta mas tarde' } }
-});
-app.use('/api/event-requests/public/submit', publicFormLimiter);
-
-// CORS
+// CORS - debe ir ANTES del rate limiter
 const allowedOrigins = [
   'https://pulsoumedia.com',
   'https://api.pulsoumedia.com',
@@ -88,6 +64,36 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Rate limiting general (más permisivo en desarrollo)
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 en desarrollo, 100 en producción
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: 'Demasiadas solicitudes, intenta mas tarde' } }
+});
+app.use(generalLimiter);
+
+// Rate limiting estricto para login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: process.env.NODE_ENV === 'production' ? 10 : 100, // 100 en desarrollo, 10 en producción
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: 'Demasiados intentos de login, intenta en 15 minutos' } }
+});
+app.use('/api/auth/login', loginLimiter);
+
+// Rate limiting para formulario publico
+const publicFormLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 10, // 10 solicitudes por hora
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: 'Has enviado demasiadas solicitudes, intenta mas tarde' } }
+});
+app.use('/api/event-requests/public/submit', publicFormLimiter);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

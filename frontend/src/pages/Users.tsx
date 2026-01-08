@@ -56,6 +56,23 @@ export function Users() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       handleCloseModal();
     },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || error?.message || 'Error al actualizar usuario';
+      alert(`Error: ${message}`);
+      console.error('[updateMutation] Error:', error);
+    },
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn: (id: string) => userService.hardDelete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || error?.message || 'Error al eliminar usuario';
+      alert(`Error: ${message}`);
+      console.error('[hardDeleteMutation] Error:', error);
+    },
   });
 
   // Handlers
@@ -69,14 +86,21 @@ export function Users() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (user: User) => {
+  const handleToggleActive = (user: User) => {
     const action = user.isActive ? 'desactivar' : 'activar';
     if (confirm(`¿Estás seguro de ${action} a ${user.name}?`)) {
-      // Toggle isActive status
       updateMutation.mutate({
         id: user.id,
         data: { isActive: !user.isActive },
       });
+    }
+  };
+
+  const handleHardDelete = (user: User) => {
+    if (confirm(`¿Estás seguro de ELIMINAR PERMANENTEMENTE a ${user.name}?\n\nEsta acción no se puede deshacer y se eliminarán todos sus registros asociados (tareas, eventos, horas, etc.).`)) {
+      if (confirm(`Confirma escribiendo: ¿Realmente deseas eliminar a "${user.name}"?`)) {
+        hardDeleteMutation.mutate(user.id);
+      }
     }
   };
 
@@ -168,7 +192,8 @@ export function Users() {
       <UserTable
         users={users}
         onEdit={handleEdit}
-        onDelete={handleDelete}
+        onToggleActive={handleToggleActive}
+        onHardDelete={handleHardDelete}
         isLoading={isLoading}
       />
 

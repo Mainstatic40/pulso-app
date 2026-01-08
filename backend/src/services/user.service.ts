@@ -195,6 +195,46 @@ export const userService = {
     return user;
   },
 
+  async hardDelete(id: string) {
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existingUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Delete related records first (cascade doesn't work for all relations)
+    await prisma.$transaction(async (tx) => {
+      // Delete task assignees
+      await tx.taskAssignee.deleteMany({ where: { userId: id } });
+      // Delete event assignees
+      await tx.eventAssignee.deleteMany({ where: { userId: id } });
+      // Delete event shifts
+      await tx.eventShift.deleteMany({ where: { userId: id } });
+      // Delete comments
+      await tx.comment.deleteMany({ where: { userId: id } });
+      // Delete weekly logs
+      await tx.weeklyLog.deleteMany({ where: { userId: id } });
+      // Delete time entries
+      await tx.timeEntry.deleteMany({ where: { userId: id } });
+      // Delete notifications
+      await tx.notification.deleteMany({ where: { userId: id } });
+      // Delete conversation participants and messages
+      await tx.message.deleteMany({ where: { senderId: id } });
+      await tx.conversationParticipant.deleteMany({ where: { userId: id } });
+      // Delete equipment assignments (as user)
+      await tx.equipmentAssignment.deleteMany({ where: { userId: id } });
+      // Delete equipment usage logs
+      await tx.equipmentUsageLog.deleteMany({ where: { userId: id } });
+      // Finally delete the user
+      await tx.user.delete({ where: { id } });
+    });
+
+    return { message: 'Usuario eliminado permanentemente' };
+  },
+
   async updateProfileImage(id: string, imagePath: string) {
     // Check if user exists
     const existingUser = await prisma.user.findUnique({

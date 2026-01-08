@@ -92,6 +92,20 @@ export const userController = {
     }
   },
 
+  async hardDelete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const result = await userService.hardDelete(id);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async uploadProfileImage(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;

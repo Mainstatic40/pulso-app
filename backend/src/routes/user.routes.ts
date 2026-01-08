@@ -58,6 +58,14 @@ router.delete(
   userController.delete
 );
 
+// DELETE /api/users/:id/permanent - Hard delete user (admin only)
+router.delete(
+  '/:id/permanent',
+  authorize('admin'),
+  validate(getUserSchema),
+  userController.hardDelete
+);
+
 // POST /api/users/:id/profile-image - Upload profile image
 // Users can update their own image, admins can update any user's image
 router.post(

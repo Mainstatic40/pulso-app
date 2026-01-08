@@ -55,6 +55,11 @@ export const userService = {
     return response.data.data!;
   },
 
+  async hardDelete(id: string) {
+    const response = await api.delete<ApiResponse<{ message: string }>>(`/users/${id}/permanent`);
+    return response.data.data!;
+  },
+
   async getMe() {
     const response = await api.get<ApiResponse<User>>('/users/me');
     return response.data.data!;

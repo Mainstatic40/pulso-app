@@ -1,4 +1,4 @@
-import { Edit2, Trash2, MoreVertical } from 'lucide-react';
+import { Edit2, Trash2, MoreVertical, UserX } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Avatar } from '../ui/Avatar';
 import { RoleBadge } from './RoleBadge';
@@ -8,18 +8,21 @@ import type { User } from '../../types';
 interface UserTableProps {
   users: User[];
   onEdit: (user: User) => void;
-  onDelete: (user: User) => void;
+  onToggleActive: (user: User) => void;
+  onHardDelete: (user: User) => void;
   isLoading?: boolean;
 }
 
 function ActionMenu({
   user,
   onEdit,
-  onDelete,
+  onToggleActive,
+  onHardDelete,
 }: {
   user: User;
   onEdit: (user: User) => void;
-  onDelete: (user: User) => void;
+  onToggleActive: (user: User) => void;
+  onHardDelete: (user: User) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -47,7 +50,7 @@ function ActionMenu({
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 z-10 mt-1 w-36 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+        <div className="absolute right-0 z-10 mt-1 w-44 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
           <button
             onClick={() => {
               onEdit(user);
@@ -60,13 +63,24 @@ function ActionMenu({
           </button>
           <button
             onClick={() => {
-              onDelete(user);
+              onToggleActive(user);
+              setIsOpen(false);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50"
+          >
+            <UserX className="h-4 w-4" />
+            {user.isActive ? 'Desactivar' : 'Activar'}
+          </button>
+          <div className="my-1 border-t border-gray-100" />
+          <button
+            onClick={() => {
+              onHardDelete(user);
               setIsOpen(false);
             }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
           >
             <Trash2 className="h-4 w-4" />
-            {user.isActive ? 'Desactivar' : 'Activar'}
+            Eliminar
           </button>
         </div>
       )}
@@ -74,7 +88,7 @@ function ActionMenu({
   );
 }
 
-export function UserTable({ users, onEdit, onDelete, isLoading }: UserTableProps) {
+export function UserTable({ users, onEdit, onToggleActive, onHardDelete, isLoading }: UserTableProps) {
   if (isLoading) {
     return (
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
@@ -161,7 +175,7 @@ export function UserTable({ users, onEdit, onDelete, isLoading }: UserTableProps
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-right">
-                  <ActionMenu user={user} onEdit={onEdit} onDelete={onDelete} />
+                  <ActionMenu user={user} onEdit={onEdit} onToggleActive={onToggleActive} onHardDelete={onHardDelete} />
                 </td>
               </tr>
             ))}
