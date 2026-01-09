@@ -95,6 +95,16 @@ export const userController = {
   async hardDelete(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      const currentUserId = req.user!.userId;
+
+      // Prevent self-deletion
+      if (id === currentUserId) {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'No puedes eliminar tu propia cuenta' },
+        });
+      }
+
       const result = await userService.hardDelete(id);
 
       res.json({

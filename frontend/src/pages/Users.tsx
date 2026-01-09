@@ -1,20 +1,26 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, AlertTriangle, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { UserTable, UserModal } from '../components/users';
 import { userService } from '../services/user.service';
+import { useAuth } from '../hooks/useAuth';
 import type { User, UserRole } from '../types';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function Users() {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Filter state
   const [search, setSearch] = useState('');
@@ -67,9 +73,11 @@ export function Users() {
     mutationFn: (id: string) => userService.hardDelete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      setShowDeleteModal(false);
+      setUserToDelete(null);
     },
     onError: (error: any) => {
-      const message = error?.response?.data?.message || error?.message || 'Error al eliminar usuario';
+      const message = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'Error al eliminar usuario';
       alert(`Error: ${message}`);
       console.error('[hardDeleteMutation] Error:', error);
     },
@@ -97,10 +105,13 @@ export function Users() {
   };
 
   const handleHardDelete = (user: User) => {
-    if (confirm(`¿Estás seguro de ELIMINAR PERMANENTEMENTE a ${user.name}?\n\nEsta acción no se puede deshacer y se eliminarán todos sus registros asociados (tareas, eventos, horas, etc.).`)) {
-      if (confirm(`Confirma escribiendo: ¿Realmente deseas eliminar a "${user.name}"?`)) {
-        hardDeleteMutation.mutate(user.id);
-      }
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      hardDeleteMutation.mutate(userToDelete.id);
     }
   };
 
@@ -191,6 +202,7 @@ export function Users() {
       {/* Table */}
       <UserTable
         users={users}
+        currentUser={currentUser}
         onEdit={handleEdit}
         onToggleActive={handleToggleActive}
         onHardDelete={handleHardDelete}
@@ -258,6 +270,63 @@ export function Users() {
         onSubmit={handleSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
+              <h2 className="mb-2 text-xl font-bold text-gray-900">
+                ¿Eliminar usuario?
+              </h2>
+              <p className="mb-4 text-gray-600">
+                Estás a punto de eliminar permanentemente a{' '}
+                <strong>{userToDelete.name}</strong>. Esta acción no se puede
+                deshacer y se eliminarán todos sus registros asociados.
+              </p>
+
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-left">
+                <p className="mb-1 text-sm font-medium text-red-800">
+                  Se eliminarán:
+                </p>
+                <ul className="list-inside list-disc text-sm text-red-700">
+                  <li>Entradas de tiempo</li>
+                  <li>Asignaciones de tareas y eventos</li>
+                  <li>Comentarios y mensajes</li>
+                  <li>Registros de uso de equipo</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setUserToDelete(null);
+                  }}
+                  className="flex-1 rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={hardDeleteMutation.isPending}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {hardDeleteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

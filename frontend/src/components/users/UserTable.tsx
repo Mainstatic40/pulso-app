@@ -7,6 +7,7 @@ import type { User } from '../../types';
 
 interface UserTableProps {
   users: User[];
+  currentUser?: User | null;
   onEdit: (user: User) => void;
   onToggleActive: (user: User) => void;
   onHardDelete: (user: User) => void;
@@ -15,15 +16,19 @@ interface UserTableProps {
 
 function ActionMenu({
   user,
+  currentUser,
   onEdit,
   onToggleActive,
   onHardDelete,
 }: {
   user: User;
+  currentUser?: User | null;
   onEdit: (user: User) => void;
   onToggleActive: (user: User) => void;
   onHardDelete: (user: User) => void;
 }) {
+  // Only show delete option if current user is admin and not deleting themselves
+  const canDelete = currentUser?.role === 'admin' && user.id !== currentUser?.id;
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -71,24 +76,28 @@ function ActionMenu({
             <UserX className="h-4 w-4" />
             {user.isActive ? 'Desactivar' : 'Activar'}
           </button>
-          <div className="my-1 border-t border-gray-100" />
-          <button
-            onClick={() => {
-              onHardDelete(user);
-              setIsOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" />
-            Eliminar
-          </button>
+          {canDelete && (
+            <>
+              <div className="my-1 border-t border-gray-100" />
+              <button
+                onClick={() => {
+                  onHardDelete(user);
+                  setIsOpen(false);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Eliminar
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export function UserTable({ users, onEdit, onToggleActive, onHardDelete, isLoading }: UserTableProps) {
+export function UserTable({ users, currentUser, onEdit, onToggleActive, onHardDelete, isLoading }: UserTableProps) {
   if (isLoading) {
     return (
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
@@ -175,7 +184,7 @@ export function UserTable({ users, onEdit, onToggleActive, onHardDelete, isLoadi
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-right">
-                  <ActionMenu user={user} onEdit={onEdit} onToggleActive={onToggleActive} onHardDelete={onHardDelete} />
+                  <ActionMenu user={user} currentUser={currentUser} onEdit={onEdit} onToggleActive={onToggleActive} onHardDelete={onHardDelete} />
                 </td>
               </tr>
             ))}
