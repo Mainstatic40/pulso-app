@@ -136,7 +136,7 @@ export function WeekView({
         {/* Hours column */}
         <div className="w-[60px] flex-shrink-0 border-r border-gray-200">
           {/* Empty header cell */}
-          <div className="h-[60px] border-b border-gray-200 bg-gray-50" />
+          <div className="h-[80px] border-b border-gray-200 bg-gray-50" />
           {/* Hour labels */}
           {HOURS.map((hour) => (
             <div
@@ -151,6 +151,7 @@ export function WeekView({
         {/* Day columns */}
         {weekDays.map((day, index) => {
           const isDayToday = isToday(day);
+          const dayTasks = getTasksForDay(tasks, day);
           const isLastDay = index === weekDays.length - 1;
 
           return (
@@ -162,7 +163,7 @@ export function WeekView({
               )}
             >
               {/* Day header */}
-              <div className="h-[60px] border-b border-gray-200 bg-gray-50 py-2 text-center overflow-hidden">
+              <div className="h-[80px] border-b border-gray-200 bg-gray-50 py-2 text-center overflow-hidden">
                 <div className="text-xs font-medium uppercase text-gray-500">
                   {DAYS_OF_WEEK[index]}
                 </div>
@@ -174,6 +175,15 @@ export function WeekView({
                 >
                   {day.getDate()}
                 </div>
+                {/* Task count */}
+                {dayTasks.length > 0 && (
+                  <button
+                    onClick={() => onTaskClick(dayTasks[0])}
+                    className="mt-1 px-1 truncate text-xs text-gray-500 hover:text-gray-700 w-full"
+                  >
+                    {dayTasks.length} tarea{dayTasks.length !== 1 ? 's' : ''}
+                  </button>
+                )}
               </div>
 
               {/* Hour cells for this day */}
