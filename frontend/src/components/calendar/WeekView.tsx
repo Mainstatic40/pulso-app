@@ -1,5 +1,6 @@
 import { cn } from '../../lib/utils';
 import { CalendarEvent } from './CalendarEvent';
+import { CalendarTask } from './CalendarTask';
 import type { EventWithRelations } from '../../services/event.service';
 import type { TaskWithRelations } from '../../services/task.service';
 
@@ -83,8 +84,36 @@ function getEventsForDayAndHour(
 
 function getTasksForDay(tasks: TaskWithRelations[], date: Date): TaskWithRelations[] {
   return tasks.filter((task) => {
-    const dueDate = new Date(task.dueDate);
-    return isSameDay(dueDate, date);
+    // Use executionDate if available, otherwise dueDate
+    const taskDate = task.executionDate ? new Date(task.executionDate) : new Date(task.dueDate);
+    return isSameDay(taskDate, date);
+  });
+}
+
+function getTasksForDayAndHour(tasks: TaskWithRelations[], date: Date, hour: number): TaskWithRelations[] {
+  const dayTasks = getTasksForDay(tasks, date);
+
+  return dayTasks.filter((task) => {
+    // Get the start hour based on shift type
+    let startHour: number | null = null;
+
+    if (task.shift === 'morning' && task.morningStartTime) {
+      startHour = parseInt(task.morningStartTime.split(':')[0], 10);
+    } else if (task.shift === 'afternoon' && task.afternoonStartTime) {
+      startHour = parseInt(task.afternoonStartTime.split(':')[0], 10);
+    } else if (task.shift === 'both') {
+      // For 'both', show at morning start time
+      if (task.morningStartTime) {
+        startHour = parseInt(task.morningStartTime.split(':')[0], 10);
+      }
+    }
+
+    // Default to 9am if no specific time
+    if (startHour === null) {
+      startHour = 9;
+    }
+
+    return startHour === hour;
   });
 }
 
@@ -107,7 +136,7 @@ export function WeekView({
         {/* Hours column */}
         <div className="w-[60px] flex-shrink-0 border-r border-gray-200">
           {/* Empty header cell */}
-          <div className="h-[80px] border-b border-gray-200 bg-gray-50" />
+          <div className="h-[60px] border-b border-gray-200 bg-gray-50" />
           {/* Hour labels */}
           {HOURS.map((hour) => (
             <div
@@ -122,7 +151,6 @@ export function WeekView({
         {/* Day columns */}
         {weekDays.map((day, index) => {
           const isDayToday = isToday(day);
-          const dayTasks = getTasksForDay(tasks, day);
           const isLastDay = index === weekDays.length - 1;
 
           return (
@@ -134,7 +162,7 @@ export function WeekView({
               )}
             >
               {/* Day header */}
-              <div className="h-[80px] border-b border-gray-200 bg-gray-50 py-2 text-center overflow-hidden">
+              <div className="h-[60px] border-b border-gray-200 bg-gray-50 py-2 text-center overflow-hidden">
                 <div className="text-xs font-medium uppercase text-gray-500">
                   {DAYS_OF_WEEK[index]}
                 </div>
@@ -146,20 +174,12 @@ export function WeekView({
                 >
                   {day.getDate()}
                 </div>
-                {/* Tasks for the day */}
-                {dayTasks.length > 0 && (
-                  <button
-                    onClick={() => onTaskClick(dayTasks[0])}
-                    className="mt-1 px-1 truncate text-xs text-gray-500 hover:text-gray-700 w-full"
-                  >
-                    {dayTasks.length} tarea{dayTasks.length !== 1 ? 's' : ''}
-                  </button>
-                )}
               </div>
 
               {/* Hour cells for this day */}
               {HOURS.map((hour) => {
                 const hourEvents = getEventsForDayAndHour(events, day, hour);
+                const hourTasks = getTasksForDayAndHour(tasks, day, hour);
 
                 return (
                   <div
@@ -172,6 +192,14 @@ export function WeekView({
                         event={event}
                         onClick={onEventClick}
                         selectedDate={day}
+                      />
+                    ))}
+                    {hourTasks.map((task) => (
+                      <CalendarTask
+                        key={task.id}
+                        task={task}
+                        onClick={onTaskClick}
+                        compact
                       />
                     ))}
                   </div>
