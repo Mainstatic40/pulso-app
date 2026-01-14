@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Filter, LayoutGrid, List } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
@@ -22,6 +23,7 @@ const allPriorityOptions = [{ value: '', label: 'Todas las prioridades' }, ...pr
 export function Tasks() {
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -32,6 +34,17 @@ export function Tasks() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
+
+  // Handle ?open=ID parameter from notifications
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (openId) {
+      setSelectedTaskId(openId);
+      // Clear the URL parameter
+      searchParams.delete('open');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Query
   const { data: tasksResponse, isLoading } = useQuery({

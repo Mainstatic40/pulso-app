@@ -320,13 +320,15 @@ model EquipmentAssignment {
 }
 
 model MonthlyHoursConfig {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   year        Int
-  month       Int      // 1-12
-  targetHours Decimal  @map("target_hours") @db.Decimal(5, 2)
-  createdBy   String   @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  month       Int       // 1-12
+  targetHours Decimal   @map("target_hours") @db.Decimal(5, 2)
+  hoursPerDay Decimal   @default(4) @map("hours_per_day") @db.Decimal(4, 2)
+  startDate   DateTime? @map("start_date") @db.Date
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   creator User @relation(fields: [createdBy], references: [id])
 

@@ -57,17 +57,27 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   const { data: assignmentsData } = useQuery({
     queryKey: ['equipment-assignments', 'all'],
     queryFn: () => equipmentAssignmentService.getAll({ limit: 500 }),
-    staleTime: 30000, // Cache for 30 seconds to avoid too many requests
+    staleTime: 15000, // Consider stale after 15 seconds
   });
 
-  // Filter and group equipment for this task
+  // Filter and group equipment for this task (active + future assignments)
   const taskEquipment = useMemo(() => {
     if (!assignmentsData?.data) return [];
 
     const taskNotePrefix = `Tarea: ${task.title}`;
-    const taskAssignments = assignmentsData.data.filter(
-      (a: EquipmentAssignment) => a.notes?.startsWith(taskNotePrefix)
-    );
+    const now = new Date();
+
+    // Filter assignments for this task that are not yet ended (includes future assignments)
+    const taskAssignments = assignmentsData.data.filter((a: EquipmentAssignment) => {
+      if (!a.notes?.startsWith(taskNotePrefix)) return false;
+
+      const endTime = a.endTime ? new Date(a.endTime) : null;
+
+      // Show if not ended yet (endTime is null or in the future)
+      const notEnded = endTime === null || endTime > now;
+
+      return notEnded;
+    });
 
     // Get unique equipment items
     const equipmentMap = new Map<string, { id: string; name: string; category: EquipmentCategory }>();

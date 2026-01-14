@@ -6,7 +6,7 @@ import { taskService, type TaskWithRelations } from '../services/task.service';
 import { eventService } from '../services/event.service';
 import { equipmentAssignmentService } from '../services/equipment-assignment.service';
 import { reportService } from '../services/report.service';
-import { monthlyHoursConfigService, DEFAULT_TARGET_HOURS } from '../services/monthly-hours-config.service';
+import { monthlyHoursConfigService, DEFAULT_HOURS_PER_DAY } from '../services/monthly-hours-config.service';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import {
@@ -94,14 +94,20 @@ export function Dashboard() {
     queryKey: ['monthly-hours-config', currentYear, currentMonth + 1],
     queryFn: () => monthlyHoursConfigService.getByMonth(currentYear, currentMonth + 1),
   });
-  const targetHours = targetData?.targetHours || DEFAULT_TARGET_HOURS;
+  // Use configured target or calculate default (workdays × 4 hours)
+  const totalWorkdays = targetData?.totalWorkdays || 22;
+  const targetHours = targetData?.targetHours || totalWorkdays * DEFAULT_HOURS_PER_DAY;
+  const configStartDate = targetData?.startDate || null;
 
   // Monthly hours for becario - fetch entries directly like TimeEntries.tsx does
+  // Use configured start date if available for filtering
+  const becarioEffectiveDateFrom = configStartDate || monthStart;
+
   const { data: monthlyEntriesData, isLoading: isLoadingMonthlyEntries } = useQuery({
-    queryKey: ['time-entries', 'monthly', currentYear, currentMonth, user?.id],
+    queryKey: ['time-entries', 'monthly', currentYear, currentMonth, user?.id, configStartDate],
     queryFn: () => timeEntryService.getAll({
       userId: user!.id,
-      dateFrom: monthStart,
+      dateFrom: becarioEffectiveDateFrom,
       dateTo: monthEnd,
       limit: 100,
     }),
@@ -109,19 +115,22 @@ export function Dashboard() {
   });
 
   // Monthly hours for admin - use report service for team totals
+  // Use configured start date if available
+  const effectiveDateFrom = configStartDate || monthStart;
+
   const { data: teamHoursData, isLoading: isLoadingTeamHours } = useQuery({
-    queryKey: ['hours-by-user', currentYear, currentMonth],
+    queryKey: ['hours-by-user', currentYear, currentMonth, configStartDate],
     queryFn: () => reportService.getHoursByUser({
-      dateFrom: monthStart,
+      dateFrom: effectiveDateFrom,
       dateTo: monthEnd,
     }),
     enabled: isAdminOrSupervisor,
   });
 
-  // Calculate monthly hours - becario from entries, admin from report
+  // Calculate monthly hours - becario from entries, admin from report (using weekday hours for progress)
   const monthlyHours = isBecario
     ? (monthlyEntriesData?.data || []).reduce((sum, e) => sum + Number(e.totalHours || 0), 0)
-    : teamHoursData?.reduce((sum, h) => sum + Number(h.totalHours || 0), 0) || 0;
+    : teamHoursData?.reduce((sum, h) => sum + (h.weekdayHours || 0), 0) || 0;
 
   const isLoadingMonthlyHours = isBecario ? isLoadingMonthlyEntries : isLoadingTeamHours;
 

@@ -3,16 +3,10 @@ import { Avatar } from '../ui/Avatar';
 import { ProgressBar } from './ProgressBar';
 import type { HoursByUserData } from '../../services/report.service';
 
-// Default monthly hours target - can be overridden via props
-export const DEFAULT_MONTHLY_HOURS_TARGET = 80;
-
-// Re-export for backwards compatibility
-export type BecarioHoursData = HoursByUserData;
-
 interface BecarioHoursCardProps {
   data: HoursByUserData;
-  daysElapsed: number;
-  totalDays: number;
+  workdaysElapsed: number;
+  totalWorkdays: number;
   targetHours?: number;
   onClick?: () => void;
 }
@@ -20,20 +14,22 @@ interface BecarioHoursCardProps {
 type ProgressStatus = 'completed' | 'on_track' | 'behind';
 
 function getProgressStatus(
-  hoursWorked: number,
-  daysElapsed: number,
-  totalDays: number,
+  weekdayHours: number,
+  workdaysElapsed: number,
+  totalWorkdays: number,
   targetHours: number
 ): ProgressStatus {
-  if (hoursWorked >= targetHours) {
+  if (weekdayHours >= targetHours) {
     return 'completed';
   }
 
-  // Calculate expected hours based on days elapsed
-  const expectedHours = (daysElapsed / totalDays) * targetHours;
+  // Calculate expected hours based on workdays elapsed
+  const expectedHours = totalWorkdays > 0
+    ? (workdaysElapsed / totalWorkdays) * targetHours
+    : 0;
 
   // Allow 10% margin before marking as behind
-  if (hoursWorked >= expectedHours * 0.9) {
+  if (weekdayHours >= expectedHours * 0.9) {
     return 'on_track';
   }
 
@@ -60,13 +56,17 @@ const statusConfig: Record<ProgressStatus, { label: string; color: string; varia
 
 export function BecarioHoursCard({
   data,
-  daysElapsed,
-  totalDays,
-  targetHours = DEFAULT_MONTHLY_HOURS_TARGET,
+  workdaysElapsed,
+  totalWorkdays,
+  targetHours = 88,
   onClick,
 }: BecarioHoursCardProps) {
-  const percentage = Math.min((data.totalHours / targetHours) * 100, 100);
-  const status = getProgressStatus(data.totalHours, daysElapsed, totalDays, targetHours);
+  // Use weekday hours for progress calculation
+  const weekdayHours = data.weekdayHours || 0;
+  const weekendHours = data.weekendHours || 0;
+
+  const percentage = Math.min((weekdayHours / targetHours) * 100, 100);
+  const status = getProgressStatus(weekdayHours, workdaysElapsed, totalWorkdays, targetHours);
   const config = statusConfig[status];
 
   return (
@@ -92,7 +92,7 @@ export function BecarioHoursCard({
       <div className="mt-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-600">
-            {data.totalHours.toFixed(1)} / {targetHours} horas
+            {weekdayHours.toFixed(1)} / {targetHours} horas
           </span>
           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
             {config.label}
@@ -101,7 +101,7 @@ export function BecarioHoursCard({
 
         <div className="mt-2">
           <ProgressBar
-            value={data.totalHours}
+            value={weekdayHours}
             max={targetHours}
             variant={config.variant}
             size="md"
@@ -110,7 +110,14 @@ export function BecarioHoursCard({
 
         <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
           <span>{percentage.toFixed(0)}% completado</span>
-          <span>{data.totalSessions} sesiones</span>
+          <div className="flex items-center gap-2">
+            <span>{data.totalSessions} sesiones</span>
+            {weekendHours > 0 && (
+              <span className="rounded bg-purple-100 px-1.5 py-0.5 text-purple-700">
+                +{weekendHours.toFixed(1)}h extra
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

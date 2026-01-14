@@ -86,30 +86,48 @@ export function ShiftEquipmentSelector({
   }, [shiftDate, startTime, endTime]);
 
   // Query available equipment
-  const { data: availableEquipment, isLoading } = useQuery({
+  const { data: availableEquipment, isLoading: isLoadingAvailable } = useQuery({
     queryKey: ['equipment-available', 'event', queryParams],
     queryFn: () => equipmentService.getAvailable(queryParams!),
     enabled: !!queryParams,
     staleTime: 30000, // Cache for 30 seconds
   });
 
-  // Group equipment by category
+  // Also query ALL active equipment to ensure current selections are always shown
+  const { data: allEquipmentResponse, isLoading: isLoadingAll } = useQuery({
+    queryKey: ['equipment', { isActive: true, limit: 100 }],
+    queryFn: () => equipmentService.getAll({ isActive: true, limit: 100 }),
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  const allEquipment = allEquipmentResponse?.data || [];
+  const isLoading = isLoadingAvailable || isLoadingAll;
+
+  // Create a set of available equipment IDs for quick lookup
+  const availableIds = useMemo(() => {
+    return new Set((availableEquipment || []).map(eq => eq.id));
+  }, [availableEquipment]);
+
+  // Group ALL equipment by category, marking availability
   const equipmentByCategory = useMemo(() => {
-    const grouped: Record<EquipmentCategory, Equipment[]> = {
+    const grouped: Record<EquipmentCategory, Array<Equipment & { isAvailable: boolean }>> = {
       camera: [],
       lens: [],
       adapter: [],
       sd_card: [],
     };
 
-    (availableEquipment || []).forEach((eq) => {
+    allEquipment.forEach((eq) => {
       if (grouped[eq.category]) {
-        grouped[eq.category].push(eq);
+        grouped[eq.category].push({
+          ...eq,
+          isAvailable: availableIds.has(eq.id),
+        });
       }
     });
 
     return grouped;
-  }, [availableEquipment]);
+  }, [allEquipment, availableIds]);
 
   // Handle equipment change
   const handleChange = (key: keyof ShiftEquipment, value: string) => {
@@ -122,24 +140,32 @@ export function ShiftEquipmentSelector({
     onChange(newEquipment);
   };
 
-  // Get options for a category (filtering out excluded equipment)
+  // Get options for a category (showing all equipment, marking unavailable ones)
   const getOptions = (category: EquipmentCategory, currentValue?: string) => {
     const items = equipmentByCategory[category] || [];
-    // Filter out excluded equipment, but keep the current value if it's selected
-    const filteredItems = items.filter(
-      (eq) => !excludeEquipmentIds.includes(eq.id) || eq.id === currentValue
-    );
 
     return [
       { value: '', label: 'Sin asignar' },
-      ...filteredItems.map((eq) => {
-        const isExcluded = excludeEquipmentIds.includes(eq.id) && eq.id !== currentValue;
+      ...items.map((eq) => {
+        const isCurrentSelection = eq.id === currentValue;
+        const isExcludedInForm = excludeEquipmentIds.includes(eq.id) && !isCurrentSelection;
+        const isUnavailable = !eq.isAvailable && !isCurrentSelection;
+
+        // Determine label suffix
+        let labelSuffix = '';
+        if (isExcludedInForm) {
+          labelSuffix = ' (en otro turno)';
+        } else if (isUnavailable) {
+          labelSuffix = ' (no disponible)';
+        }
+
+        const baseName = eq.serialNumber ? `${eq.name} (${eq.serialNumber})` : eq.name;
+
         return {
           value: eq.id,
-          label: isExcluded
-            ? `${eq.name} (ya asignado)`
-            : (eq.serialNumber ? `${eq.name} (${eq.serialNumber})` : eq.name),
-          disabled: isExcluded,
+          label: baseName + labelSuffix,
+          // Current selection should never be disabled
+          disabled: isCurrentSelection ? false : (isExcludedInForm || isUnavailable),
         };
       }),
     ];
@@ -159,7 +185,6 @@ export function ShiftEquipmentSelector({
     const equipmentId = presetEquipment[key];
     if (!equipmentId) return null;
 
-    const allEquipment = availableEquipment || [];
     const found = allEquipment.find((eq) => eq.id === equipmentId);
     return found?.name || 'Equipo preset';
   };

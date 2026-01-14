@@ -1,16 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Calendar, Clock } from 'lucide-react';
+import { Plus, Search, Calendar, Clock, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Spinner } from '../components/ui/Spinner';
 import { Modal } from '../components/ui/Modal';
-import { EventCard, EventModal, EventForm } from '../components/events';
+import { EventCard, EventModal, EventForm, EventKanbanBoard } from '../components/events';
 import { eventService, type EventWithRelations, type CreateEventRequest } from '../services/event.service';
 import { useAuthContext } from '../stores/auth.store.tsx';
 import type { EventType } from '../types';
+
+type ViewMode = 'list' | 'board';
 
 function groupEventsByStatus(events: EventWithRelations[]) {
   const today = new Date();
@@ -47,15 +50,47 @@ const EVENT_TYPE_OPTIONS = [
 export function Events() {
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [eventTypeFilter, setEventTypeFilter] = useState<EventType | ''>('');
   const [selectedEvent, setSelectedEvent] = useState<EventWithRelations | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [pendingOpenId, setPendingOpenId] = useState<string | null>(null);
 
   const canManageEvents = user?.role === 'admin' || user?.role === 'supervisor';
+
+  // Month navigation for board view
+  const goToPreviousMonth = () => {
+    setSelectedMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setSelectedMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const goToCurrentMonth = () => {
+    setSelectedMonth(new Date());
+  };
+
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+  };
+
+  // Handle ?open=ID parameter from notifications
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (openId) {
+      setPendingOpenId(openId);
+      // Clear the URL parameter
+      searchParams.delete('open');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: eventsResponse, isLoading } = useQuery({
     queryKey: ['events', { dateFrom, dateTo }],
@@ -66,6 +101,17 @@ export function Events() {
         limit: 100,
       }),
   });
+
+  // Open event modal when data loads and we have a pending ID
+  useEffect(() => {
+    if (pendingOpenId && eventsResponse?.data) {
+      const event = eventsResponse.data.find((e: EventWithRelations) => e.id === pendingOpenId);
+      if (event) {
+        setSelectedEvent(event);
+      }
+      setPendingOpenId(null);
+    }
+  }, [pendingOpenId, eventsResponse?.data]);
 
   // Create event mutation - now simpler since equipment is handled within days/shifts
   const createEventMutation = useMutation({
@@ -119,12 +165,40 @@ export function Events() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Eventos</h1>
-        {canManageEvents && (
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Evento
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* View Toggle */}
+          <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              Lista
+            </button>
+            <button
+              onClick={() => setViewMode('board')}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'board'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Tablero
+            </button>
+          </div>
+
+          {canManageEvents && (
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Evento
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -221,9 +295,44 @@ export function Events() {
         </CardContent>
       </Card>
 
+      {/* Month Selector for Board View */}
+      {viewMode === 'board' && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={goToPreviousMonth}
+              className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <h2 className="min-w-[180px] text-center text-lg font-semibold capitalize text-gray-900">
+              {formatMonthYear(selectedMonth)}
+            </h2>
+            <button
+              onClick={goToNextMonth}
+              className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+          <Button variant="outline" size="sm" onClick={goToCurrentMonth}>
+            Hoy
+          </Button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
+        </div>
+      ) : viewMode === 'board' ? (
+        /* Board View */
+        <div className="min-h-[500px]">
+          <EventKanbanBoard
+            events={eventsResponse?.data || []}
+            selectedMonth={selectedMonth}
+            onEventClick={(event) => setSelectedEvent(event)}
+          />
         </div>
       ) : !hasEvents ? (
         <Card>
@@ -244,6 +353,7 @@ export function Events() {
           </CardContent>
         </Card>
       ) : (
+        /* List View */
         <div className="space-y-8">
           {/* Eventos Proximos */}
           {upcoming.length > 0 && (

@@ -55,4 +55,18 @@ router.delete(
   eventController.delete
 );
 
+// POST /api/events/:id/equipment/:userId/release - Release equipment for a user (admin/supervisor only)
+router.post(
+  '/:id/equipment/:userId/release',
+  authorize('admin', 'supervisor'),
+  eventController.releaseEquipment
+);
+
+// POST /api/events/:id/equipment/:userId/transfer - Transfer equipment to another user (admin/supervisor only)
+router.post(
+  '/:id/equipment/:userId/transfer',
+  authorize('admin', 'supervisor'),
+  eventController.transferEquipment
+);
+
 export default router;

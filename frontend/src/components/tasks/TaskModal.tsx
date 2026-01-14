@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera, Clock, Sun, Sunset, Users, ClipboardList, Download } from 'lucide-react';
+import { Calendar, User, FileText, MessageSquare, Trash2, Edit2, Send, Camera, Clock, Sun, Sunset, Users, ClipboardList, Download, X, RefreshCw } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
@@ -16,6 +16,7 @@ import { TaskExportView } from './TaskExportView';
 import { taskService, type UpdateTaskRequest, type CreateTaskRequest } from '../../services/task.service';
 import { commentService, type CommentWithUser } from '../../services/comment.service';
 import { equipmentAssignmentService } from '../../services/equipment-assignment.service';
+import { userService } from '../../services/user.service';
 import { exportTaskToImage } from '../../utils/exportTaskToImage';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import type { TaskStatus, EquipmentCategory, EquipmentAssignment } from '../../types';
@@ -114,6 +115,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [replacingUserId, setReplacingUserId] = useState<string | null>(null);
 
   const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
 
@@ -127,6 +129,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     queryKey: ['tasks', taskId, 'comments'],
     queryFn: () => commentService.getByTaskId(taskId!),
     enabled: !!taskId && isOpen,
+    refetchInterval: 15000, // Poll every 15 seconds for new comments
   });
 
   // Query all equipment assignments (no active filter - we filter by task title in notes)
@@ -134,6 +137,14 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     queryKey: ['equipment-assignments', 'all'],
     queryFn: () => equipmentAssignmentService.getAll({ limit: 500 }),
     enabled: !!task && isOpen,
+    staleTime: 10000, // Consider stale after 10 seconds
+  });
+
+  // Query users for replacement dropdown (only when replacing)
+  const { data: usersData } = useQuery({
+    queryKey: ['users', 'active'],
+    queryFn: () => userService.getAll({ isActive: true, limit: 50 }),
+    enabled: !!replacingUserId && isOpen,
   });
 
   // Filter and group equipment by user and shift for this task
@@ -142,11 +153,21 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
     const assignments = assignmentsData?.data || [];
     const taskNotePrefix = `Tarea: ${task.title}`;
+    const now = new Date();
 
-    // Filter assignments where notes starts with "Tarea: {title}"
-    const taskAssignments = assignments.filter(
-      (a: EquipmentAssignment) => a.notes?.startsWith(taskNotePrefix)
-    );
+    // Filter assignments for this task that are not yet ended
+    // This includes: future assignments (not started), active assignments (started but not ended)
+    // Excludes: past assignments (already ended)
+    const taskAssignments = assignments.filter((a: EquipmentAssignment) => {
+      if (!a.notes?.startsWith(taskNotePrefix)) return false;
+
+      const endTime = a.endTime ? new Date(a.endTime) : null;
+
+      // Show if not ended yet (endTime is null or in the future)
+      const notEnded = endTime === null || endTime > now;
+
+      return notEnded;
+    });
 
     const userMap = new Map<string, EquipmentByUserAndShift>();
 
@@ -198,10 +219,19 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
     const assignments = assignmentsData?.data || [];
     const taskNotePrefix = `Tarea: ${task.title}`;
+    const now = new Date();
 
-    const taskAssignments = assignments.filter(
-      (a: EquipmentAssignment) => a.notes?.startsWith(taskNotePrefix)
-    );
+    // Filter assignments for this task that are not yet ended (includes future assignments)
+    const taskAssignments = assignments.filter((a: EquipmentAssignment) => {
+      if (!a.notes?.startsWith(taskNotePrefix)) return false;
+
+      const endTime = a.endTime ? new Date(a.endTime) : null;
+
+      // Show if not ended yet (endTime is null or in the future)
+      const notEnded = endTime === null || endTime > now;
+
+      return notEnded;
+    });
 
     return taskAssignments
       .filter((a: EquipmentAssignment) => a.user && a.equipment)
@@ -233,6 +263,41 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
       // Create equipment assignments if any (now with shift support)
       if (equipmentAssignments && Object.keys(equipmentAssignments).length > 0) {
+        // Find users who already have active equipment assignments for this task
+        const taskNotePrefix = `Tarea: ${task?.title}`;
+        const now = new Date();
+        const usersWithActiveEquipment = new Set<string>();
+
+        if (assignmentsData?.data) {
+          assignmentsData.data.forEach((a: EquipmentAssignment) => {
+            if (!a.notes?.startsWith(taskNotePrefix) || !a.user) return;
+
+            const endTime = a.endTime ? new Date(a.endTime) : null;
+            const notEnded = endTime === null || endTime > now;
+
+            // Include users with active or future assignments (anything not ended)
+            if (notEnded) {
+              usersWithActiveEquipment.add(a.user.id);
+            }
+          });
+        }
+
+        // Only release equipment for users who actually have active assignments
+        for (const userId of Object.keys(equipmentAssignments)) {
+          if (usersWithActiveEquipment.has(userId)) {
+            try {
+              await taskService.releaseEquipment(taskId!, userId);
+            } catch {
+              // Ignore error if release fails
+            }
+          }
+        }
+
+        // Small delay to ensure release is processed (only if we released something)
+        if (usersWithActiveEquipment.size > 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
         for (const [userId, userShiftAssignments] of Object.entries(equipmentAssignments)) {
           // Process morning shift assignments
           if (userShiftAssignments.morning) {
@@ -292,7 +357,28 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
   const updateStatusMutation = useMutation({
     mutationFn: (status: TaskStatus) => taskService.updateStatus(taskId!, status),
-    onSuccess: () => {
+    onMutate: async (newStatus) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['tasks', taskId] });
+
+      // Snapshot previous value
+      const previousTask = queryClient.getQueryData(['tasks', taskId]);
+
+      // Optimistically update
+      queryClient.setQueryData(['tasks', taskId], (old: typeof task) => {
+        if (!old) return old;
+        return { ...old, status: newStatus };
+      });
+
+      return { previousTask };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTask) {
+        queryClient.setQueryData(['tasks', taskId], context.previousTask);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
@@ -307,18 +393,130 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
   const addCommentMutation = useMutation({
     mutationFn: () => commentService.create(taskId!, { content: newComment }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', taskId, 'comments'] });
+    onMutate: async () => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['tasks', taskId, 'comments'] });
+
+      // Snapshot previous value
+      const previousComments = queryClient.getQueryData(['tasks', taskId, 'comments']);
+
+      // Optimistically add comment
+      const optimisticComment = {
+        id: `temp-${Date.now()}`,
+        content: newComment,
+        createdAt: new Date().toISOString(),
+        userId: user?.id,
+        user: {
+          id: user?.id,
+          name: user?.name || '',
+          email: user?.email || '',
+          profileImage: user?.profileImage,
+        },
+      };
+
+      queryClient.setQueryData(['tasks', taskId, 'comments'], (old: CommentWithUser[] | undefined) => {
+        return old ? [...old, optimisticComment] : [optimisticComment];
+      });
+
+      // Clear input immediately for better UX
       setNewComment('');
+
+      return { previousComments };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousComments) {
+        queryClient.setQueryData(['tasks', taskId, 'comments'], context.previousComments);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId, 'comments'] });
     },
   });
 
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId: string) => commentService.delete(commentId),
-    onSuccess: () => {
+    onMutate: async (commentId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['tasks', taskId, 'comments'] });
+
+      // Snapshot previous value
+      const previousComments = queryClient.getQueryData(['tasks', taskId, 'comments']);
+
+      // Optimistically remove comment
+      queryClient.setQueryData(['tasks', taskId, 'comments'], (old: CommentWithUser[] | undefined) => {
+        return old ? old.filter((c) => c.id !== commentId) : [];
+      });
+
+      return { previousComments };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousComments) {
+        queryClient.setQueryData(['tasks', taskId, 'comments'], context.previousComments);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', taskId, 'comments'] });
     },
   });
+
+  const removeAssigneeMutation = useMutation({
+    mutationFn: (userId: string) => taskService.removeAssignee(taskId!, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-assignments'] });
+    },
+  });
+
+  const replaceAssigneeMutation = useMutation({
+    mutationFn: ({ oldUserId, newUserId }: { oldUserId: string; newUserId: string }) =>
+      taskService.replaceAssignee(taskId!, oldUserId, newUserId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-assignments'] });
+      setReplacingUserId(null);
+    },
+  });
+
+  // Equipment-only mutations (for equipment distribution section)
+  const releaseEquipmentMutation = useMutation({
+    mutationFn: (userId: string) => taskService.releaseEquipment(taskId!, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-assignments'] });
+    },
+  });
+
+  const transferEquipmentMutation = useMutation({
+    mutationFn: ({ fromUserId, toUserId }: { fromUserId: string; toUserId: string }) =>
+      taskService.transferEquipment(taskId!, fromUserId, toUserId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-assignments'] });
+      setReplacingUserId(null);
+    },
+  });
+
+  const handleRemoveAssignee = (userId: string, userName: string) => {
+    if (window.confirm(`¿Quitar a ${userName} de esta tarea? Se liberará el equipo asignado.`)) {
+      removeAssigneeMutation.mutate(userId);
+    }
+  };
+
+  const handleReplaceAssignee = (oldUserId: string, newUserId: string) => {
+    replaceAssigneeMutation.mutate({ oldUserId, newUserId });
+  };
+
+  const handleReleaseEquipment = (userId: string, userName: string) => {
+    if (window.confirm(`¿Liberar el equipo asignado a ${userName}?`)) {
+      releaseEquipmentMutation.mutate(userId);
+    }
+  };
+
+  const handleTransferEquipment = (fromUserId: string, toUserId: string) => {
+    transferEquipmentMutation.mutate({ fromUserId, toUserId });
+  };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as TaskStatus;
@@ -344,6 +542,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     setIsEditing(false);
     setNewComment('');
     setIsExportModalOpen(false);
+    setReplacingUserId(null);
     onClose();
   };
 
@@ -543,10 +742,66 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                     key={userEquipment.userId}
                     className="rounded-lg border border-gray-200 bg-white p-3"
                   >
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-500" />
-                      <p className="font-medium text-gray-900">{userEquipment.userName}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <p className="font-medium text-gray-900">{userEquipment.userName}</p>
+                      </div>
+                      {isAdminOrSupervisor && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => setReplacingUserId(
+                              replacingUserId === `eq_${userEquipment.userId}` ? null : `eq_${userEquipment.userId}`
+                            )}
+                            className={`rounded-full p-1.5 transition-colors ${
+                              replacingUserId === `eq_${userEquipment.userId}`
+                                ? 'bg-blue-100 text-blue-600'
+                                : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'
+                            }`}
+                            title="Transferir equipo a otra persona"
+                            disabled={transferEquipmentMutation.isPending}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleReleaseEquipment(userEquipment.userId, userEquipment.userName)}
+                            className="rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            title="Liberar equipo"
+                            disabled={releaseEquipmentMutation.isPending}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Dropdown para seleccionar reemplazo de equipo */}
+                    {replacingUserId === `eq_${userEquipment.userId}` && usersData?.data && (
+                      <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <p className="text-xs text-blue-700 mb-2">Transferir equipo a:</p>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {usersData.data
+                            .filter((u) => u.id !== userEquipment.userId)
+                            .map((u) => (
+                              <button
+                                key={u.id}
+                                onClick={() => handleTransferEquipment(userEquipment.userId, u.id)}
+                                disabled={transferEquipmentMutation.isPending}
+                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-blue-100 transition-colors disabled:opacity-50"
+                              >
+                                <Avatar name={u.name} profileImage={u.profileImage} size="xs" />
+                                <span className="text-gray-700">{u.name}</span>
+                              </button>
+                            ))}
+                        </div>
+                        <button
+                          onClick={() => setReplacingUserId(null)}
+                          className="mt-2 text-xs text-gray-500 hover:text-gray-700"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
 
                     {/* Morning Shift Equipment */}
                     {userEquipment.shifts.morning.length > 0 && (
@@ -600,6 +855,11 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   </div>
                 ))}
               </div>
+              {isAdminOrSupervisor && (
+                <p className="mt-3 text-xs text-gray-500">
+                  <RefreshCw className="inline h-3 w-3 mr-1" />Transferir mueve el equipo a otro usuario
+                </p>
+              )}
             </div>
           )}
 
@@ -610,17 +870,76 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                 <Users className="h-4 w-4" />
                 Asignados
               </h3>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 space-y-2">
                 {task.assignees.map((assignee) => (
-                  <div
-                    key={assignee.user.id}
-                    className="flex items-center gap-2 rounded-full bg-white border border-gray-200 py-1 pl-1 pr-3"
-                  >
-                    <Avatar name={assignee.user.name} profileImage={assignee.user.profileImage} size="sm" />
-                    <span className="text-sm text-gray-700">{assignee.user.name}</span>
+                  <div key={assignee.user.id}>
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-1 items-center gap-2 rounded-full bg-white border border-gray-200 py-1 pl-1 pr-3">
+                        <Avatar name={assignee.user.name} profileImage={assignee.user.profileImage} size="sm" />
+                        <span className="text-sm text-gray-700">{assignee.user.name}</span>
+                      </div>
+                      {isAdminOrSupervisor && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => setReplacingUserId(
+                              replacingUserId === assignee.user.id ? null : assignee.user.id
+                            )}
+                            className={`rounded-full p-1.5 transition-colors ${
+                              replacingUserId === assignee.user.id
+                                ? 'bg-blue-100 text-blue-600'
+                                : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'
+                            }`}
+                            title="Reemplazar (conserva equipo)"
+                            disabled={replaceAssigneeMutation.isPending}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleRemoveAssignee(assignee.user.id, assignee.user.name)}
+                            className="rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            title="Quitar (libera equipo)"
+                            disabled={removeAssigneeMutation.isPending}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {/* Dropdown para seleccionar reemplazo */}
+                    {replacingUserId === assignee.user.id && usersData?.data && (
+                      <div className="mt-2 ml-8 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <p className="text-xs text-blue-700 mb-2">Selecciona el reemplazo:</p>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {usersData.data
+                            .filter((u) => !task.assignees?.some((a) => a.user.id === u.id))
+                            .map((u) => (
+                              <button
+                                key={u.id}
+                                onClick={() => handleReplaceAssignee(assignee.user.id, u.id)}
+                                disabled={replaceAssigneeMutation.isPending}
+                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-blue-100 transition-colors disabled:opacity-50"
+                              >
+                                <Avatar name={u.name} profileImage={u.profileImage} size="xs" />
+                                <span className="text-gray-700">{u.name}</span>
+                              </button>
+                            ))}
+                        </div>
+                        <button
+                          onClick={() => setReplacingUserId(null)}
+                          className="mt-2 text-xs text-gray-500 hover:text-gray-700"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+              {isAdminOrSupervisor && (
+                <p className="mt-3 text-xs text-gray-500">
+                  <RefreshCw className="inline h-3 w-3 mr-1" />Reemplazar transfiere el equipo asignado
+                </p>
+              )}
             </div>
           )}
 

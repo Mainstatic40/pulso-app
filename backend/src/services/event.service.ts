@@ -466,8 +466,8 @@ export const eventService = {
       const startDatetime = eventData.startDatetime || existingEvent.startDatetime;
       const endDatetime = eventData.endDatetime || existingEvent.endDatetime;
 
-      if (endDatetime <= startDatetime) {
-        throw new ValidationError('End datetime must be after start datetime');
+      if (endDatetime < startDatetime) {
+        throw new ValidationError('End datetime must be after or equal to start datetime');
       }
     }
 
@@ -750,5 +750,114 @@ export const eventService = {
     });
 
     return { message: 'Event deleted successfully' };
+  },
+
+  async releaseEquipment(eventId: string, userId: string) {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundError('Event not found');
+    }
+
+    const eventNotePrefix = `Evento: ${event.name}`;
+    const now = new Date();
+
+    // Find all equipment assignments for this user and event that are not yet ended
+    // This includes active assignments AND future assignments
+    const assignments = await prisma.equipmentAssignment.findMany({
+      where: {
+        userId,
+        notes: { startsWith: eventNotePrefix },
+        OR: [
+          { endTime: null },
+          { endTime: { gt: now } },
+        ],
+      },
+    });
+
+    if (assignments.length === 0) {
+      throw new ValidationError('El usuario no tiene equipo asignado para este evento');
+    }
+
+    // Release equipment - set endTime to 1 second ago to avoid overlap conflicts
+    const releaseTime = new Date(now.getTime() - 1000);
+    await prisma.$transaction(async (tx) => {
+      await tx.equipmentAssignment.updateMany({
+        where: { id: { in: assignments.map((a) => a.id) } },
+        data: { endTime: releaseTime },
+      });
+
+      await tx.equipment.updateMany({
+        where: { id: { in: assignments.map((a) => a.equipmentId) } },
+        data: { status: 'available' },
+      });
+    });
+
+    return prisma.event.findUnique({
+      where: { id: eventId },
+      select: eventDetailSelect,
+    });
+  },
+
+  async transferEquipment(eventId: string, fromUserId: string, toUserId: string) {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundError('Event not found');
+    }
+
+    // Verify target user exists
+    const toUser = await prisma.user.findUnique({
+      where: { id: toUserId },
+      select: { id: true, name: true },
+    });
+
+    if (!toUser) {
+      throw new NotFoundError('Target user not found');
+    }
+
+    const eventNotePrefix = `Evento: ${event.name}`;
+    const now = new Date();
+
+    // Find all equipment assignments for source user and event that are not yet ended
+    // This includes active assignments AND future assignments
+    const assignments = await prisma.equipmentAssignment.findMany({
+      where: {
+        userId: fromUserId,
+        notes: { startsWith: eventNotePrefix },
+        OR: [
+          { endTime: null },
+          { endTime: { gt: now } },
+        ],
+      },
+    });
+
+    if (assignments.length === 0) {
+      throw new ValidationError('El usuario origen no tiene equipo asignado para este evento');
+    }
+
+    // Transfer equipment to new user
+    await prisma.equipmentAssignment.updateMany({
+      where: { id: { in: assignments.map((a) => a.id) } },
+      data: { userId: toUserId },
+    });
+
+    // Notify new user
+    await notificationService.create(toUserId, {
+      type: 'event_assigned',
+      title: 'Equipo transferido',
+      message: `Se te transfirió equipo del evento "${event.name}"`,
+      link: `/events?open=${event.id}`,
+      metadata: { eventId: event.id },
+    });
+
+    return prisma.event.findUnique({
+      where: { id: eventId },
+      select: eventDetailSelect,
+    });
   },
 };

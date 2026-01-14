@@ -14,6 +14,11 @@ export interface HoursByUserData {
   userProfileImage?: string | null;
   totalHours: number;
   totalSessions: number;
+  // Separated hours (L-V vs S-D)
+  weekdayHours: number;
+  weekendHours: number;
+  weekdaySessions: number;
+  weekendSessions: number;
 }
 
 export interface HoursByEventData {

@@ -93,33 +93,47 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
   // Additional equipment (equipment taken without assigning to specific shift)
   const [additionalEquipmentIds, setAdditionalEquipmentIds] = useState<string[]>([]);
 
-  // Days with shifts
-  const [days, setDays] = useState<EventDayInput[]>(() => {
-    if (event?.days && event.days.length > 0) {
-      return event.days.map((day) => ({
-        date: day.date.split('T')[0],
-        note: day.note,
-        shifts: day.shifts.map((shift) => ({
+  // Helper function to parse event days
+  const parseEventDays = (eventData: Event | undefined): EventDayInput[] => {
+    if (!eventData?.days || eventData.days.length === 0) return [];
+
+    return eventData.days.map((day) => ({
+      date: day.date.split('T')[0],
+      note: day.note,
+      shifts: day.shifts.map((shift) => {
+        // Map equipment assignments by category
+        const equipment: ShiftEquipment = {
+          cameraId: shift.equipmentAssignments?.find(ea => ea.equipment?.category === 'camera')?.equipmentId || undefined,
+          lensId: shift.equipmentAssignments?.find(ea => ea.equipment?.category === 'lens')?.equipmentId || undefined,
+          adapterId: shift.equipmentAssignments?.find(ea => ea.equipment?.category === 'adapter')?.equipmentId || undefined,
+          sdCardId: shift.equipmentAssignments?.find(ea => ea.equipment?.category === 'sd_card')?.equipmentId || undefined,
+        };
+
+        return {
           userId: shift.userId,
           startTime: shift.startTime,
           endTime: shift.endTime,
           shiftType: shift.shiftType as 'morning' | 'afternoon' | null,
           note: shift.note,
-          equipment: shift.equipmentAssignments?.reduce((acc, ea) => {
-            if (ea.equipment) {
-              const category = ea.equipment.category;
-              if (category === 'camera') acc.cameraId = ea.equipmentId;
-              else if (category === 'lens') acc.lensId = ea.equipmentId;
-              else if (category === 'adapter') acc.adapterId = ea.equipmentId;
-              else if (category === 'sd_card') acc.sdCardId = ea.equipmentId;
-            }
-            return acc;
-          }, {} as ShiftEquipment),
-        })),
-      }));
+          equipment,
+        };
+      }),
+    }));
+  };
+
+  // Days with shifts
+  const [days, setDays] = useState<EventDayInput[]>(() => parseEventDays(event));
+
+  // Update days when event prop changes (e.g., when event details load from API)
+  // Use event?.id and days length as dependencies to ensure we detect when full data loads
+  const eventDaysKey = event?.days?.map(d => d.id).join(',') || '';
+  const hasEquipmentData = event?.days?.[0]?.shifts?.[0]?.equipmentAssignments !== undefined;
+
+  useEffect(() => {
+    if (event?.days && event.days.length > 0) {
+      setDays(parseEventDays(event));
     }
-    return [];
-  });
+  }, [event?.id, eventDaysKey, hasEquipmentData]);
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -255,28 +269,6 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
         })),
       })),
     };
-
-    // DEBUG: Log what we're submitting
-    console.log('=== EventForm submitting ===');
-    console.log('Full data:', JSON.stringify(data, null, 2));
-    console.log('Days count:', data.days?.length);
-    console.log('Additional equipment:', additionalEquipmentIds);
-    data.days?.forEach((day, i) => {
-      console.log(`Day ${i + 1} (${day.date}):`, {
-        note: day.note,
-        shiftsCount: day.shifts?.length,
-      });
-      day.shifts?.forEach((shift, j) => {
-        console.log(`  Shift ${j + 1}:`, {
-          userId: shift.userId,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
-          shiftType: shift.shiftType,
-          equipment: shift.equipment,
-        });
-      });
-    });
-    console.log('=== End EventForm data ===');
 
     onSubmit(data);
   };

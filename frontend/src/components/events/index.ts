@@ -6,3 +6,6 @@ export { EventDaysManager } from './EventDaysManager';
 export { EventDayForm } from './EventDayForm';
 export { EventDaysDisplay } from './EventDaysDisplay';
 export { ShiftEquipmentSelector } from './ShiftEquipmentSelector';
+export { EventKanbanBoard } from './EventKanbanBoard';
+export { EventKanbanColumn, eventColumnConfigs } from './EventKanbanColumn';
+export { EventKanbanCard } from './EventKanbanCard';

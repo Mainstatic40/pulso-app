@@ -144,4 +144,30 @@ export const taskService = {
     const response = await api.patch<ApiResponse<TaskChecklistItem[]>>(`/tasks/${taskId}/checklist/reorder`, { itemIds });
     return response.data.data!;
   },
+
+  // Assignee management
+  async removeAssignee(taskId: string, userId: string) {
+    const response = await api.delete<ApiResponse<TaskWithRelations>>(`/tasks/${taskId}/assignees/${userId}`);
+    return response.data.data!;
+  },
+
+  async replaceAssignee(taskId: string, oldUserId: string, newUserId: string) {
+    const response = await api.post<ApiResponse<TaskWithRelations>>(`/tasks/${taskId}/assignees/${oldUserId}/replace`, {
+      newUserId,
+    });
+    return response.data.data!;
+  },
+
+  // Equipment management (separate from assignees)
+  async releaseEquipment(taskId: string, userId: string) {
+    const response = await api.post<ApiResponse<TaskWithRelations>>(`/tasks/${taskId}/equipment/${userId}/release`);
+    return response.data.data!;
+  },
+
+  async transferEquipment(taskId: string, fromUserId: string, toUserId: string) {
+    const response = await api.post<ApiResponse<TaskWithRelations>>(`/tasks/${taskId}/equipment/${fromUserId}/transfer`, {
+      toUserId,
+    });
+    return response.data.data!;
+  },
 };

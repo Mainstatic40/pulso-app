@@ -13,7 +13,9 @@ export const upsertSchema = z.object({
     month: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().int().min(1).max(12)),
   }),
   body: z.object({
-    targetHours: z.number().positive('Target hours must be positive').max(200, 'Target hours cannot exceed 200'),
+    targetHours: z.number().positive('Target hours must be positive').max(300, 'Target hours cannot exceed 300'),
+    hoursPerDay: z.number().positive('Hours per day must be positive').max(12, 'Hours per day cannot exceed 12').optional().default(4),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format').nullable().optional(),
   }),
 });
 

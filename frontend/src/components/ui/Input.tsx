@@ -23,6 +23,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
+          spellCheck={true}
+          lang="es"
           className={cn(
             'block w-full rounded-md border px-3 py-2 text-gray-900 placeholder-gray-400',
             'focus:outline-none focus:ring-2 focus:ring-offset-0',

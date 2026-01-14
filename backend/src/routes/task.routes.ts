@@ -60,4 +60,32 @@ router.delete(
   taskController.delete
 );
 
+// DELETE /api/tasks/:id/assignees/:userId - Remove assignee from task (admin/supervisor only)
+router.delete(
+  '/:id/assignees/:userId',
+  authorize('admin', 'supervisor'),
+  taskController.removeAssignee
+);
+
+// POST /api/tasks/:id/assignees/:userId/replace - Replace assignee with another (admin/supervisor only)
+router.post(
+  '/:id/assignees/:userId/replace',
+  authorize('admin', 'supervisor'),
+  taskController.replaceAssignee
+);
+
+// POST /api/tasks/:id/equipment/:userId/release - Release equipment for a user (admin/supervisor only)
+router.post(
+  '/:id/equipment/:userId/release',
+  authorize('admin', 'supervisor'),
+  taskController.releaseEquipment
+);
+
+// POST /api/tasks/:id/equipment/:userId/transfer - Transfer equipment to another user (admin/supervisor only)
+router.post(
+  '/:id/equipment/:userId/transfer',
+  authorize('admin', 'supervisor'),
+  taskController.transferEquipment
+);
+
 export default router;

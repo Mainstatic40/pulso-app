@@ -378,6 +378,132 @@ export const taskService = {
     return updatedTask;
   },
 
+  async removeAssignee(taskId: string, userId: string) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { assignees: true },
+    });
+
+    if (!task) {
+      throw new NotFoundError('Task not found');
+    }
+
+    const isAssigned = task.assignees.some((a) => a.userId === userId);
+    if (!isAssigned) {
+      throw new ValidationError('User is not assigned to this task');
+    }
+
+    // Remove assignee
+    await prisma.taskAssignee.delete({
+      where: {
+        taskId_userId: { taskId, userId },
+      },
+    });
+
+    // Return equipment assigned to this user for this task
+    const taskNotePrefix = `Tarea: ${task.title}`;
+    const now = new Date();
+    const releaseTime = new Date(now.getTime() - 1000); // 1 second ago to avoid conflicts
+
+    await prisma.$transaction(async (tx) => {
+      const assignments = await tx.equipmentAssignment.findMany({
+        where: {
+          userId,
+          notes: { startsWith: taskNotePrefix },
+          startTime: { lte: now },
+          OR: [
+            { endTime: null },
+            { endTime: { gt: now } },
+          ],
+        },
+      });
+
+      if (assignments.length > 0) {
+        await tx.equipmentAssignment.updateMany({
+          where: { id: { in: assignments.map((a) => a.id) } },
+          data: { endTime: releaseTime },
+        });
+        await tx.equipment.updateMany({
+          where: { id: { in: assignments.map((a) => a.equipmentId) } },
+          data: { status: 'available' },
+        });
+      }
+    });
+
+    return prisma.task.findUnique({
+      where: { id: taskId },
+      select: taskSelect,
+    });
+  },
+
+  async replaceAssignee(taskId: string, oldUserId: string, newUserId: string) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { assignees: true },
+    });
+
+    if (!task) {
+      throw new NotFoundError('Task not found');
+    }
+
+    const isOldUserAssigned = task.assignees.some((a) => a.userId === oldUserId);
+    if (!isOldUserAssigned) {
+      throw new ValidationError('Original user is not assigned to this task');
+    }
+
+    const isNewUserAssigned = task.assignees.some((a) => a.userId === newUserId);
+    if (isNewUserAssigned) {
+      throw new ValidationError('New user is already assigned to this task');
+    }
+
+    // Verify new user exists
+    const newUser = await prisma.user.findUnique({
+      where: { id: newUserId },
+      select: { id: true, name: true },
+    });
+
+    if (!newUser) {
+      throw new NotFoundError('New user not found');
+    }
+
+    const taskNotePrefix = `Tarea: ${task.title}`;
+
+    await prisma.$transaction(async (tx) => {
+      // Remove old assignee and add new one
+      await tx.taskAssignee.delete({
+        where: { taskId_userId: { taskId, userId: oldUserId } },
+      });
+
+      await tx.taskAssignee.create({
+        data: { taskId, userId: newUserId },
+      });
+
+      // Transfer equipment assignments from old user to new user
+      await tx.equipmentAssignment.updateMany({
+        where: {
+          userId: oldUserId,
+          notes: { startsWith: taskNotePrefix },
+          endTime: null,
+        },
+        data: { userId: newUserId },
+      });
+    });
+
+    // Notify new assignee
+    await notificationService.create(newUserId, {
+      type: 'task_assigned',
+      title: 'Nueva tarea asignada',
+      message: `Se te asignó la tarea "${task.title}"`,
+      link: `/tasks?open=${task.id}`,
+      metadata: { taskId: task.id },
+    });
+
+    return prisma.task.findUnique({
+      where: { id: taskId },
+      select: taskSelect,
+    });
+  },
+
   async delete(id: string) {
     const task = await prisma.task.findUnique({
       where: { id },
@@ -388,13 +514,20 @@ export const taskService = {
     }
 
     // Use transaction to return equipment and delete task
+    const now = new Date();
+    const releaseTime = new Date(now.getTime() - 1000); // 1 second ago
+
     await prisma.$transaction(async (tx) => {
       // Find all active equipment assignments for this task (by notes pattern)
       const taskNotePrefix = `Tarea: ${task.title}`;
       const activeAssignments = await tx.equipmentAssignment.findMany({
         where: {
           notes: { startsWith: taskNotePrefix },
-          endTime: null,
+          startTime: { lte: now },
+          OR: [
+            { endTime: null },
+            { endTime: { gt: now } },
+          ],
         },
         select: {
           id: true,
@@ -404,15 +537,13 @@ export const taskService = {
 
       // Return each equipment (set endTime and status to available)
       if (activeAssignments.length > 0) {
-        const now = new Date();
-
         // Update all assignments to mark as returned
         await tx.equipmentAssignment.updateMany({
           where: {
             id: { in: activeAssignments.map((a) => a.id) },
           },
           data: {
-            endTime: now,
+            endTime: releaseTime,
           },
         });
 
@@ -434,5 +565,114 @@ export const taskService = {
     });
 
     return { message: 'Task deleted successfully' };
+  },
+
+  async releaseEquipment(taskId: string, userId: string) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      throw new NotFoundError('Task not found');
+    }
+
+    const taskNotePrefix = `Tarea: ${task.title}`;
+    const now = new Date();
+
+    // Find all equipment assignments for this user and task that are not yet ended
+    // This includes active assignments AND future assignments
+    const assignments = await prisma.equipmentAssignment.findMany({
+      where: {
+        userId,
+        notes: { startsWith: taskNotePrefix },
+        OR: [
+          { endTime: null },
+          { endTime: { gt: now } },
+        ],
+      },
+    });
+
+    if (assignments.length === 0) {
+      throw new ValidationError('El usuario no tiene equipo asignado para esta tarea');
+    }
+
+    // Release equipment - set endTime to 1 second ago to avoid overlap conflicts
+    const releaseTime = new Date(now.getTime() - 1000);
+    await prisma.$transaction(async (tx) => {
+      await tx.equipmentAssignment.updateMany({
+        where: { id: { in: assignments.map((a) => a.id) } },
+        data: { endTime: releaseTime },
+      });
+
+      await tx.equipment.updateMany({
+        where: { id: { in: assignments.map((a) => a.equipmentId) } },
+        data: { status: 'available' },
+      });
+    });
+
+    return prisma.task.findUnique({
+      where: { id: taskId },
+      select: taskSelect,
+    });
+  },
+
+  async transferEquipment(taskId: string, fromUserId: string, toUserId: string) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      throw new NotFoundError('Task not found');
+    }
+
+    // Verify target user exists
+    const toUser = await prisma.user.findUnique({
+      where: { id: toUserId },
+      select: { id: true, name: true },
+    });
+
+    if (!toUser) {
+      throw new NotFoundError('Target user not found');
+    }
+
+    const taskNotePrefix = `Tarea: ${task.title}`;
+    const now = new Date();
+
+    // Find all equipment assignments for source user and task that are not yet ended
+    // This includes active assignments AND future assignments
+    const assignments = await prisma.equipmentAssignment.findMany({
+      where: {
+        userId: fromUserId,
+        notes: { startsWith: taskNotePrefix },
+        OR: [
+          { endTime: null },
+          { endTime: { gt: now } },
+        ],
+      },
+    });
+
+    if (assignments.length === 0) {
+      throw new ValidationError('El usuario origen no tiene equipo asignado para esta tarea');
+    }
+
+    // Transfer equipment to new user
+    await prisma.equipmentAssignment.updateMany({
+      where: { id: { in: assignments.map((a) => a.id) } },
+      data: { userId: toUserId },
+    });
+
+    // Notify new user
+    await notificationService.create(toUserId, {
+      type: 'task_assigned',
+      title: 'Equipo transferido',
+      message: `Se te transfirió equipo de la tarea "${task.title}"`,
+      link: `/tasks?open=${task.id}`,
+      metadata: { taskId: task.id },
+    });
+
+    return prisma.task.findUnique({
+      where: { id: taskId },
+      select: taskSelect,
+    });
   },
 };

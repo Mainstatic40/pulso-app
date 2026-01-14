@@ -36,10 +36,43 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     refetchInterval: 5000, // Poll every 5 seconds
   });
 
-  // Send message mutation
+  // Send message mutation with optimistic update
   const sendMessageMutation = useMutation({
     mutationFn: (content: string) => conversationService.sendMessage(conversation.id, content),
-    onSuccess: () => {
+    onMutate: async (content) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['messages', conversation.id] });
+
+      // Snapshot previous messages
+      const previousMessages = queryClient.getQueryData(['messages', conversation.id]);
+
+      // Optimistically add the message
+      const optimisticMessage = {
+        id: `temp-${Date.now()}`,
+        content,
+        senderId: user?.id,
+        conversationId: conversation.id,
+        createdAt: new Date().toISOString(),
+        sender: {
+          id: user?.id,
+          name: user?.name || '',
+          profileImage: user?.profileImage,
+        },
+      };
+
+      queryClient.setQueryData(['messages', conversation.id], (old: typeof messages) => {
+        return old ? [...old, optimisticMessage] : [optimisticMessage];
+      });
+
+      return { previousMessages };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['messages', conversation.id], context.previousMessages);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', conversation.id] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },

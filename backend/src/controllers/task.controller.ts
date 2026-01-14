@@ -100,4 +100,78 @@ export const taskController = {
       next(error);
     }
   },
+
+  async removeAssignee(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, userId } = req.params;
+      const task = await taskService.removeAssignee(id, userId);
+
+      res.json({
+        success: true,
+        data: task,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async replaceAssignee(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, userId } = req.params;
+      const { newUserId } = req.body;
+
+      if (!newUserId) {
+        return res.status(400).json({
+          success: false,
+          error: 'newUserId is required',
+        });
+      }
+
+      const task = await taskService.replaceAssignee(id, userId, newUserId);
+
+      res.json({
+        success: true,
+        data: task,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async releaseEquipment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, userId } = req.params;
+      const task = await taskService.releaseEquipment(id, userId);
+
+      res.json({
+        success: true,
+        data: task,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async transferEquipment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, userId } = req.params;
+      const { toUserId } = req.body;
+
+      if (!toUserId) {
+        return res.status(400).json({
+          success: false,
+          error: 'toUserId is required',
+        });
+      }
+
+      const task = await taskService.transferEquipment(id, userId, toUserId);
+
+      res.json({
+        success: true,
+        data: task,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 };

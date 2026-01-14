@@ -1,5 +1,6 @@
 import { PrismaClient, TaskStatus, TaskPriority } from '@prisma/client';
 import ExcelJS from 'exceljs';
+import { isWeekend } from '../utils/workdays';
 
 const prisma = new PrismaClient();
 
@@ -24,52 +25,109 @@ export const reportService = {
   async getHoursByUser(query: DateRangeQuery) {
     const dateRange = getDateRange(query);
 
-    const whereClause: Record<string, unknown> = {
+    // First, get all active becarios (or specific user if filtered)
+    const usersWhere: Record<string, unknown> = {
+      isActive: true,
+      role: 'becario',
+    };
+
+    if (query.userId) {
+      usersWhere.id = query.userId;
+    }
+
+    const allBecarios = await prisma.user.findMany({
+      where: usersWhere,
+      select: { id: true, name: true, email: true, profileImage: true },
+    });
+
+    // Get all time entries to separate weekday vs weekend hours
+    const entriesWhereClause: Record<string, unknown> = {
       clockOut: { not: null },
     };
 
     if (Object.keys(dateRange).length > 0) {
-      whereClause.clockIn = dateRange;
+      entriesWhereClause.clockIn = dateRange;
     }
 
     if (query.userId) {
-      whereClause.userId = query.userId;
+      entriesWhereClause.userId = query.userId;
+    } else {
+      entriesWhereClause.userId = { in: allBecarios.map((u) => u.id) };
     }
 
-    const entries = await prisma.timeEntry.groupBy({
-      by: ['userId'],
-      where: whereClause,
-      _sum: { totalHours: true },
-      _count: { id: true },
+    const allEntries = await prisma.timeEntry.findMany({
+      where: entriesWhereClause,
+      select: {
+        userId: true,
+        clockIn: true,
+        totalHours: true,
+      },
     });
 
-    // Get user names
-    const userIds = entries.map((e) => e.userId);
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, name: true, email: true, profileImage: true },
-    });
+    // Calculate hours by user, separating weekday vs weekend
+    const userHoursMap = new Map<string, {
+      weekdayHours: number;
+      weekendHours: number;
+      weekdaySessions: number;
+      weekendSessions: number;
+    }>();
 
-    const userMap = new Map(users.map((u) => [u.id, u]));
+    for (const entry of allEntries) {
+      const existing = userHoursMap.get(entry.userId) || {
+        weekdayHours: 0,
+        weekendHours: 0,
+        weekdaySessions: 0,
+        weekendSessions: 0,
+      };
 
-    const data = entries.map((entry) => {
-      const user = userMap.get(entry.userId);
+      const hours = Number(entry.totalHours) || 0;
+      const entryDate = new Date(entry.clockIn);
+
+      if (isWeekend(entryDate)) {
+        existing.weekendHours += hours;
+        existing.weekendSessions += 1;
+      } else {
+        existing.weekdayHours += hours;
+        existing.weekdaySessions += 1;
+      }
+
+      userHoursMap.set(entry.userId, existing);
+    }
+
+    // Combine all becarios with their hours (including those with 0 hours)
+    const data = allBecarios.map((user) => {
+      const hours = userHoursMap.get(user.id);
+      const weekdayHours = hours?.weekdayHours || 0;
+      const weekendHours = hours?.weekendHours || 0;
+      const weekdaySessions = hours?.weekdaySessions || 0;
+      const weekendSessions = hours?.weekendSessions || 0;
+
       return {
-        userId: entry.userId,
-        userName: user?.name || 'Unknown',
-        userEmail: user?.email || '',
-        userProfileImage: user?.profileImage || null,
-        totalHours: Number(entry._sum.totalHours) || 0,
-        totalSessions: entry._count.id,
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        userProfileImage: user.profileImage || null,
+        // Total hours (for backwards compatibility)
+        totalHours: weekdayHours + weekendHours,
+        totalSessions: weekdaySessions + weekendSessions,
+        // Separated hours
+        weekdayHours,
+        weekendHours,
+        weekdaySessions,
+        weekendSessions,
       };
     });
 
-    // Sort by total hours descending
-    data.sort((a, b) => b.totalHours - a.totalHours);
+    // Sort by weekday hours descending (primary metric for progress)
+    data.sort((a, b) => b.weekdayHours - a.weekdayHours);
 
     const totals = {
       totalHours: data.reduce((sum, d) => sum + d.totalHours, 0),
       totalSessions: data.reduce((sum, d) => sum + d.totalSessions, 0),
+      weekdayHours: data.reduce((sum, d) => sum + d.weekdayHours, 0),
+      weekendHours: data.reduce((sum, d) => sum + d.weekendHours, 0),
+      weekdaySessions: data.reduce((sum, d) => sum + d.weekdaySessions, 0),
+      weekendSessions: data.reduce((sum, d) => sum + d.weekendSessions, 0),
     };
 
     return { data, totals };

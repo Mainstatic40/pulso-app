@@ -553,12 +553,14 @@ POST   /api/tasks/:id/comments  # Agregar comentario
 
 ### Eventos
 ```
-GET    /api/events              # Listar eventos (filtros: date_from, date_to)
-GET    /api/events/upcoming     # Próximos eventos (7 días)
-GET    /api/events/:id          # Obtener evento por ID
-POST   /api/events              # Crear evento (admin/supervisor)
-PUT    /api/events/:id          # Actualizar evento (admin/supervisor)
-DELETE /api/events/:id          # Eliminar evento (admin)
+GET    /api/events                                 # Listar eventos (filtros: date_from, date_to)
+GET    /api/events/upcoming                        # Próximos eventos (7 días)
+GET    /api/events/:id                             # Obtener evento por ID
+POST   /api/events                                 # Crear evento (admin/supervisor)
+PUT    /api/events/:id                             # Actualizar evento (admin/supervisor)
+DELETE /api/events/:id                             # Eliminar evento (admin)
+POST   /api/events/:id/equipment/:userId/release   # Liberar equipo de usuario (admin/supervisor)
+POST   /api/events/:id/equipment/:userId/transfer  # Transferir equipo a otro usuario (admin/supervisor)
 ```
 
 ### Bitácoras Semanales
@@ -815,6 +817,40 @@ Sistema de gestión visual de tareas con drag & drop usando `@dnd-kit`:
 - Becario: solo sus tareas asignadas, NO pueden mover directamente a "Completado"
 
 **Toggle de vista:** Botones Lista/Tablero en la página de Tareas
+
+### Tablero Kanban de Eventos
+
+Vista de tablero para eventos organizada por estado temporal (sin drag & drop):
+
+**Componentes:**
+- `EventKanbanBoard.tsx` - Contenedor principal con las 3 columnas
+- `EventKanbanColumn.tsx` - Columnas por estado temporal
+- `EventKanbanCard.tsx` - Tarjeta compacta del evento
+
+**Columnas:**
+- **Próximos** (azul): Eventos que aún no han comenzado
+- **En Curso** (verde): Eventos actualmente en progreso
+- **Finalizados** (gris): Eventos ya terminados
+
+**Características:**
+- Selector de mes para filtrar eventos
+- Toggle Lista/Tablero en la página de Eventos
+- Cards compactas con tipo de evento, fechas y conteo de turnos
+
+### Deep Linking para Notificaciones
+
+Las notificaciones pueden abrir directamente el modal de una tarea o evento:
+
+**Implementación:**
+- URL parameter `?open=ID` en Tasks.tsx y Events.tsx
+- `useSearchParams` de React Router para leer el parámetro
+- useEffect que abre el modal correspondiente al cargar la página
+
+**Ejemplo de uso:**
+```typescript
+// En NotificationDropdown, al hacer clic en una notificación:
+navigate(`/tasks?open=${notification.taskId}`);
+```
 
 ### Sistema de Notificaciones
 
@@ -1077,6 +1113,29 @@ async findAll(query, userId, userRole) {
 2. Verificar que el auth store refresque los datos del usuario
 3. Verificar la URL: `{API_BASE}/uploads/profiles/{filename}`
 
+### Error: Selectores de equipo vacíos al editar evento
+
+**Problema:** Al editar un evento, los selectores de equipo aparecen vacíos aunque hay equipos asignados en la base de datos.
+
+**Causa:** El `ShiftEquipmentSelector` solo consultaba equipos "disponibles", pero el equipo ya asignado a este evento no aparecía porque estaba marcado como "en uso".
+
+**Solución implementada:**
+- `ShiftEquipmentSelector` ahora consulta TODOS los equipos activos además de los disponibles
+- El equipo actualmente seleccionado siempre aparece en las opciones y nunca está deshabilitado
+- Los equipos no disponibles se muestran con "(no disponible)" pero el actual siempre está visible
+
+```typescript
+// En ShiftEquipmentSelector.tsx
+const { data: allEquipmentResponse } = useQuery({
+  queryKey: ['equipment', { isActive: true, limit: 100 }],
+  queryFn: () => equipmentService.getAll({ isActive: true, limit: 100 }),
+});
+
+// En getOptions: el equipo actual nunca se deshabilita
+const isCurrentSelection = eq.id === currentValue;
+disabled: isCurrentSelection ? false : (isExcludedInForm || isUnavailable),
+```
+
 ### Error de conexión a PostgreSQL
 ```bash
 # Verificar que PostgreSQL esté corriendo
@@ -1197,5 +1256,5 @@ VITE_API_URL=http://localhost:3000/api
 
 ---
 
-**Última actualización:** 6 Enero 2026
-**Versión del documento:** 3.3
+**Última actualización:** 14 Enero 2026
+**Versión del documento:** 3.4

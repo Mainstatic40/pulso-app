@@ -132,4 +132,41 @@ export const eventController = {
       next(error);
     }
   },
+
+  async releaseEquipment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, userId } = req.params;
+      const event = await eventService.releaseEquipment(id, userId);
+
+      res.json({
+        success: true,
+        data: event,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async transferEquipment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, userId } = req.params;
+      const { toUserId } = req.body;
+
+      if (!toUserId) {
+        return res.status(400).json({
+          success: false,
+          error: 'toUserId is required',
+        });
+      }
+
+      const event = await eventService.transferEquipment(id, userId, toUserId);
+
+      res.json({
+        success: true,
+        data: event,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 };

@@ -126,12 +126,6 @@ export function EventDayForm({
 
   // Update equipment for a specific shift
   const updateShiftEquipment = (index: number, equipment: ShiftEquipment) => {
-    // DEBUG: Log equipment updates
-    console.log('=== EventDayForm updateShiftEquipment ===');
-    console.log('Shift index:', index);
-    console.log('New equipment:', equipment);
-    console.log('=== End updateShiftEquipment ===');
-
     onChange({
       ...day,
       shifts: day.shifts.map((shift, i) =>

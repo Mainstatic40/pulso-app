@@ -2,27 +2,25 @@ import api from '../lib/axios';
 import type { ApiResponse } from '../types';
 
 export interface MonthlyHoursConfig {
-  id: string;
+  id: string | null;
   year: number;
   month: number;
   targetHours: number;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  hoursPerDay: number;
+  startDate: string | null;
+  totalWorkdays: number;
+  workdaysElapsed: number;
+  calculatedTarget: number;
+  isCustomTarget: boolean;
   creator?: {
     id: string;
     name: string;
-  };
+  } | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
-export interface MonthTargetResponse {
-  year: number;
-  month: number;
-  targetHours: number;
-  config: MonthlyHoursConfig | null;
-}
-
-export const DEFAULT_TARGET_HOURS = 80;
+export const DEFAULT_HOURS_PER_DAY = 4;
 
 export const monthlyHoursConfigService = {
   async getAll(year?: number) {
@@ -31,23 +29,22 @@ export const monthlyHoursConfigService = {
     return response.data.data || [];
   },
 
-  async getByMonth(year: number, month: number) {
-    const response = await api.get<ApiResponse<MonthTargetResponse>>(`/monthly-hours-config/${year}/${month}`);
+  async getByMonth(year: number, month: number): Promise<MonthlyHoursConfig> {
+    const response = await api.get<ApiResponse<MonthlyHoursConfig>>(`/monthly-hours-config/${year}/${month}`);
     return response.data.data!;
   },
 
-  async getTargetHours(year: number, month: number): Promise<number> {
-    try {
-      const response = await api.get<ApiResponse<MonthTargetResponse>>(`/monthly-hours-config/${year}/${month}`);
-      return response.data.data?.targetHours || DEFAULT_TARGET_HOURS;
-    } catch {
-      return DEFAULT_TARGET_HOURS;
-    }
-  },
-
-  async upsert(year: number, month: number, targetHours: number) {
+  async upsert(
+    year: number,
+    month: number,
+    targetHours: number,
+    hoursPerDay: number = DEFAULT_HOURS_PER_DAY,
+    startDate: string | null = null
+  ) {
     const response = await api.put<ApiResponse<MonthlyHoursConfig>>(`/monthly-hours-config/${year}/${month}`, {
       targetHours,
+      hoursPerDay,
+      startDate,
     });
     return response.data.data!;
   },

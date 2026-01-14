@@ -30,18 +30,12 @@ export const monthlyHoursConfigController = {
     try {
       const { year, month } = req.params as unknown as GetByMonthParams;
 
-      // Get config or return default
-      const config = await monthlyHoursConfigService.findByMonth(year, month);
-      const targetHours = await monthlyHoursConfigService.getTargetHours(year, month);
+      // Get full config with workday stats
+      const config = await monthlyHoursConfigService.getMonthConfig(year, month);
 
       res.json({
         success: true,
-        data: {
-          year,
-          month,
-          targetHours,
-          config, // null if using default
-        },
+        data: config,
       });
     } catch (error) {
       next(error);
@@ -55,13 +49,15 @@ export const monthlyHoursConfigController = {
       }
 
       const { year, month } = req.params as unknown as GetByMonthParams;
-      const { targetHours } = req.body as UpsertBody;
+      const { targetHours, hoursPerDay = 4, startDate } = req.body as UpsertBody;
 
       const config = await monthlyHoursConfigService.upsert(
         year,
         month,
         targetHours,
-        req.user!.userId
+        hoursPerDay,
+        req.user!.userId,
+        startDate
       );
 
       res.json({

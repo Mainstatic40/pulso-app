@@ -135,20 +135,6 @@ export function EventDaysManager({
 
   // Handle day update
   const handleDayChange = (index: number, updatedDay: EventDayInput) => {
-    // DEBUG: Log day changes
-    console.log('=== EventDaysManager handleDayChange ===');
-    console.log('Day index:', index);
-    console.log('Updated day:', JSON.stringify(updatedDay, null, 2));
-    console.log('Shifts count:', updatedDay.shifts?.length || 0);
-    updatedDay.shifts?.forEach((shift, i) => {
-      console.log(`  Shift ${i + 1}:`, {
-        userId: shift.userId,
-        shiftType: shift.shiftType,
-        equipment: shift.equipment,
-      });
-    });
-    console.log('=== End handleDayChange ===');
-
     const newDays = [...days];
     newDays[index] = updatedDay;
     onChange(newDays);

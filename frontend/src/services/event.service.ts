@@ -106,4 +106,19 @@ export const eventService = {
     const response = await api.delete<ApiResponse<{ message: string }>>(`/events/${id}`);
     return response.data.data!;
   },
+
+  async releaseEquipment(eventId: string, userId: string) {
+    const response = await api.post<ApiResponse<EventWithDetails>>(
+      `/events/${eventId}/equipment/${userId}/release`
+    );
+    return response.data.data!;
+  },
+
+  async transferEquipment(eventId: string, fromUserId: string, toUserId: string) {
+    const response = await api.post<ApiResponse<EventWithDetails>>(
+      `/events/${eventId}/equipment/${fromUserId}/transfer`,
+      { toUserId }
+    );
+    return response.data.data!;
+  },
 };

@@ -177,24 +177,22 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   // Count total shifts
   const totalShifts = fullEvent.days?.reduce((acc, day) => acc + (day.shifts?.length || 0), 0) || 0;
 
-  // DEBUG: Log event data
-  console.log('=== EventModal fullEvent ===');
-  console.log('Event ID:', fullEvent.id);
-  console.log('Days count:', fullEvent.days?.length || 0);
-  console.log('Total shifts:', totalShifts);
-  fullEvent.days?.forEach((day, i) => {
-    console.log(`Day ${i + 1}:`, {
-      date: day.date,
-      shiftsCount: day.shifts?.length || 0,
-    });
-  });
-  console.log('=== End EventModal ===');
-
   if (isEditing) {
+    // If eventDetails hasn't loaded yet, show loading state
+    if (!eventDetails && isLoadingDetails) {
+      return (
+        <Modal isOpen={isOpen} onClose={handleClose} title="Cargando..." size="2xl">
+          <div className="flex items-center justify-center py-12">
+            <Spinner size="lg" />
+          </div>
+        </Modal>
+      );
+    }
+
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title="Editar Evento" size="2xl">
         <EventForm
-          event={fullEvent}
+          event={eventDetails || fullEvent}
           onSubmit={handleUpdateEvent}
           onCancel={() => setIsEditing(false)}
           isLoading={updateEventMutation.isPending}
