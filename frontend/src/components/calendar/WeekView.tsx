@@ -114,7 +114,7 @@ export function WeekView({
           return (
             <div
               key={index}
-              className="border-r border-gray-200 py-2 text-center last:border-r-0"
+              className="border-r border-gray-200 py-2 text-center last:border-r-0 overflow-hidden min-w-0"
             >
               <div className="text-xs font-medium uppercase text-gray-500">
                 {DAYS_OF_WEEK[index]}
@@ -129,7 +129,7 @@ export function WeekView({
               </div>
               {/* Tasks for the day (all-day section) */}
               {dayTasks.length > 0 && (
-                <div className="mt-1 max-h-[40px] overflow-hidden space-y-1 px-1">
+                <div className="mt-1 space-y-1 px-1 overflow-hidden">
                   {dayTasks.slice(0, 2).map((task) => (
                     <CalendarTask
                       key={task.id}
@@ -139,7 +139,7 @@ export function WeekView({
                     />
                   ))}
                   {dayTasks.length > 2 && (
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 truncate">
                       +{dayTasks.length - 2} mas
                     </div>
                   )}
