@@ -129,7 +129,7 @@ export function WeekView({
               </div>
               {/* Tasks for the day (all-day section) */}
               {dayTasks.length > 0 && (
-                <div className="mt-1 space-y-1 px-1">
+                <div className="mt-1 max-h-[40px] overflow-hidden space-y-1 px-1">
                   {dayTasks.slice(0, 2).map((task) => (
                     <CalendarTask
                       key={task.id}
