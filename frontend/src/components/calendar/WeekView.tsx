@@ -1,6 +1,5 @@
 import { cn } from '../../lib/utils';
 import { CalendarEvent } from './CalendarEvent';
-import { CalendarTask } from './CalendarTask';
 import type { EventWithRelations } from '../../services/event.service';
 import type { TaskWithRelations } from '../../services/task.service';
 
@@ -104,80 +103,83 @@ export function WeekView({
 
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-      {/* Header with days */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-gray-200 bg-gray-50">
-        <div className="border-r border-gray-200" />
+      <div className="flex">
+        {/* Hours column */}
+        <div className="w-[60px] flex-shrink-0 border-r border-gray-200">
+          {/* Empty header cell */}
+          <div className="h-[80px] border-b border-gray-200 bg-gray-50" />
+          {/* Hour labels */}
+          {HOURS.map((hour) => (
+            <div
+              key={hour}
+              className="h-[40px] border-b border-gray-200 bg-white py-2 text-right pr-2 text-xs text-gray-500"
+            >
+              {formatHour(hour)}
+            </div>
+          ))}
+        </div>
+
+        {/* Day columns */}
         {weekDays.map((day, index) => {
           const isDayToday = isToday(day);
           const dayTasks = getTasksForDay(tasks, day);
+          const isLastDay = index === weekDays.length - 1;
 
           return (
             <div
               key={index}
-              className="border-r border-gray-200 py-2 text-center last:border-r-0 overflow-hidden min-w-0"
-            >
-              <div className="text-xs font-medium uppercase text-gray-500">
-                {DAYS_OF_WEEK[index]}
-              </div>
-              <div
-                className={cn(
-                  'mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
-                  isDayToday ? 'bg-[#CC0000] text-white' : 'text-gray-900'
-                )}
-              >
-                {day.getDate()}
-              </div>
-              {/* Tasks for the day (all-day section) */}
-              {dayTasks.length > 0 && (
-                <div className="mt-1 space-y-1 px-1 overflow-hidden">
-                  {dayTasks.slice(0, 2).map((task) => (
-                    <CalendarTask
-                      key={task.id}
-                      task={task}
-                      onClick={onTaskClick}
-                      compact
-                    />
-                  ))}
-                  {dayTasks.length > 2 && (
-                    <div className="text-xs text-gray-500 truncate">
-                      +{dayTasks.length - 2} mas
-                    </div>
-                  )}
-                </div>
+              className={cn(
+                'flex-1 min-w-0',
+                !isLastDay && 'border-r border-gray-200'
               )}
+            >
+              {/* Day header */}
+              <div className="h-[80px] border-b border-gray-200 bg-gray-50 py-2 text-center overflow-hidden">
+                <div className="text-xs font-medium uppercase text-gray-500">
+                  {DAYS_OF_WEEK[index]}
+                </div>
+                <div
+                  className={cn(
+                    'mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
+                    isDayToday ? 'bg-[#CC0000] text-white' : 'text-gray-900'
+                  )}
+                >
+                  {day.getDate()}
+                </div>
+                {/* Tasks for the day */}
+                {dayTasks.length > 0 && (
+                  <button
+                    onClick={() => onTaskClick(dayTasks[0])}
+                    className="mt-1 px-1 truncate text-xs text-gray-500 hover:text-gray-700 w-full"
+                  >
+                    {dayTasks.length} tarea{dayTasks.length !== 1 ? 's' : ''}
+                  </button>
+                )}
+              </div>
+
+              {/* Hour cells for this day */}
+              {HOURS.map((hour) => {
+                const hourEvents = getEventsForDayAndHour(events, day, hour);
+
+                return (
+                  <div
+                    key={hour}
+                    className="h-[40px] border-b border-gray-200 p-1 overflow-hidden"
+                  >
+                    {hourEvents.map((event) => (
+                      <CalendarEvent
+                        key={event.id}
+                        event={event}
+                        onClick={onEventClick}
+                        selectedDate={day}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
-      </div>
-
-      {/* Time grid - no scroll, 7am to 9pm */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)]">
-        {HOURS.map((hour) => (
-          <div key={hour} className="contents">
-            <div className="border-b border-r border-gray-200 bg-white py-2 text-right pr-2 text-xs text-gray-500">
-              {formatHour(hour)}
-            </div>
-            {weekDays.map((day, dayIndex) => {
-              const hourEvents = getEventsForDayAndHour(events, day, hour);
-
-              return (
-                <div
-                  key={`${hour}-${dayIndex}`}
-                  className="min-h-[40px] border-b border-r border-gray-200 p-1 last:border-r-0"
-                >
-                  {hourEvents.map((event) => (
-                    <CalendarEvent
-                      key={event.id}
-                      event={event}
-                      onClick={onEventClick}
-                      selectedDate={day}
-                    />
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        ))}
       </div>
     </div>
   );
