@@ -42,6 +42,35 @@ const eventListSelect = {
       },
     },
   },
+  // Include days with shifts for time display in Kanban view
+  days: {
+    select: {
+      id: true,
+      date: true,
+      shifts: {
+        select: {
+          id: true,
+          userId: true,
+          startTime: true,
+          endTime: true,
+          shiftType: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              profileImage: true,
+            },
+          },
+        },
+        orderBy: {
+          startTime: 'asc' as const,
+        },
+      },
+    },
+    orderBy: {
+      date: 'asc' as const,
+    },
+  },
   _count: {
     select: {
       days: true,

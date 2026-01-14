@@ -16,13 +16,25 @@ function formatDateTime(dateString: string): string {
   });
 }
 
-function formatTime(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString('es-MX', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+// Get time range from shifts (first start to last end)
+function getEventTimeRange(event: EventWithRelations): { start: string; end: string } | null {
+  if (!event.days?.length) return null;
+
+  const allShifts = event.days.flatMap(day => day.shifts || []);
+  if (!allShifts.length) return null;
+
+  // Sort shifts by start time
+  const sortedByStart = [...allShifts].sort((a, b) =>
+    a.startTime.localeCompare(b.startTime)
+  );
+  const sortedByEnd = [...allShifts].sort((a, b) =>
+    a.endTime.localeCompare(b.endTime)
+  );
+
+  return {
+    start: sortedByStart[0].startTime,
+    end: sortedByEnd[sortedByEnd.length - 1].endTime,
+  };
 }
 
 const eventTypeConfig: Record<EventType, { label: string; icon: React.ReactNode; borderColor: string }> = {
@@ -69,6 +81,7 @@ export function EventKanbanCard({ event, onClick }: EventKanbanCardProps) {
   }
 
   const isSameDay = formatDateTime(event.startDatetime) === formatDateTime(event.endDatetime);
+  const timeRange = getEventTimeRange(event);
 
   return (
     <div
@@ -97,12 +110,12 @@ export function EventKanbanCard({ event, onClick }: EventKanbanCardProps) {
             {!isSameDay && ` - ${formatDateTime(event.endDatetime)}`}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <Clock className="h-3 w-3" />
-          <span>
-            {formatTime(event.startDatetime)} - {formatTime(event.endDatetime)}
-          </span>
-        </div>
+        {timeRange && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <Clock className="h-3 w-3" />
+            <span>{timeRange.start} - {timeRange.end}</span>
+          </div>
+        )}
       </div>
 
       {/* Assignees */}
