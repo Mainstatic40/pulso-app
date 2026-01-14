@@ -19,6 +19,12 @@ type ViewMode = 'list' | 'board';
 
 const allStatusOptions = [{ value: '', label: 'Todos los estados' }, ...statusOptions];
 const allPriorityOptions = [{ value: '', label: 'Todas las prioridades' }, ...priorityOptions];
+const shiftOptions = [
+  { value: '', label: 'Todos los turnos' },
+  { value: 'morning', label: 'Mañana' },
+  { value: 'afternoon', label: 'Tarde' },
+  { value: 'both', label: 'Ambos turnos' },
+];
 
 export function Tasks() {
   const { user } = useAuthContext();
@@ -30,6 +36,7 @@ export function Tasks() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('');
+  const [shiftFilter, setShiftFilter] = useState<string>('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -156,14 +163,22 @@ export function Tasks() {
     createTaskMutation.mutate({ taskData: data as CreateTaskRequest, equipmentAssignments });
   };
 
-  // Filter tasks by search query
+  // Filter tasks by search query and shift
   const tasks = (tasksResponse?.data || []).filter((task: TaskWithRelations) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      task.title.toLowerCase().includes(query) ||
-      task.description?.toLowerCase().includes(query)
-    );
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = task.title.toLowerCase().includes(query) ||
+        task.description?.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+    }
+
+    // Shift filter
+    if (shiftFilter) {
+      if (task.shift !== shiftFilter) return false;
+    }
+
+    return true;
   });
 
   return (
@@ -223,19 +238,26 @@ export function Tasks() {
                 />
               </div>
             </div>
-            <div className="flex gap-4">
-              <div className="w-44">
+            <div className="flex flex-wrap gap-3">
+              <div className="w-40">
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   options={allStatusOptions}
                 />
               </div>
-              <div className="w-44">
+              <div className="w-40">
                 <Select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
                   options={allPriorityOptions}
+                />
+              </div>
+              <div className="w-40">
+                <Select
+                  value={shiftFilter}
+                  onChange={(e) => setShiftFilter(e.target.value)}
+                  options={shiftOptions}
                 />
               </div>
             </div>
@@ -262,11 +284,11 @@ export function Tasks() {
             <Filter className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-4 text-lg font-medium text-gray-900">No hay tareas</h3>
             <p className="mt-2 text-gray-500">
-              {searchQuery || statusFilter || priorityFilter
+              {searchQuery || statusFilter || priorityFilter || shiftFilter
                 ? 'No se encontraron tareas con los filtros seleccionados.'
                 : 'Aún no hay tareas creadas.'}
             </p>
-            {isAdminOrSupervisor && !searchQuery && !statusFilter && !priorityFilter && (
+            {isAdminOrSupervisor && !searchQuery && !statusFilter && !priorityFilter && !shiftFilter && (
               <Button className="mt-4" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Crear primera tarea
