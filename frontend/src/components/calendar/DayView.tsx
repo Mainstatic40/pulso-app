@@ -158,6 +158,7 @@ export function DayView({
                         key={event.id}
                         event={event}
                         onClick={onEventClick}
+                        selectedDate={currentDate}
                       />
                     ))}
                   </div>

@@ -171,6 +171,7 @@ export function WeekView({
                         key={event.id}
                         event={event}
                         onClick={onEventClick}
+                        selectedDate={day}
                       />
                     ))}
                   </div>

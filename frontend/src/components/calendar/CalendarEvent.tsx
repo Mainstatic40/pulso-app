@@ -5,8 +5,27 @@ interface CalendarEventProps {
   event: EventWithRelations;
   onClick: (event: EventWithRelations) => void;
   compact?: boolean;
+  selectedDate?: Date; // The specific day this event is being displayed for
 }
 
+// Get time range from shifts for a specific date
+function getShiftTimeForDate(event: EventWithRelations, date: Date): string | null {
+  if (!event.days?.length) return null;
+
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const dayData = event.days.find((d) => d.date.split('T')[0] === dateStr);
+
+  if (!dayData?.shifts?.length) return null;
+
+  // Sort shifts and get first start time
+  const sortedShifts = [...dayData.shifts].sort((a, b) =>
+    a.startTime.localeCompare(b.startTime)
+  );
+
+  return sortedShifts[0].startTime;
+}
+
+// Fallback: format time from datetime string
 function formatTime(dateString: string): string {
   return new Date(dateString).toLocaleTimeString('es-MX', {
     hour: '2-digit',
@@ -15,7 +34,12 @@ function formatTime(dateString: string): string {
   });
 }
 
-export function CalendarEvent({ event, onClick, compact = false }: CalendarEventProps) {
+export function CalendarEvent({ event, onClick, compact = false, selectedDate }: CalendarEventProps) {
+  // Get time from shifts if selectedDate is provided, otherwise use startDatetime
+  const displayTime = selectedDate
+    ? getShiftTimeForDate(event, selectedDate) || formatTime(event.startDatetime)
+    : formatTime(event.startDatetime);
+
   return (
     <button
       onClick={() => onClick(event)}
@@ -29,7 +53,7 @@ export function CalendarEvent({ event, onClick, compact = false }: CalendarEvent
         <span className="truncate">{event.name}</span>
       ) : (
         <>
-          <span className="font-semibold">{formatTime(event.startDatetime)}</span>
+          <span className="font-semibold">{displayTime}</span>
           <span className="ml-1 truncate">{event.name}</span>
         </>
       )}

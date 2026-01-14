@@ -151,6 +151,7 @@ export function MonthView({
                     event={event}
                     onClick={onEventClick}
                     compact
+                    selectedDate={day}
                   />
                 ))}
                 {dayTasks.slice(0, 2 - dayEvents.length).map((task) => (
