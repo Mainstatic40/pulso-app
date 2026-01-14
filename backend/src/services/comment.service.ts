@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 const commentSelect = {
   id: true,
   taskId: true,
+  eventId: true,
   userId: true,
   content: true,
   createdAt: true,
@@ -136,5 +137,83 @@ export const commentService = {
     });
 
     return { message: 'Comment deleted successfully' };
+  },
+
+  // Event comments
+  async findByEventId(eventId: string) {
+    // Verify event exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true },
+    });
+
+    if (!event) {
+      throw new NotFoundError('Event not found');
+    }
+
+    const comments = await prisma.comment.findMany({
+      where: { eventId },
+      select: commentSelect,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return comments;
+  },
+
+  async createForEvent(eventId: string, input: CreateCommentInput, userId: string) {
+    // Verify event exists and get participants
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        name: true,
+        createdBy: true,
+        assignees: {
+          select: { userId: true },
+        },
+        days: {
+          select: {
+            shifts: {
+              select: { userId: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundError('Event not found');
+    }
+
+    const comment = await prisma.comment.create({
+      data: {
+        eventId,
+        userId,
+        content: input.content,
+      },
+      select: commentSelect,
+    });
+
+    // Notify other participants (creator + assignees + shift users, excluding comment author)
+    const participantIds = new Set<string>();
+    participantIds.add(event.createdBy);
+    event.assignees.forEach((a) => participantIds.add(a.userId));
+    event.days.forEach((day) => {
+      day.shifts.forEach((shift) => participantIds.add(shift.userId));
+    });
+    participantIds.delete(userId); // Don't notify the author
+
+    if (participantIds.size > 0) {
+      const commenterName = comment.user?.name || 'Alguien';
+      await notificationService.createForMany(Array.from(participantIds), {
+        type: 'event_comment',
+        title: 'Nuevo comentario en evento',
+        message: `${commenterName} comentó en "${event.name}"`,
+        link: `/events?open=${eventId}`,
+        metadata: { eventId, commentId: comment.id },
+      });
+    }
+
+    return comment;
   },
 };

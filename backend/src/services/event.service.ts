@@ -182,6 +182,31 @@ const eventDetailSelect = {
     },
     orderBy: { createdAt: 'desc' as const },
   },
+  comments: {
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profileImage: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' as const },
+  },
+  checklistItems: {
+    select: {
+      id: true,
+      content: true,
+      isCompleted: true,
+      order: true,
+    },
+    orderBy: { order: 'asc' as const },
+  },
 } as const;
 
 type EventListItem = Prisma.EventGetPayload<{ select: typeof eventListSelect }>;

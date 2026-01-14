@@ -918,6 +918,69 @@ Funcionalidad para exportar tareas como imagen:
 3. Click en "Descargar PNG"
 4. Se genera imagen con resolución 2x
 
+### Checklist y Comentarios en Eventos
+
+Sistema de checklist y comentarios similar al de tareas, implementado para eventos:
+
+**Modelo Prisma:**
+```prisma
+model EventChecklistItem {
+  id          String   @id @default(uuid())
+  eventId     String   @map("event_id")
+  content     String   @db.VarChar(500)
+  isCompleted Boolean  @default(false) @map("is_completed")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@map("event_checklist_items")
+}
+```
+
+**Endpoints:**
+- `GET /api/events/:id/checklist` - Obtener checklist
+- `POST /api/events/:id/checklist` - Agregar item
+- `PATCH /api/events/:id/checklist/:itemId` - Actualizar item
+- `DELETE /api/events/:id/checklist/:itemId` - Eliminar item
+- `POST /api/events/:id/comments` - Agregar comentario
+
+**Componentes:**
+- `EventChecklist.tsx` - Componente de checklist con estado optimista
+- `EventModal.tsx` - Incluye secciones de checklist y comentarios
+
+### Exportar Eventos a PDF
+
+Funcionalidad para exportar múltiples eventos a un solo PDF con toda la información:
+
+**Dependencia:** `jspdf`
+
+**Características:**
+- Modo de selección múltiple en la página de eventos
+- Filtro de fin de semana (viernes, sábado, domingo)
+- Exportación con todos los detalles del evento:
+  - Información general (nombre, tipo, fechas, descripción)
+  - Requisitos del cliente (caja destacada)
+  - Días y turnos con equipo asignado
+  - Imágenes de perfil de usuarios (cargadas como base64)
+  - Checklist con estado de completado
+  - Comentarios con avatar del autor
+
+**Flujo:**
+1. Click en "Seleccionar" para entrar en modo selección
+2. Seleccionar eventos individualmente o "Seleccionar todos"
+3. Click en "Exportar PDF"
+4. Se cargan los detalles completos de cada evento
+5. Se pre-cargan las imágenes de perfil en paralelo
+6. Se genera PDF con toda la información
+
+**Horarios predeterminados para fin de semana:**
+- Viernes: 19:00 - 20:00
+- Sábado: 08:00 - 13:00
+
+**Nota sobre jsPDF:**
+- No soporta caracteres unicode especiales (usar ASCII)
+- Usar `+` para concatenar strings en lugar de template literals
+- Las fechas deben validarse antes de formatear
+
 ### Sistema RFID y Credenciales
 
 Sistema completo de gestión de credenciales RFID para usuarios y equipos:
@@ -1208,6 +1271,11 @@ app.use(cors({
 - [x] Búsqueda global (Ctrl+K)
 - [x] Tablero Kanban con drag & drop
 - [x] Exportar tarea como imagen PNG
+- [x] Checklist en eventos
+- [x] Comentarios en eventos
+- [x] Exportar eventos a PDF con imágenes de perfil
+- [x] Filtro de fin de semana en eventos
+- [x] Horarios predeterminados para eventos de fin de semana
 
 ### Fase 5 (Sistema RFID) ✅
 - [x] Sistema RFID para tracking de equipos
@@ -1257,4 +1325,4 @@ VITE_API_URL=http://localhost:3000/api
 ---
 
 **Última actualización:** 14 Enero 2026
-**Versión del documento:** 3.4
+**Versión del documento:** 3.5

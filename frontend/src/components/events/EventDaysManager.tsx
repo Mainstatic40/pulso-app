@@ -18,6 +18,8 @@ interface EventDaysManagerProps {
   afternoonEndTime?: string;
   usePresetEquipment?: boolean;
   presetEquipment?: ShiftEquipment;
+  defaultShiftStart?: string;
+  defaultShiftEnd?: string;
 }
 
 function formatDateShort(date: Date): string {
@@ -70,6 +72,8 @@ export function EventDaysManager({
   afternoonEndTime,
   usePresetEquipment,
   presetEquipment,
+  defaultShiftStart,
+  defaultShiftEnd,
 }: EventDaysManagerProps) {
   // Generate days when dates change
   useEffect(() => {
@@ -467,6 +471,8 @@ export function EventDaysManager({
                   afternoonEndTime={afternoonEndTime}
                   usePresetEquipment={usePresetEquipment}
                   presetEquipment={presetEquipment}
+                  defaultShiftStart={defaultShiftStart}
+                  defaultShiftEnd={defaultShiftEnd}
                 />
               </div>
             </div>

@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { eventService } from '../services/event.service';
+import { commentService } from '../services/comment.service';
+import { eventChecklistService } from '../services/event-checklist.service';
 import type { ListEventsQuery, CreateEventInput, UpdateEventInput } from '../schemas/event.schema';
 
 export const eventController = {
@@ -164,6 +166,115 @@ export const eventController = {
       res.json({
         success: true,
         data: event,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Comments
+  async getComments(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const comments = await commentService.findByEventId(id);
+
+      res.json({
+        success: true,
+        data: comments,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async addComment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { content } = req.body;
+
+      if (!content || typeof content !== 'string' || !content.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Content is required',
+        });
+      }
+
+      const comment = await commentService.createForEvent(id, { content: content.trim() }, req.user!.userId);
+
+      res.status(201).json({
+        success: true,
+        data: comment,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Checklist
+  async getChecklist(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const items = await eventChecklistService.getItemsByEventId(id);
+
+      res.json({
+        success: true,
+        data: items,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async addChecklistItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { content } = req.body;
+
+      if (!content || typeof content !== 'string' || !content.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Content is required',
+        });
+      }
+
+      const item = await eventChecklistService.addItem(id, { content: content.trim() });
+
+      res.status(201).json({
+        success: true,
+        data: item,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async updateChecklistItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { itemId } = req.params;
+      const { content, isCompleted } = req.body;
+
+      const item = await eventChecklistService.updateItem(itemId, {
+        ...(content !== undefined && { content }),
+        ...(isCompleted !== undefined && { isCompleted }),
+      });
+
+      res.json({
+        success: true,
+        data: item,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async deleteChecklistItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { itemId } = req.params;
+      await eventChecklistService.deleteItem(itemId);
+
+      res.json({
+        success: true,
+        message: 'Checklist item deleted',
       });
     } catch (error) {
       next(error);

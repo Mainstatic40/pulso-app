@@ -18,6 +18,8 @@ interface EventDayFormProps {
   usePresetEquipment?: boolean;
   presetEquipment?: ShiftEquipment;
   eventStartDate?: Date;
+  defaultShiftStart?: string;
+  defaultShiftEnd?: string;
 }
 
 const NOTE_PLACEHOLDERS: Record<EventType, string> = {
@@ -80,6 +82,8 @@ export function EventDayForm({
   afternoonEndTime = DEFAULT_TIMES.afternoonEnd,
   usePresetEquipment,
   presetEquipment,
+  defaultShiftStart = '09:00',
+  defaultShiftEnd = '13:00',
 }: EventDayFormProps) {
   // Update day note
   const handleNoteChange = (note: string) => {
@@ -93,8 +97,8 @@ export function EventDayForm({
   const addShift = (shiftType?: 'morning' | 'afternoon') => {
     const newShift: EventShiftInput = {
       userId: '',
-      startTime: shiftType === 'morning' ? morningStartTime : shiftType === 'afternoon' ? afternoonStartTime : '09:00',
-      endTime: shiftType === 'morning' ? morningEndTime : shiftType === 'afternoon' ? afternoonEndTime : '13:00',
+      startTime: shiftType === 'morning' ? morningStartTime : shiftType === 'afternoon' ? afternoonStartTime : defaultShiftStart,
+      endTime: shiftType === 'morning' ? morningEndTime : shiftType === 'afternoon' ? afternoonEndTime : defaultShiftEnd,
       shiftType: shiftType || null,
       note: null,
       equipment: {},
@@ -417,8 +421,8 @@ export function EventDayForm({
                     onClick={() => {
                       const newShift: EventShiftInput = {
                         userId: user.id,
-                        startTime: '09:00',
-                        endTime: '13:00',
+                        startTime: defaultShiftStart,
+                        endTime: defaultShiftEnd,
                         shiftType: null,
                         note: null,
                         equipment: {},

@@ -9,3 +9,4 @@ export { ShiftEquipmentSelector } from './ShiftEquipmentSelector';
 export { EventKanbanBoard } from './EventKanbanBoard';
 export { EventKanbanColumn, eventColumnConfigs } from './EventKanbanColumn';
 export { EventKanbanCard } from './EventKanbanCard';
+export { EventChecklist } from './EventChecklist';

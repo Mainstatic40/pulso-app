@@ -181,6 +181,8 @@ model Event {
   days                 EventDay[]
   attachments          Attachment[]
   eventRequests        EventRequest[]
+  comments             Comment[]
+  checklistItems       EventChecklistItem[]
 
   @@index([eventType])
   @@index([startDatetime])
@@ -238,17 +240,35 @@ model EventShift {
 
 model Comment {
   id        String   @id @default(uuid())
-  taskId    String   @map("task_id")
+  taskId    String?  @map("task_id")
+  eventId   String?  @map("event_id")
   userId    String   @map("user_id")
   content   String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id])
+  task  Task?  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  event Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id])
 
   @@index([taskId])
+  @@index([eventId])
   @@index([userId])
   @@map("comments")
+}
+
+model EventChecklistItem {
+  id          String   @id @default(uuid())
+  eventId     String   @map("event_id")
+  content     String   @db.VarChar(500)
+  isCompleted Boolean  @default(false) @map("is_completed")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("event_checklist_items")
 }
 
 model WeeklyLog {

@@ -3,7 +3,8 @@ import type { ApiResponse } from '../types';
 
 export interface CommentWithUser {
   id: string;
-  taskId: string;
+  taskId?: string;
+  eventId?: string;
   userId: string;
   content: string;
   createdAt: string;
@@ -37,6 +38,17 @@ export const commentService = {
 
   async delete(commentId: string) {
     const response = await api.delete<ApiResponse<{ message: string }>>(`/comments/${commentId}`);
+    return response.data.data!;
+  },
+
+  // Event comments
+  async getByEventId(eventId: string) {
+    const response = await api.get<ApiResponse<CommentWithUser[]>>(`/events/${eventId}/comments`);
+    return response.data.data || [];
+  },
+
+  async createForEvent(eventId: string, data: CreateCommentRequest) {
+    const response = await api.post<ApiResponse<CommentWithUser>>(`/events/${eventId}/comments`, data);
     return response.data.data!;
   },
 };

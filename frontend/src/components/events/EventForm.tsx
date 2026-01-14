@@ -26,6 +26,12 @@ const DEFAULT_TIMES = {
   afternoonEnd: '18:30',
 };
 
+// Weekend-specific default times
+const WEEKEND_TIMES = {
+  friday: { start: '19:00', end: '20:00' },    // Friday evening
+  saturday: { start: '08:00', end: '13:00' },  // Saturday morning
+};
+
 const EVENT_TYPE_LABELS: Record<EventType, string> = {
   civic: 'Evento Cívico',
   church: 'Iglesia Universitaria',
@@ -92,6 +98,10 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
 
   // Additional equipment (equipment taken without assigning to specific shift)
   const [additionalEquipmentIds, setAdditionalEquipmentIds] = useState<string[]>([]);
+
+  // Default shift times (updated based on day of week)
+  const [defaultShiftStart, setDefaultShiftStart] = useState('09:00');
+  const [defaultShiftEnd, setDefaultShiftEnd] = useState('13:00');
 
   // Helper function to parse event days
   const parseEventDays = (eventData: Event | undefined): EventDayInput[] => {
@@ -183,6 +193,28 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
       setEndDate(startDate);
     }
   }, [isSingleDay, startDate]);
+
+  // Update default shift times based on day of week (Friday/Saturday)
+  useEffect(() => {
+    if (!startDate) return;
+
+    const date = new Date(startDate + 'T12:00:00');
+    const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+
+    if (dayOfWeek === 5) {
+      // Friday - evening hours
+      setDefaultShiftStart(WEEKEND_TIMES.friday.start);
+      setDefaultShiftEnd(WEEKEND_TIMES.friday.end);
+    } else if (dayOfWeek === 6) {
+      // Saturday - morning hours
+      setDefaultShiftStart(WEEKEND_TIMES.saturday.start);
+      setDefaultShiftEnd(WEEKEND_TIMES.saturday.end);
+    } else {
+      // Regular weekday defaults
+      setDefaultShiftStart('09:00');
+      setDefaultShiftEnd('13:00');
+    }
+  }, [startDate]);
 
   // Derived dates for EventDaysManager
   const startDateObj = parseDateString(startDate);
@@ -573,6 +605,8 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
           afternoonEndTime={afternoonEndTime}
           usePresetEquipment={usePresetEquipment}
           presetEquipment={presetEquipment}
+          defaultShiftStart={defaultShiftStart}
+          defaultShiftEnd={defaultShiftEnd}
         />
         {errors.days && (
           <p className="text-sm text-red-600">{errors.days}</p>

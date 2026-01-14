@@ -69,4 +69,24 @@ router.post(
   eventController.transferEquipment
 );
 
+// Comments
+// GET /api/events/:id/comments - Get event comments
+router.get('/:id/comments', eventController.getComments);
+
+// POST /api/events/:id/comments - Add comment to event
+router.post('/:id/comments', eventController.addComment);
+
+// Checklist
+// GET /api/events/:id/checklist - Get event checklist
+router.get('/:id/checklist', eventController.getChecklist);
+
+// POST /api/events/:id/checklist - Add checklist item
+router.post('/:id/checklist', eventController.addChecklistItem);
+
+// PATCH /api/events/:id/checklist/:itemId - Update checklist item
+router.patch('/:id/checklist/:itemId', eventController.updateChecklistItem);
+
+// DELETE /api/events/:id/checklist/:itemId - Delete checklist item
+router.delete('/:id/checklist/:itemId', eventController.deleteChecklistItem);
+
 export default router;

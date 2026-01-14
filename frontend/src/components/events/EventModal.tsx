@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, FileText, Trash2, Edit2, Flag, Church, Camera, Mic2, Users } from 'lucide-react';
+import { Calendar, FileText, Trash2, Edit2, Flag, Church, Camera, Mic2, Users, MessageSquare, Send } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
+import { Textarea } from '../ui/Textarea';
+import { Avatar } from '../ui/Avatar';
 import { EventForm } from './EventForm';
 import { EventDaysDisplay } from './EventDaysDisplay';
+import { EventChecklist } from './EventChecklist';
 import { AttachmentsList } from '../shared/AttachmentsList';
 import { eventService, type EventWithRelations, type EventWithDetails, type CreateEventRequest, type UpdateEventRequest } from '../../services/event.service';
+import { commentService, type CommentWithUser } from '../../services/comment.service';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import type { EventType } from '../../types';
 
@@ -27,6 +31,16 @@ function formatFullDate(dateString: string): string {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+  });
+}
+
+function formatDateTime(dateString: string): string {
+  return new Date(dateString).toLocaleString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
@@ -99,6 +113,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
+  const [newComment, setNewComment] = useState('');
 
   const isAdmin = user?.role === 'admin';
   const canEdit = user?.role === 'admin' || user?.role === 'supervisor';
@@ -109,6 +124,14 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
     queryFn: () => eventService.getById(event!.id),
     enabled: isOpen && !!event?.id,
     staleTime: 0, // Always refetch to get fresh data
+  });
+
+  // Fetch comments
+  const { data: comments, isLoading: isLoadingComments } = useQuery({
+    queryKey: ['event', event?.id, 'comments'],
+    queryFn: () => commentService.getByEventId(event!.id),
+    enabled: isOpen && !!event?.id,
+    refetchInterval: 15000, // Poll every 15 seconds for new comments
   });
 
   // Use full details when available, otherwise fall back to list data
@@ -140,6 +163,76 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
     },
   });
 
+  const addCommentMutation = useMutation({
+    mutationFn: () => commentService.createForEvent(event!.id, { content: newComment }),
+    onMutate: async () => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['event', event?.id, 'comments'] });
+
+      // Snapshot previous value
+      const previousComments = queryClient.getQueryData(['event', event?.id, 'comments']);
+
+      // Optimistically add comment
+      const optimisticComment = {
+        id: `temp-${Date.now()}`,
+        content: newComment,
+        createdAt: new Date().toISOString(),
+        userId: user?.id,
+        user: {
+          id: user?.id,
+          name: user?.name || '',
+          email: user?.email || '',
+          profileImage: user?.profileImage,
+        },
+      };
+
+      queryClient.setQueryData(['event', event?.id, 'comments'], (old: CommentWithUser[] | undefined) => {
+        return old ? [...old, optimisticComment] : [optimisticComment];
+      });
+
+      // Clear input immediately for better UX
+      setNewComment('');
+
+      return { previousComments };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousComments) {
+        queryClient.setQueryData(['event', event?.id, 'comments'], context.previousComments);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', event?.id, 'comments'] });
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) => commentService.delete(commentId),
+    onMutate: async (commentId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['event', event?.id, 'comments'] });
+
+      // Snapshot previous value
+      const previousComments = queryClient.getQueryData(['event', event?.id, 'comments']);
+
+      // Optimistically remove comment
+      queryClient.setQueryData(['event', event?.id, 'comments'], (old: CommentWithUser[] | undefined) => {
+        return old ? old.filter((c) => c.id !== commentId) : [];
+      });
+
+      return { previousComments };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousComments) {
+        queryClient.setQueryData(['event', event?.id, 'comments'], context.previousComments);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', event?.id, 'comments'] });
+    },
+  });
+
   const handleDelete = () => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este evento?')) {
       deleteEventMutation.mutate();
@@ -148,7 +241,15 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
 
   const handleClose = () => {
     setIsEditing(false);
+    setNewComment('');
     onClose();
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newComment.trim()) {
+      addCommentMutation.mutate();
+    }
   };
 
   const handleUpdateEvent = (data: CreateEventRequest | UpdateEventRequest) => {
@@ -324,6 +425,85 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
             </div>
           </div>
         )}
+
+        {/* 7. Checklist Section */}
+        <div className="mt-6">
+          <EventChecklist
+            eventId={fullEvent.id}
+            items={fullEvent.checklistItems || []}
+            readOnly={false}
+          />
+        </div>
+
+        {/* 8. Comments Section */}
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <MessageSquare className="h-4 w-4" />
+            Comentarios ({comments?.length || 0})
+          </h3>
+
+          {/* Comment Form */}
+          <form onSubmit={handleAddComment} className="mt-4">
+            <div className="flex gap-2">
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Escribe un comentario..."
+                rows={2}
+                className="flex-1"
+              />
+              <Button
+                type="submit"
+                isLoading={addCommentMutation.isPending}
+                disabled={!newComment.trim()}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </form>
+
+          {/* Comments List */}
+          <div className="mt-4 space-y-4">
+            {isLoadingComments ? (
+              <div className="flex justify-center py-4">
+                <Spinner />
+              </div>
+            ) : comments && comments.length > 0 ? (
+              comments.map((comment: CommentWithUser) => (
+                <div key={comment.id} className="flex gap-3">
+                  <Avatar name={comment.user.name} profileImage={comment.user.profileImage} size="sm" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {comment.user.name}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {formatDateTime(comment.createdAt)}
+                      </span>
+                      {(user?.id === comment.userId || canEdit) && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm('¿Eliminar este comentario?')) {
+                              deleteCommentMutation.mutate(comment.id);
+                            }
+                          }}
+                          className="ml-auto text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-gray-600">{comment.content}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="py-4 text-center text-sm text-gray-500">
+                No hay comentarios aún
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* Creator info */}
         {fullEvent.creator && (

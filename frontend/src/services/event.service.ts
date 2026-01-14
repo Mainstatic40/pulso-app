@@ -4,6 +4,7 @@ import type {
   Event,
   EventType,
   EventDayInput,
+  EventChecklistItem,
 } from '../types';
 
 // Full event with all relations (for detail view)
@@ -119,6 +120,27 @@ export const eventService = {
       `/events/${eventId}/equipment/${fromUserId}/transfer`,
       { toUserId }
     );
+    return response.data.data!;
+  },
+
+  // Checklist methods
+  async getChecklist(eventId: string) {
+    const response = await api.get<ApiResponse<EventChecklistItem[]>>(`/events/${eventId}/checklist`);
+    return response.data.data || [];
+  },
+
+  async addChecklistItem(eventId: string, content: string) {
+    const response = await api.post<ApiResponse<EventChecklistItem>>(`/events/${eventId}/checklist`, { content });
+    return response.data.data!;
+  },
+
+  async updateChecklistItem(eventId: string, itemId: string, data: { content?: string; isCompleted?: boolean }) {
+    const response = await api.patch<ApiResponse<EventChecklistItem>>(`/events/${eventId}/checklist/${itemId}`, data);
+    return response.data.data!;
+  },
+
+  async deleteChecklistItem(eventId: string, itemId: string) {
+    const response = await api.delete<ApiResponse<{ message: string }>>(`/events/${eventId}/checklist/${itemId}`);
     return response.data.data!;
   },
 };

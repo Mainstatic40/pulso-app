@@ -32,6 +32,14 @@ export interface TaskChecklistItem {
   order: number;
 }
 
+export interface EventChecklistItem {
+  id: string;
+  eventId: string;
+  content: string;
+  isCompleted: boolean;
+  order: number;
+}
+
 export interface Attachment {
   id: string;
   filename: string;
@@ -158,6 +166,8 @@ export interface Event {
   }>;
   days?: EventDay[];
   attachments?: Attachment[];
+  comments?: Comment[];
+  checklistItems?: EventChecklistItem[];
   // Count for list views
   _count?: {
     days: number;
@@ -176,7 +186,8 @@ export interface TimeEntry {
 
 export interface Comment {
   id: string;
-  taskId: string;
+  taskId?: string;
+  eventId?: string;
   userId: string;
   content: string;
   createdAt: string;
