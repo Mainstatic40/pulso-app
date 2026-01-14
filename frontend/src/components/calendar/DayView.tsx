@@ -27,7 +27,24 @@ function isToday(date: Date): boolean {
 }
 
 function getEventsForHour(events: EventWithRelations[], date: Date, hour: number): EventWithRelations[] {
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
   return events.filter((event) => {
+    // If event has days with shifts, use shift times
+    if (event.days && event.days.length > 0) {
+      const dayData = event.days.find((d) => d.date.split('T')[0] === dateStr);
+      if (!dayData || !dayData.shifts || dayData.shifts.length === 0) {
+        return false;
+      }
+
+      // Check if any shift starts at this hour
+      return dayData.shifts.some((shift) => {
+        const shiftStartHour = parseInt(shift.startTime.split(':')[0], 10);
+        return shiftStartHour === hour;
+      });
+    }
+
+    // Fallback for events without days data
     const eventStart = new Date(event.startDatetime);
     const eventEnd = new Date(event.endDatetime);
     const slotStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour);
@@ -60,7 +77,17 @@ export function DayView({
 }: DayViewProps) {
   const isDayToday = isToday(currentDate);
   const dayTasks = getTasksForDay(tasks, currentDate);
+  const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
   const dayEvents = events.filter((event) => {
+    // If event has days with shifts, only show on days that have shifts
+    if (event.days && event.days.length > 0) {
+      return event.days.some((day) => {
+        const dayDateStr = day.date.split('T')[0];
+        return dayDateStr === dateStr && day.shifts && day.shifts.length > 0;
+      });
+    }
+
+    // Fallback for events without days data: use date range
     const eventStart = new Date(event.startDatetime);
     const eventEnd = new Date(event.endDatetime);
     const dayStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());

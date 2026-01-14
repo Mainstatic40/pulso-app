@@ -61,7 +61,18 @@ function isToday(date: Date): boolean {
 }
 
 function getEventsForDay(events: EventWithRelations[], date: Date): EventWithRelations[] {
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
   return events.filter((event) => {
+    // If event has days with shifts, only show on days that have shifts
+    if (event.days && event.days.length > 0) {
+      return event.days.some((day) => {
+        const dayDateStr = day.date.split('T')[0];
+        return dayDateStr === dateStr && day.shifts && day.shifts.length > 0;
+      });
+    }
+
+    // Fallback for events without days data: use date range
     const eventStart = new Date(event.startDatetime);
     const eventEnd = new Date(event.endDatetime);
     const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());

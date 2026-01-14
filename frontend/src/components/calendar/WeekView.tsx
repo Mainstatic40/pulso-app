@@ -48,7 +48,24 @@ function getEventsForDayAndHour(
   date: Date,
   hour: number
 ): EventWithRelations[] {
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
   return events.filter((event) => {
+    // If event has days with shifts, use shift times
+    if (event.days && event.days.length > 0) {
+      const dayData = event.days.find((d) => d.date.split('T')[0] === dateStr);
+      if (!dayData || !dayData.shifts || dayData.shifts.length === 0) {
+        return false;
+      }
+
+      // Check if any shift starts at this hour
+      return dayData.shifts.some((shift) => {
+        const shiftStartHour = parseInt(shift.startTime.split(':')[0], 10);
+        return shiftStartHour === hour;
+      });
+    }
+
+    // Fallback for events without days data
     const eventStart = new Date(event.startDatetime);
     const eventEnd = new Date(event.endDatetime);
     const slotStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour);
