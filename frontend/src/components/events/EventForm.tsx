@@ -308,8 +308,8 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
   // Step 1: Event type selection
   if (!eventType) {
     return (
-      <div className="p-6">
-        <h3 className="mb-4 text-lg font-medium text-gray-900">
+      <div className="p-4 sm:p-6">
+        <h3 className="mb-3 text-base font-medium text-gray-900 sm:mb-4 sm:text-lg">
           Selecciona el tipo de evento
         </h3>
         <EventTypeSelector
@@ -322,8 +322,8 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
         {errors.eventType && (
           <p className="mt-2 text-sm text-red-600">{errors.eventType}</p>
         )}
-        <div className="mt-6 flex justify-end">
-          <Button type="button" variant="outline" onClick={onCancel}>
+        <div className="mt-4 flex justify-end sm:mt-6">
+          <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
             Cancelar
           </Button>
         </div>
@@ -333,28 +333,28 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
 
   // Step 2: Full form
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-6">
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:space-y-6 sm:p-6">
       {/* Event Type Header - Click to change */}
       {!isEditing && (
         <button
           type="button"
           onClick={() => setEventType(null)}
-          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-900 sm:text-sm"
         >
           <ChevronLeft className="h-4 w-4" />
           <span className="font-medium">{EVENT_TYPE_LABELS[eventType]}</span>
-          <span className="text-gray-400">— cambiar tipo</span>
+          <span className="hidden text-gray-400 sm:inline">— cambiar tipo</span>
         </button>
       )}
 
       {isEditing && (
-        <div className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700">
+        <div className="rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 sm:text-sm">
           {EVENT_TYPE_LABELS[eventType]}
         </div>
       )}
 
       {/* Basic Info */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <Input
           label="Nombre del evento *"
           value={name}
@@ -381,8 +381,8 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
       </div>
 
       {/* Dates */}
-      <div className="space-y-4 rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center justify-between">
+      <div className="space-y-3 rounded-lg border border-gray-200 p-3 sm:space-y-4 sm:p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <Calendar className="h-4 w-4" />
             Fechas del evento
@@ -392,12 +392,12 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
               type="checkbox"
               checked={isSingleDay}
               onChange={(e) => setIsSingleDay(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              className="h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500 sm:h-4 sm:w-4"
             />
-            <span className="text-sm text-gray-600">Evento de un solo día</span>
+            <span className="text-xs text-gray-600 sm:text-sm">Evento de un solo día</span>
           </label>
         </div>
-        <div className={`grid gap-4 ${isSingleDay ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+        <div className={`grid gap-3 sm:gap-4 ${isSingleDay ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
           <Input
             type="date"
             label={isSingleDay ? 'Fecha del evento *' : 'Fecha de inicio *'}
@@ -419,16 +419,16 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
 
       {/* Yearbook-specific settings */}
       {eventType === 'yearbook' && (
-        <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:space-y-4 sm:p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-blue-800">
             <Settings className="h-4 w-4" />
             Configuración de Anuario
           </div>
 
           {/* Time presets */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
             <div>
-              <label className="mb-1 flex items-center gap-1 text-xs text-gray-600">
+              <label className="mb-1 flex items-center gap-1 text-[10px] text-gray-600 sm:text-xs">
                 <Clock className="h-3 w-3" />
                 Mañana inicio
               </label>
@@ -439,7 +439,7 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
               />
             </div>
             <div>
-              <label className="mb-1 text-xs text-gray-600">Mañana fin</label>
+              <label className="mb-1 text-[10px] text-gray-600 sm:text-xs">Mañana fin</label>
               <Input
                 type="time"
                 value={morningEndTime}
@@ -447,7 +447,7 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
               />
             </div>
             <div>
-              <label className="mb-1 flex items-center gap-1 text-xs text-gray-600">
+              <label className="mb-1 flex items-center gap-1 text-[10px] text-gray-600 sm:text-xs">
                 <Clock className="h-3 w-3" />
                 Tarde inicio
               </label>
@@ -458,7 +458,7 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
               />
             </div>
             <div>
-              <label className="mb-1 text-xs text-gray-600">Tarde fin</label>
+              <label className="mb-1 text-[10px] text-gray-600 sm:text-xs">Tarde fin</label>
               <Input
                 type="time"
                 value={afternoonEndTime}
@@ -468,29 +468,29 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
           </div>
 
           {/* Preset equipment toggle and config */}
-          <div className="border-t border-blue-200 pt-4">
-            <label className="flex cursor-pointer items-center gap-3">
+          <div className="border-t border-blue-200 pt-3 sm:pt-4">
+            <label className="flex cursor-pointer items-center gap-2 sm:gap-3">
               <input
                 type="checkbox"
                 checked={usePresetEquipment}
                 onChange={(e) => setUsePresetEquipment(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 sm:h-4 sm:w-4"
               />
               <div>
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-xs font-medium text-gray-700 sm:text-sm">
                   Usar equipo preset
                 </span>
-                <p className="text-xs text-gray-500">
-                  El mismo equipo para todos los turnos (solo SD seleccionable por turno)
+                <p className="text-[10px] text-gray-500 sm:text-xs">
+                  El mismo equipo para todos los turnos
                 </p>
               </div>
             </label>
 
             {/* Preset equipment selectors */}
             {usePresetEquipment && (
-              <div className="mt-3 grid grid-cols-1 gap-3 rounded-lg bg-white p-3 sm:grid-cols-3">
+              <div className="mt-3 grid grid-cols-1 gap-2 rounded-lg bg-white p-2 sm:grid-cols-3 sm:gap-3 sm:p-3">
                 <div>
-                  <label className="mb-1 flex items-center gap-1 text-xs font-medium text-blue-600">
+                  <label className="mb-1 flex items-center gap-1 text-[10px] font-medium text-blue-600 sm:text-xs">
                     <Camera className="h-3 w-3" />
                     Cámara preset
                   </label>
@@ -508,7 +508,7 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
                   />
                 </div>
                 <div>
-                  <label className="mb-1 text-xs font-medium text-purple-600">
+                  <label className="mb-1 text-[10px] font-medium text-purple-600 sm:text-xs">
                     Lente preset
                   </label>
                   <Select
@@ -525,7 +525,7 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
                   />
                 </div>
                 <div>
-                  <label className="mb-1 text-xs font-medium text-orange-600">
+                  <label className="mb-1 text-[10px] font-medium text-orange-600 sm:text-xs">
                     Adaptador preset
                   </label>
                   <Select
@@ -546,12 +546,12 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
           </div>
 
           {/* Additional equipment */}
-          <div className="border-t border-blue-200 pt-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <div className="border-t border-blue-200 pt-3 sm:pt-4">
+            <div className="flex items-center gap-2 text-xs font-medium text-gray-700 sm:text-sm">
               <Package className="h-4 w-4" />
               Equipo adicional
             </div>
-            <p className="mb-3 text-xs text-gray-500">
+            <p className="mb-2 text-[10px] text-gray-500 sm:mb-3 sm:text-xs">
               Equipo que se llevará al evento sin asignar a un turno específico
             </p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -570,16 +570,16 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
                         setAdditionalEquipmentIds(additionalEquipmentIds.filter((id) => id !== eq.id));
                       }
                     }}
-                    className="h-3 w-3 rounded border-gray-300 text-blue-600"
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 sm:h-3 sm:w-3"
                   />
-                  <span className="text-xs text-gray-700 truncate" title={eq.name}>
+                  <span className="truncate text-[10px] text-gray-700 sm:text-xs" title={eq.name}>
                     {eq.name}
                   </span>
                 </label>
               ))}
             </div>
             {additionalEquipmentIds.length > 0 && (
-              <p className="mt-2 text-xs text-blue-600">
+              <p className="mt-2 text-[10px] text-blue-600 sm:text-xs">
                 {additionalEquipmentIds.length} equipo(s) seleccionado(s)
               </p>
             )}
@@ -614,11 +614,11 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end sm:gap-3">
+        <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
           Cancelar
         </Button>
-        <Button type="submit" isLoading={isLoading}>
+        <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
           {isEditing ? 'Guardar cambios' : 'Crear evento'}
         </Button>
       </div>

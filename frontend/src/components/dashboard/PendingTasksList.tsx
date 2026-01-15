@@ -69,14 +69,14 @@ export function PendingTasksList({
   const displayTasks = tasks.slice(0, maxItems);
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full w-full flex-col overflow-hidden">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <CheckSquare className="h-5 w-5 text-amber-600" />
-          {isBecario ? 'Mis Tareas Pendientes' : 'Tareas Pendientes'}
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <CheckSquare className="h-5 w-5 flex-shrink-0 text-amber-600" />
+          <span className="truncate">{isBecario ? 'Mis Tareas Pendientes' : 'Tareas Pendientes'}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col">
+      <CardContent className="flex flex-1 flex-col overflow-hidden">
         {isLoading ? (
           <div className="flex flex-1 items-center justify-center py-8">
             <Spinner />

@@ -60,15 +60,17 @@ export function EventKanbanBoard({ events, selectedMonth, onEventClick }: EventK
   }, [events, selectedMonth]);
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
-      {eventColumnConfigs.map((config) => (
-        <EventKanbanColumn
-          key={config.id}
-          config={config}
-          events={eventsByStatus[config.id]}
-          onEventClick={onEventClick}
-        />
-      ))}
+    <div className="overflow-x-auto pb-4">
+      <div className="flex min-w-max gap-3 sm:min-w-0 sm:gap-4">
+        {eventColumnConfigs.map((config) => (
+          <EventKanbanColumn
+            key={config.id}
+            config={config}
+            events={eventsByStatus[config.id]}
+            onEventClick={onEventClick}
+          />
+        ))}
+      </div>
     </div>
   );
 }

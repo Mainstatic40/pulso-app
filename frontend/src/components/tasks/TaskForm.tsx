@@ -378,18 +378,18 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
     startTime: string,
     endTime: string
   ) => (
-    <div key={`${assignedUser.id}-${shiftKey}`} className="rounded-lg bg-white border border-gray-200 p-3">
-      <div className="mb-3 flex items-center gap-2">
+    <div key={`${assignedUser.id}-${shiftKey}`} className="rounded-lg border border-gray-200 bg-white p-2 sm:p-3">
+      <div className="mb-2 flex items-center gap-2 sm:mb-3">
         {shiftKey === 'morning' ? (
           <Sun className="h-4 w-4 text-yellow-500" />
         ) : (
           <Sunset className="h-4 w-4 text-orange-500" />
         )}
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-xs font-medium text-gray-700 sm:text-sm">
           {shiftLabel} ({startTime} - {endTime})
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
         {(Object.keys(categoryConfig) as EquipmentCategory[]).map((category) => {
           const config = categoryConfig[category];
           const options = getAvailableOptionsForCategory(category, assignedUser.id, shiftKey);
@@ -415,12 +415,12 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
   );
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 p-6">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 p-4 sm:p-6">
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700">
           Título
         </label>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <div className="flex-1">
             <Input
               placeholder="Escribe un título o selecciona una plantilla →"
@@ -428,7 +428,7 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
               {...register('title')}
             />
           </div>
-          <div className="w-48">
+          <div className="w-full sm:w-48">
             <Select
               value=""
               onChange={(e) => handleQuickTaskSelect(e.target.value)}
@@ -440,7 +440,7 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
       </div>
 
       {/* 1. Fechas */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <Input
           type="date"
           label="Fecha límite"
@@ -472,12 +472,12 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
       </div>
 
       {showMorningShift && (
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Sun className="h-5 w-5 text-yellow-600" />
-            <span className="font-medium text-yellow-800">Turno Mañana</span>
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 sm:p-4">
+          <div className="mb-2 flex items-center gap-2 sm:mb-3">
+            <Sun className="h-4 w-4 text-yellow-600 sm:h-5 sm:w-5" />
+            <span className="text-sm font-medium text-yellow-800 sm:text-base">Turno Mañana</span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <Input
               type="time"
               label="Hora inicio"
@@ -493,12 +493,12 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
       )}
 
       {showAfternoonShift && (
-        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Sunset className="h-5 w-5 text-orange-600" />
-            <span className="font-medium text-orange-800">Turno Tarde</span>
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 sm:p-4">
+          <div className="mb-2 flex items-center gap-2 sm:mb-3">
+            <Sunset className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5" />
+            <span className="text-sm font-medium text-orange-800 sm:text-base">Turno Tarde</span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <Input
               type="time"
               label="Hora inicio"
@@ -533,7 +533,7 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
 
       {/* 5. Asignados */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label className="mb-1.5 block text-sm font-medium text-gray-700 sm:mb-2">
           Asignar a
         </label>
         <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-300 p-2">
@@ -560,10 +560,10 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
                     type="checkbox"
                     checked={selectedAssignees.includes(user.id)}
                     onChange={() => toggleAssignee(user.id)}
-                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    className="h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500 sm:h-4 sm:w-4"
                   />
                   <span className="text-sm text-gray-900">{user.name}</span>
-                  <span className="text-xs text-gray-500">({user.email})</span>
+                  <span className="hidden text-xs text-gray-500 sm:inline">({user.email})</span>
                 </label>
               ))}
             </div>
@@ -574,11 +574,11 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
       {/* 6. Distribución de equipos */}
       {canAssignEquipment && assignedUsers.length > 0 && selectedShift && (
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-sm font-medium text-gray-700 sm:mb-2">
             Distribución de equipos
           </label>
           {!executionDate ? (
-            <p className="py-4 text-center text-sm text-gray-500 rounded-lg border border-gray-200 bg-gray-50">
+            <p className="rounded-lg border border-gray-200 bg-gray-50 py-4 text-center text-sm text-gray-500">
               Selecciona una fecha de realización para ver equipos disponibles
             </p>
           ) : isLoadingEquipment ? (
@@ -586,12 +586,12 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
               Cargando equipos disponibles...
             </p>
           ) : (
-            <div className="space-y-4 rounded-lg border border-gray-300 p-4">
+            <div className="space-y-3 rounded-lg border border-gray-300 p-3 sm:space-y-4 sm:p-4">
               {assignedUsers.map((assignedUser) => (
-                <div key={assignedUser.id} className="rounded-lg bg-gray-50 p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <User className="h-5 w-5 text-gray-600" />
-                    <h4 className="font-medium text-gray-900">{assignedUser.name}</h4>
+                <div key={assignedUser.id} className="rounded-lg bg-gray-50 p-3 sm:p-4">
+                  <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                    <User className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5" />
+                    <h4 className="text-sm font-medium text-gray-900 sm:text-base">{assignedUser.name}</h4>
                   </div>
                   <div className="space-y-3">
                     {showMorningShift && renderEquipmentSelects(
@@ -616,11 +616,11 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
         </div>
       )}
 
-      <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end sm:gap-3">
+        <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
           Cancelar
         </Button>
-        <Button type="submit" isLoading={isLoading}>
+        <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
           {isEditing ? 'Guardar cambios' : 'Crear tarea'}
         </Button>
       </div>

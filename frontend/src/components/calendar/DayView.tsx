@@ -98,21 +98,21 @@ export function DayView({
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-gray-50 p-4">
-        <div className="flex items-center justify-center gap-4">
+      <div className="border-b border-gray-200 bg-gray-50 p-3 sm:p-4">
+        <div className="flex items-center justify-center gap-3 sm:gap-4">
           <div
             className={cn(
-              'flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold',
+              'flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold sm:h-12 sm:w-12 sm:text-xl',
               isDayToday ? 'bg-[#CC0000] text-white' : 'bg-gray-200 text-gray-900'
             )}
           >
             {currentDate.getDate()}
           </div>
           <div>
-            <div className="text-lg font-semibold capitalize text-gray-900">
+            <div className="text-base font-semibold capitalize text-gray-900 sm:text-lg">
               {currentDate.toLocaleDateString('es-MX', { weekday: 'long' })}
             </div>
-            <div className="text-sm text-gray-500 capitalize">
+            <div className="text-xs capitalize text-gray-500 sm:text-sm">
               {currentDate.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
             </div>
           </div>
@@ -121,11 +121,11 @@ export function DayView({
 
       {/* All-day tasks section */}
       {dayTasks.length > 0 && (
-        <div className="border-b border-gray-200 bg-gray-50 p-3">
-          <div className="mb-2 text-xs font-medium uppercase text-gray-500">
+        <div className="border-b border-gray-200 bg-gray-50 p-2 sm:p-3">
+          <div className="mb-1.5 text-[10px] font-medium uppercase text-gray-500 sm:mb-2 sm:text-xs">
             Tareas con fecha limite hoy
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-1.5 sm:grid-cols-2 sm:gap-2 lg:grid-cols-3">
             {dayTasks.map((task) => (
               <CalendarTask key={task.id} task={task} onClick={onTaskClick} />
             ))}
@@ -135,23 +135,23 @@ export function DayView({
 
       {/* Events summary */}
       {dayEvents.length === 0 && dayTasks.length === 0 && (
-        <div className="p-8 text-center text-gray-500">
+        <div className="p-6 text-center text-sm text-gray-500 sm:p-8">
           No hay eventos ni tareas para este dia
         </div>
       )}
 
       {/* Time grid */}
-      <div className="max-h-[600px] overflow-y-auto">
+      <div className="max-h-[500px] overflow-y-auto sm:max-h-[600px]">
         <div className="divide-y divide-gray-200">
           {HOURS.map((hour) => {
             const hourEvents = getEventsForHour(dayEvents, currentDate, hour);
 
             return (
-              <div key={hour} className="flex min-h-[60px]">
-                <div className="w-20 flex-shrink-0 border-r border-gray-200 bg-gray-50 py-2 text-right pr-3 text-sm text-gray-500">
+              <div key={hour} className="flex min-h-[48px] sm:min-h-[60px]">
+                <div className="w-14 flex-shrink-0 border-r border-gray-200 bg-gray-50 py-1.5 pr-2 text-right text-xs text-gray-500 sm:w-20 sm:py-2 sm:pr-3 sm:text-sm">
                   {formatHour(hour)}
                 </div>
-                <div className="flex-1 p-2">
+                <div className="flex-1 p-1.5 sm:p-2">
                   <div className="space-y-1">
                     {hourEvents.map((event) => (
                       <CalendarEvent

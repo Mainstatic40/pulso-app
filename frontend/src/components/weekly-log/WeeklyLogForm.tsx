@@ -57,18 +57,18 @@ export function WeeklyLogForm({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>
+      <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+        <CardTitle className="text-base sm:text-lg">
           {existingLog ? 'Editar Bitácora' : 'Nueva Bitácora'}
           {isReadOnly && (
-            <span className="ml-2 text-sm font-normal text-gray-500">
+            <span className="ml-2 text-xs font-normal text-gray-500 sm:text-sm">
               (Solo lectura)
             </span>
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-6">
           <Textarea
             label="Actividades realizadas *"
             placeholder="Describe las actividades que realizaste esta semana..."
@@ -115,9 +115,9 @@ export function WeeklyLogForm({
           />
 
           {!isReadOnly && (
-            <div className="flex justify-end">
-              <Button type="submit" isLoading={isLoading} disabled={!isDirty && !!existingLog}>
-                <Save className="mr-2 h-4 w-4" />
+            <div className="flex justify-end pt-2 sm:pt-0">
+              <Button type="submit" isLoading={isLoading} disabled={!isDirty && !!existingLog} className="w-full sm:w-auto">
+                <Save className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
                 {existingLog ? 'Guardar Cambios' : 'Crear Bitácora'}
               </Button>
             </div>

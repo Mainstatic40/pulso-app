@@ -51,26 +51,45 @@ export function CalendarHeader({
   onToday,
 }: CalendarHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onPrevious}>
-          <ChevronLeft className="h-4 w-4" />
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      {/* Title - shown first on mobile for context */}
+      <h2 className="order-first text-center text-base font-semibold capitalize text-gray-900 sm:order-none sm:ml-4 sm:text-left sm:text-lg">
+        {formatHeaderDate(currentDate, view)}
+      </h2>
+
+      {/* Navigation controls */}
+      <div className="flex items-center justify-center gap-1.5 sm:order-first sm:gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPrevious}
+          className="min-h-[44px] min-w-[44px] p-2 sm:min-h-0 sm:min-w-0 sm:p-1.5"
+        >
+          <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
         </Button>
-        <Button variant="outline" size="sm" onClick={onNext}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="sm" onClick={onToday}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onToday}
+          className="min-h-[44px] px-4 sm:min-h-0 sm:px-3"
+        >
           Hoy
         </Button>
-        <h2 className="ml-4 text-lg font-semibold capitalize text-gray-900">
-          {formatHeaderDate(currentDate, view)}
-        </h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onNext}
+          className="min-h-[44px] min-w-[44px] p-2 sm:min-h-0 sm:min-w-0 sm:p-1.5"
+        >
+          <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
+        </Button>
       </div>
 
-      <div className="flex rounded-lg border border-gray-300 bg-white p-1">
+      {/* View selector */}
+      <div className="flex justify-center rounded-lg border border-gray-300 bg-white p-1 sm:justify-end">
         <button
           onClick={() => onViewChange('month')}
-          className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+          className={`min-h-[36px] rounded px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 sm:px-3 sm:py-1 sm:text-sm ${
             view === 'month'
               ? 'bg-[#CC0000] text-white'
               : 'text-gray-600 hover:bg-gray-100'
@@ -80,17 +99,18 @@ export function CalendarHeader({
         </button>
         <button
           onClick={() => onViewChange('week')}
-          className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+          className={`min-h-[36px] rounded px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 sm:px-3 sm:py-1 sm:text-sm ${
             view === 'week'
               ? 'bg-[#CC0000] text-white'
               : 'text-gray-600 hover:bg-gray-100'
           }`}
         >
-          Semana
+          <span className="sm:hidden">Sem</span>
+          <span className="hidden sm:inline">Semana</span>
         </button>
         <button
           onClick={() => onViewChange('day')}
-          className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+          className={`min-h-[36px] rounded px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 sm:px-3 sm:py-1 sm:text-sm ${
             view === 'day'
               ? 'bg-[#CC0000] text-white'
               : 'text-gray-600 hover:bg-gray-100'

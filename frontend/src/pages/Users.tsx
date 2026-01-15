@@ -144,20 +144,21 @@ export function Users() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Usuario
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Usuarios</h1>
+        <Button onClick={handleOpenCreate} className="w-full text-sm sm:w-auto sm:text-base">
+          <Plus className="mr-1.5 h-4 w-4 sm:mr-2" />
+          <span className="sm:hidden">Nuevo</span>
+          <span className="hidden sm:inline">Nuevo Usuario</span>
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-end">
-        <div className="min-w-0 flex-1 sm:min-w-[300px]">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+      <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 sm:p-4">
+        <div className="min-w-0 flex-1 sm:min-w-[250px]">
+          <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
             Buscar
           </label>
           <div className="relative">
@@ -170,33 +171,35 @@ export function Users() {
                 setPage(1);
               }}
               placeholder="Buscar por nombre o email..."
-              className="h-10 w-full rounded-md border border-gray-300 px-10 py-2 text-base focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="h-9 w-full rounded-md border border-gray-300 px-10 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 sm:h-10 sm:text-base"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-gray-400" />
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
+          <div className="flex items-center gap-2">
+            <Filter className="hidden h-4 w-4 text-gray-400 sm:block" />
+            <Select
+              options={roleOptions}
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value as UserRole | 'all');
+                setPage(1);
+              }}
+              className="w-full sm:w-40"
+            />
+          </div>
+
           <Select
-            options={roleOptions}
-            value={roleFilter}
+            options={statusOptions}
+            value={statusFilter}
             onChange={(e) => {
-              setRoleFilter(e.target.value as UserRole | 'all');
+              setStatusFilter(e.target.value as StatusFilter);
               setPage(1);
             }}
-            className="w-40"
+            className="w-full sm:w-32"
           />
         </div>
-
-        <Select
-          options={statusOptions}
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value as StatusFilter);
-            setPage(1);
-          }}
-          className="w-32"
-        />
       </div>
 
       {/* Table */}
@@ -211,21 +214,22 @@ export function Users() {
 
       {/* Pagination */}
       {meta && meta.total > limit && (
-        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3">
-          <div className="text-sm text-gray-500">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 sm:flex-row sm:justify-between sm:px-4">
+          <div className="order-2 text-xs text-gray-500 sm:order-1 sm:text-sm">
             Mostrando {(page - 1) * limit + 1} a{' '}
             {Math.min(page * limit, meta.total)} de {meta.total} usuarios
           </div>
-          <div className="flex gap-2">
+          <div className="order-1 flex gap-2 sm:order-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
+              className="text-xs sm:text-sm"
             >
               Anterior
             </Button>
-            <div className="flex items-center gap-1">
+            <div className="hidden items-center gap-1 sm:flex">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let pageNum: number;
                 if (totalPages <= 5) {
@@ -250,11 +254,15 @@ export function Users() {
                 );
               })}
             </div>
+            <span className="flex items-center text-xs text-gray-500 sm:hidden">
+              {page}/{totalPages}
+            </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
+              className="text-xs sm:text-sm"
             >
               Siguiente
             </Button>
@@ -273,26 +281,26 @@ export function Users() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black bg-opacity-50 p-0 sm:items-center sm:p-4">
+          <div className="w-full max-h-[90vh] overflow-y-auto rounded-t-xl bg-white p-4 shadow-xl sm:max-w-md sm:rounded-xl sm:p-6">
             <div className="text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                <AlertTriangle className="h-8 w-8 text-red-600" />
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 sm:mb-4 sm:h-16 sm:w-16">
+                <AlertTriangle className="h-6 w-6 text-red-600 sm:h-8 sm:w-8" />
               </div>
-              <h2 className="mb-2 text-xl font-bold text-gray-900">
+              <h2 className="mb-2 text-lg font-bold text-gray-900 sm:text-xl">
                 ¿Eliminar usuario?
               </h2>
-              <p className="mb-4 text-gray-600">
+              <p className="mb-3 text-sm text-gray-600 sm:mb-4 sm:text-base">
                 Estás a punto de eliminar permanentemente a{' '}
                 <strong>{userToDelete.name}</strong>. Esta acción no se puede
                 deshacer y se eliminarán todos sus registros asociados.
               </p>
 
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-left">
-                <p className="mb-1 text-sm font-medium text-red-800">
+              <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-2 text-left sm:mb-4 sm:p-3">
+                <p className="mb-1 text-xs font-medium text-red-800 sm:text-sm">
                   Se eliminarán:
                 </p>
-                <ul className="list-inside list-disc text-sm text-red-700">
+                <ul className="list-inside list-disc text-xs text-red-700 sm:text-sm">
                   <li>Entradas de tiempo</li>
                   <li>Asignaciones de tareas y eventos</li>
                   <li>Comentarios y mensajes</li>
@@ -300,20 +308,20 @@ export function Users() {
                 </ul>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <button
                   onClick={() => {
                     setShowDeleteModal(false);
                     setUserToDelete(null);
                   }}
-                  className="flex-1 rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 hover:bg-gray-200"
+                  className="flex-1 rounded-lg bg-gray-100 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200 sm:px-4 sm:py-2 sm:text-base"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={confirmDelete}
                   disabled={hardDeleteMutation.isPending}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 sm:px-4 sm:py-2 sm:text-base"
                 >
                   {hardDeleteMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

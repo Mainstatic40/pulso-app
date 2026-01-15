@@ -70,7 +70,7 @@ export function NewConversationModal({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar usuario..."
-            className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 sm:py-2"
           />
         </div>
 
@@ -114,11 +114,11 @@ export function NewConversationModal({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+        <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end sm:gap-3">
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="min-h-[44px] w-full rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 sm:min-h-0 sm:w-auto sm:py-2"
           >
             Cancelar
           </button>
@@ -126,7 +126,7 @@ export function NewConversationModal({
             type="button"
             onClick={handleCreate}
             disabled={!selectedUserId || isCreating}
-            className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 sm:min-h-0 sm:w-auto sm:py-2"
           >
             {isCreating && (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

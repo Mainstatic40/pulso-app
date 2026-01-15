@@ -40,13 +40,13 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps) {
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 sm:gap-3">
       <Button variant="outline" size="sm" onClick={handlePrevious}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
 
-      <div className="min-w-[180px] text-center">
-        <span className="text-lg font-semibold text-gray-900">
+      <div className="min-w-[120px] text-center sm:min-w-[180px]">
+        <span className="text-sm font-semibold text-gray-900 sm:text-lg">
           {monthNames[month]} {year}
         </span>
       </div>
@@ -56,7 +56,7 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps) {
       </Button>
 
       {!isCurrentMonth() && (
-        <Button variant="outline" size="sm" onClick={handleToday}>
+        <Button variant="outline" size="sm" onClick={handleToday} className="hidden sm:flex">
           Mes actual
         </Button>
       )}

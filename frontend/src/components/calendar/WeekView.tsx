@@ -14,6 +14,7 @@ interface WeekViewProps {
 
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7am to 9pm (7-21)
 const DAYS_OF_WEEK = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+const DAYS_OF_WEEK_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 function getWeekDays(date: Date): Date[] {
   const days: Date[] = [];
@@ -132,92 +133,100 @@ export function WeekView({
 
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-      <div className="flex">
-        {/* Hours column */}
-        <div className="w-[60px] flex-shrink-0 border-r border-gray-200">
-          {/* Empty header cell */}
-          <div className="h-[80px] border-b border-gray-200 bg-gray-50" />
-          {/* Hour labels */}
-          {HOURS.map((hour) => (
-            <div
-              key={hour}
-              className="h-[40px] border-b border-gray-200 bg-white py-2 text-right pr-2 text-xs text-gray-500"
-            >
-              {formatHour(hour)}
-            </div>
-          ))}
-        </div>
-
-        {/* Day columns */}
-        {weekDays.map((day, index) => {
-          const isDayToday = isToday(day);
-          const dayTasks = getTasksForDay(tasks, day);
-          const isLastDay = index === weekDays.length - 1;
-
-          return (
-            <div
-              key={index}
-              className={cn(
-                'flex-1 min-w-0',
-                !isLastDay && 'border-r border-gray-200'
-              )}
-            >
-              {/* Day header */}
-              <div className="h-[80px] border-b border-gray-200 bg-gray-50 py-2 text-center overflow-hidden">
-                <div className="text-xs font-medium uppercase text-gray-500">
-                  {DAYS_OF_WEEK[index]}
-                </div>
+      {/* Horizontal scroll container for mobile */}
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="min-w-[600px] sm:min-w-0">
+          <div className="flex">
+            {/* Hours column */}
+            <div className="w-[45px] flex-shrink-0 border-r border-gray-200 sm:w-[60px]">
+              {/* Empty header cell */}
+              <div className="h-[60px] border-b border-gray-200 bg-gray-50 sm:h-[80px]" />
+              {/* Hour labels */}
+              {HOURS.map((hour) => (
                 <div
+                  key={hour}
+                  className="h-[36px] border-b border-gray-200 bg-white py-1.5 pr-1 text-right text-[10px] text-gray-500 sm:h-[40px] sm:py-2 sm:pr-2 sm:text-xs"
+                >
+                  {formatHour(hour)}
+                </div>
+              ))}
+            </div>
+
+            {/* Day columns */}
+            {weekDays.map((day, index) => {
+              const isDayToday = isToday(day);
+              const dayTasks = getTasksForDay(tasks, day);
+              const isLastDay = index === weekDays.length - 1;
+
+              return (
+                <div
+                  key={index}
                   className={cn(
-                    'mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
-                    isDayToday ? 'bg-[#CC0000] text-white' : 'text-gray-900'
+                    'min-w-0 flex-1',
+                    !isLastDay && 'border-r border-gray-200'
                   )}
                 >
-                  {day.getDate()}
-                </div>
-                {/* Task count */}
-                {dayTasks.length > 0 && (
-                  <button
-                    onClick={() => onTaskClick(dayTasks[0])}
-                    className="mt-1 px-1 truncate text-xs text-gray-500 hover:text-gray-700 w-full"
-                  >
-                    {dayTasks.length} tarea{dayTasks.length !== 1 ? 's' : ''}
-                  </button>
-                )}
-              </div>
-
-              {/* Hour cells for this day */}
-              {HOURS.map((hour) => {
-                const hourEvents = getEventsForDayAndHour(events, day, hour);
-                const hourTasks = getTasksForDayAndHour(tasks, day, hour);
-
-                return (
-                  <div
-                    key={hour}
-                    className="h-[40px] border-b border-gray-200 p-1 overflow-hidden"
-                  >
-                    {hourEvents.map((event) => (
-                      <CalendarEvent
-                        key={event.id}
-                        event={event}
-                        onClick={onEventClick}
-                        selectedDate={day}
-                      />
-                    ))}
-                    {hourTasks.map((task) => (
-                      <CalendarTask
-                        key={task.id}
-                        task={task}
-                        onClick={onTaskClick}
-                        compact
-                      />
-                    ))}
+                  {/* Day header */}
+                  <div className="h-[60px] overflow-hidden border-b border-gray-200 bg-gray-50 py-1 text-center sm:h-[80px] sm:py-2">
+                    <div className="text-[10px] font-medium uppercase text-gray-500 sm:text-xs">
+                      {/* Show single letter on mobile, short name on desktop */}
+                      <span className="sm:hidden">{DAYS_OF_WEEK_SHORT[index]}</span>
+                      <span className="hidden sm:inline">{DAYS_OF_WEEK[index]}</span>
+                    </div>
+                    <div
+                      className={cn(
+                        'mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold sm:mt-1 sm:h-8 sm:w-8 sm:text-sm',
+                        isDayToday ? 'bg-[#CC0000] text-white' : 'text-gray-900'
+                      )}
+                    >
+                      {day.getDate()}
+                    </div>
+                    {/* Task count */}
+                    {dayTasks.length > 0 && (
+                      <button
+                        onClick={() => onTaskClick(dayTasks[0])}
+                        className="mt-0.5 w-full truncate px-0.5 text-[10px] text-gray-500 hover:text-gray-700 sm:mt-1 sm:px-1 sm:text-xs"
+                      >
+                        <span className="hidden sm:inline">{dayTasks.length} tarea{dayTasks.length !== 1 ? 's' : ''}</span>
+                        <span className="sm:hidden">{dayTasks.length}t</span>
+                      </button>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          );
-        })}
+
+                  {/* Hour cells for this day */}
+                  {HOURS.map((hour) => {
+                    const hourEvents = getEventsForDayAndHour(events, day, hour);
+                    const hourTasks = getTasksForDayAndHour(tasks, day, hour);
+
+                    return (
+                      <div
+                        key={hour}
+                        className="h-[36px] overflow-hidden border-b border-gray-200 p-0.5 sm:h-[40px] sm:p-1"
+                      >
+                        {hourEvents.map((event) => (
+                          <CalendarEvent
+                            key={event.id}
+                            event={event}
+                            onClick={onEventClick}
+                            selectedDate={day}
+                          />
+                        ))}
+                        {hourTasks.map((task) => (
+                          <CalendarTask
+                            key={task.id}
+                            task={task}
+                            onClick={onTaskClick}
+                            compact
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

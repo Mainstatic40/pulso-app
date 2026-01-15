@@ -203,14 +203,14 @@ export function EventRequestForm() {
 
   if (!isValidCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Acceso no valido</h2>
-          <p className="text-gray-600 mb-6">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 text-center shadow-lg sm:p-8">
+          <AlertCircle className="mx-auto mb-3 h-12 w-12 text-red-500 sm:mb-4 sm:h-16 sm:w-16" />
+          <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">Acceso no valido</h2>
+          <p className="mb-4 text-sm text-gray-600 sm:mb-6 sm:text-base">
             El codigo de acceso no es valido o el formulario esta desactivado.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-xs text-gray-500 sm:text-sm">
             Si crees que esto es un error, contacta al departamento de multimedia.
           </p>
         </div>
@@ -226,50 +226,50 @@ export function EventRequestForm() {
 
   if (submitResult) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl sm:p-6">
           <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 sm:mb-4 sm:h-16 sm:w-16">
+              <CheckCircle className="h-7 w-7 text-green-600 sm:h-8 sm:w-8" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Solicitud Enviada!</h2>
-            <p className="text-gray-600 mb-4">Tu solicitud ha sido recibida correctamente.</p>
+            <h2 className="mb-2 text-lg font-bold text-gray-900 sm:text-xl">Solicitud Enviada!</h2>
+            <p className="mb-3 text-sm text-gray-600 sm:mb-4 sm:text-base">Tu solicitud ha sido recibida correctamente.</p>
 
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <p className="text-sm text-gray-500 mb-1">Codigo de solicitud:</p>
-              <p className="text-lg font-mono font-bold text-gray-900">{submitResult.code}</p>
+            <div className="mb-3 rounded-lg bg-gray-50 p-3 sm:mb-4 sm:p-4">
+              <p className="mb-1 text-xs text-gray-500 sm:text-sm">Codigo de solicitud:</p>
+              <p className="font-mono text-base font-bold text-gray-900 sm:text-lg">{submitResult.code}</p>
             </div>
 
-            <div className="bg-blue-50 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-600 mb-1">Tu codigo de acceso (guardalo):</p>
+            <div className="mb-3 rounded-lg bg-blue-50 p-3 sm:mb-4 sm:p-4">
+              <p className="mb-1 text-xs text-blue-600 sm:text-sm">Tu codigo de acceso (guardalo):</p>
               <div className="flex items-center justify-center gap-2">
-                <p className="text-lg font-mono font-bold text-blue-900">{submitResult.token}</p>
+                <p className="font-mono text-base font-bold text-blue-900 sm:text-lg">{submitResult.token}</p>
                 <button
                   onClick={handleCopyToken}
-                  className="p-1 hover:bg-blue-100 rounded"
+                  className="min-h-[36px] min-w-[36px] rounded p-1.5 hover:bg-blue-100 sm:min-h-0 sm:min-w-0 sm:p-1"
                   title="Copiar"
                 >
                   <Copy className={`h-4 w-4 ${copiedToken ? 'text-green-600' : 'text-blue-600'}`} />
                 </button>
               </div>
               {copiedToken && (
-                <p className="text-xs text-green-600 mt-1">Copiado!</p>
+                <p className="mt-1 text-xs text-green-600">Copiado!</p>
               )}
-              <p className="text-xs text-blue-500 mt-2">
+              <p className="mt-2 text-[10px] text-blue-500 sm:text-xs">
                 Usa este codigo para ver y editar tus solicitudes.
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <button
                 onClick={() => navigate(`/mis-solicitudes/${submitResult.token}`)}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
+                className="min-h-[44px] flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 sm:min-h-0 sm:py-2"
               >
                 Ver mis solicitudes
               </button>
               <button
                 onClick={() => navigate(`/solicitar/${accessCode}`)}
-                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200"
+                className="min-h-[44px] flex-1 rounded-lg bg-gray-100 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200 sm:min-h-0 sm:py-2"
               >
                 Volver al portal
               </button>
@@ -281,81 +281,81 @@ export function EventRequestForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gray-50 px-4 py-6 sm:py-8">
+      <div className="mx-auto max-w-3xl">
         {/* Back button */}
         <button
           onClick={() => navigate(`/solicitar/${accessCode}`)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+          className="mb-4 flex min-h-[36px] items-center gap-2 text-sm text-gray-600 hover:text-gray-900 sm:min-h-0"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver al portal
         </button>
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#CC0000] mb-2">PULSO</h1>
-          <h2 className="text-xl font-semibold text-gray-900">Solicitud de Cobertura de Evento</h2>
-          <p className="text-gray-600 mt-2">
+        <div className="mb-6 text-center sm:mb-8">
+          <h1 className="mb-2 text-2xl font-bold text-[#CC0000] sm:text-3xl">PULSO</h1>
+          <h2 className="text-lg font-semibold text-gray-900 sm:text-xl">Solicitud de Cobertura de Evento</h2>
+          <p className="mt-2 text-sm text-gray-600 sm:text-base">
             Completa el formulario para solicitar servicios de multimedia para tu evento.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-lg shadow-lg p-6 space-y-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-lg bg-white p-4 shadow-lg sm:space-y-8 sm:p-6">
           {submitError && (
-            <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-600 sm:p-4 sm:text-sm">
+              <AlertCircle className="h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5" />
               {submitError}
             </div>
           )}
 
           {/* Datos del Solicitante */}
           <section>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+            <h3 className="mb-3 border-b pb-2 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
               Informacion del Solicitante
             </h3>
 
             {/* Tipo de Organizacion */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="mb-2 block text-xs font-medium text-gray-700 sm:text-sm">
                 Tipo de organizacion *
               </label>
-              <div className="flex gap-4">
-                <label className={`flex-1 flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${tipoOrganizacion === 'facultad' ? 'border-[#CC0000] bg-red-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                <label className={`flex flex-1 cursor-pointer items-center gap-2 rounded-lg border-2 p-3 transition-colors sm:gap-3 sm:p-4 ${tipoOrganizacion === 'facultad' ? 'border-[#CC0000] bg-red-50' : 'border-gray-200 hover:bg-gray-50'}`}>
                   <input
                     type="radio"
                     value="facultad"
-                    className="w-4 h-4 text-[#CC0000] focus:ring-[#CC0000]"
+                    className="h-5 w-5 text-[#CC0000] focus:ring-[#CC0000] sm:h-4 sm:w-4"
                     {...register('tipoOrganizacion')}
                   />
-                  <GraduationCap className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium">Facultad/Escuela</span>
+                  <GraduationCap className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5" />
+                  <span className="text-sm font-medium sm:text-base">Facultad/Escuela</span>
                 </label>
-                <label className={`flex-1 flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${tipoOrganizacion === 'departamento' ? 'border-[#CC0000] bg-red-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                <label className={`flex flex-1 cursor-pointer items-center gap-2 rounded-lg border-2 p-3 transition-colors sm:gap-3 sm:p-4 ${tipoOrganizacion === 'departamento' ? 'border-[#CC0000] bg-red-50' : 'border-gray-200 hover:bg-gray-50'}`}>
                   <input
                     type="radio"
                     value="departamento"
-                    className="w-4 h-4 text-[#CC0000] focus:ring-[#CC0000]"
+                    className="h-5 w-5 text-[#CC0000] focus:ring-[#CC0000] sm:h-4 sm:w-4"
                     {...register('tipoOrganizacion')}
                   />
-                  <Building2 className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium">Departamento</span>
+                  <Building2 className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5" />
+                  <span className="text-sm font-medium sm:text-base">Departamento</span>
                 </label>
               </div>
               {errors.tipoOrganizacion && (
-                <p className="text-red-500 text-sm mt-1">{errors.tipoOrganizacion.message}</p>
+                <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.tipoOrganizacion.message}</p>
               )}
             </div>
 
             {/* Facultad/Escuela */}
             {tipoOrganizacion === 'facultad' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="mb-4 grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                     Facultad/Escuela *
                   </label>
                   <select
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.facultad ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.facultad ? 'border-red-500' : 'border-gray-300'}`}
                     {...register('facultad')}
                   >
                     <option value="">Selecciona una facultad</option>
@@ -366,17 +366,17 @@ export function EventRequestForm() {
                     ))}
                   </select>
                   {errors.facultad && (
-                    <p className="text-red-500 text-sm mt-1">{errors.facultad.message}</p>
+                    <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.facultad.message}</p>
                   )}
                 </div>
 
                 {mostrarCarreras && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                       Carrera *
                     </label>
                     <select
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.facultadCarrera ? 'border-red-500' : 'border-gray-300'}`}
+                      className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.facultadCarrera ? 'border-red-500' : 'border-gray-300'}`}
                       {...register('facultadCarrera')}
                     >
                       <option value="">Selecciona una carrera</option>
@@ -387,7 +387,7 @@ export function EventRequestForm() {
                       ))}
                     </select>
                     {errors.facultadCarrera && (
-                      <p className="text-red-500 text-sm mt-1">{errors.facultadCarrera.message}</p>
+                      <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.facultadCarrera.message}</p>
                     )}
                   </div>
                 )}
@@ -397,42 +397,42 @@ export function EventRequestForm() {
             {/* Departamento */}
             {tipoOrganizacion === 'departamento' && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Nombre del departamento *
                 </label>
                 <input
                   type="text"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.departamentoNombre ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.departamentoNombre ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="Ej: Servicios Escolares, Recursos Humanos..."
                   {...register('departamentoNombre')}
                 />
                 {errors.departamentoNombre && (
-                  <p className="text-red-500 text-sm mt-1">{errors.departamentoNombre.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.departamentoNombre.message}</p>
                 )}
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Nombre del solicitante *
                 </label>
                 <input
                   type="text"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.solicitanteNombre ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.solicitanteNombre ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="Tu nombre completo"
                   {...register('solicitanteNombre')}
                 />
                 {errors.solicitanteNombre && (
-                  <p className="text-red-500 text-sm mt-1">{errors.solicitanteNombre.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.solicitanteNombre.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Cargo *
                 </label>
                 <select
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.solicitanteCargo ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.solicitanteCargo ? 'border-red-500' : 'border-gray-300'}`}
                   {...register('solicitanteCargo')}
                 >
                   <option value="">Selecciona tu cargo</option>
@@ -443,35 +443,35 @@ export function EventRequestForm() {
                   ))}
                 </select>
                 {errors.solicitanteCargo && (
-                  <p className="text-red-500 text-sm mt-1">{errors.solicitanteCargo.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.solicitanteCargo.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Email institucional *
                 </label>
                 <input
                   type="email"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.solicitanteEmail ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.solicitanteEmail ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="correo@universidad.edu.mx"
                   {...register('solicitanteEmail')}
                 />
                 {errors.solicitanteEmail && (
-                  <p className="text-red-500 text-sm mt-1">{errors.solicitanteEmail.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.solicitanteEmail.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Telefono de contacto *
                 </label>
                 <input
                   type="tel"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.solicitanteTelefono ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.solicitanteTelefono ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="Ej: 618-123-4567"
                   {...register('solicitanteTelefono')}
                 />
                 {errors.solicitanteTelefono && (
-                  <p className="text-red-500 text-sm mt-1">{errors.solicitanteTelefono.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.solicitanteTelefono.message}</p>
                 )}
               </div>
             </div>
@@ -479,30 +479,30 @@ export function EventRequestForm() {
 
           {/* Datos del Evento */}
           <section>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+            <h3 className="mb-3 border-b pb-2 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
               Datos del Evento
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Nombre del Evento *
                 </label>
                 <input
                   type="text"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.eventoNombre ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.eventoNombre ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="Ej: Ceremonia de Graduacion 2026"
                   {...register('eventoNombre')}
                 />
                 {errors.eventoNombre && (
-                  <p className="text-red-500 text-sm mt-1">{errors.eventoNombre.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.eventoNombre.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Tipo de Evento *
                 </label>
                 <select
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.eventoTipo ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.eventoTipo ? 'border-red-500' : 'border-gray-300'}`}
                   {...register('eventoTipo')}
                 >
                   <option value="">Selecciona un tipo</option>
@@ -513,82 +513,82 @@ export function EventRequestForm() {
                   ))}
                 </select>
                 {errors.eventoTipo && (
-                  <p className="text-red-500 text-sm mt-1">{errors.eventoTipo.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.eventoTipo.message}</p>
                 )}
               </div>
               {eventoTipo === 'otro' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                     Especifica el tipo *
                   </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000]"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2"
                     placeholder="Describe el tipo de evento"
                     {...register('eventoTipoOtro')}
                   />
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Fecha del Evento *
                 </label>
                 <input
                   type="date"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.eventoFecha ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.eventoFecha ? 'border-red-500' : 'border-gray-300'}`}
                   {...register('eventoFecha')}
                 />
                 {errors.eventoFecha && (
-                  <p className="text-red-500 text-sm mt-1">{errors.eventoFecha.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.eventoFecha.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Hora de Inicio *
                 </label>
                 <input
                   type="time"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.eventoHoraInicio ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.eventoHoraInicio ? 'border-red-500' : 'border-gray-300'}`}
                   {...register('eventoHoraInicio')}
                 />
                 {errors.eventoHoraInicio && (
-                  <p className="text-red-500 text-sm mt-1">{errors.eventoHoraInicio.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.eventoHoraInicio.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Hora de Fin *
                 </label>
                 <input
                   type="time"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.eventoHoraFin ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.eventoHoraFin ? 'border-red-500' : 'border-gray-300'}`}
                   {...register('eventoHoraFin')}
                 />
                 {errors.eventoHoraFin && (
-                  <p className="text-red-500 text-sm mt-1">{errors.eventoHoraFin.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.eventoHoraFin.message}</p>
                 )}
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Ubicacion *
                 </label>
                 <input
                   type="text"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000] ${errors.eventoUbicacion ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2 ${errors.eventoUbicacion ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="Ej: Auditorio Principal, Campus Norte"
                   {...register('eventoUbicacion')}
                 />
                 {errors.eventoUbicacion && (
-                  <p className="text-red-500 text-sm mt-1">{errors.eventoUbicacion.message}</p>
+                  <p className="mt-1 text-xs text-red-500 sm:text-sm">{errors.eventoUbicacion.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Numero de Asistentes Esperados
                 </label>
                 <input
                   type="number"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000]"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2"
                   placeholder="Ej: 200"
                   {...register('eventoAsistentes', { valueAsNumber: true })}
                 />
@@ -598,31 +598,31 @@ export function EventRequestForm() {
 
           {/* Servicios Requeridos */}
           <section>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+            <h3 className="mb-3 border-b pb-2 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
               Servicios Requeridos
             </h3>
-            <p className="text-sm text-gray-600 mb-4">Selecciona los servicios que necesitas para tu evento:</p>
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+            <p className="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">Selecciona los servicios que necesitas para tu evento:</p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-3 transition-colors hover:bg-gray-50 sm:gap-3 sm:p-4">
                 <input
                   type="checkbox"
-                  className="w-5 h-5 text-[#CC0000] rounded focus:ring-[#CC0000]"
+                  className="h-5 w-5 rounded text-[#CC0000] focus:ring-[#CC0000]"
                   {...register('servicioFotografia')}
                 />
                 <div className="flex items-center gap-2">
-                  <Camera className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium">Fotografia</span>
+                  <Camera className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5" />
+                  <span className="text-sm font-medium sm:text-base">Fotografia</span>
                 </div>
               </label>
-              <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-3 transition-colors hover:bg-gray-50 sm:gap-3 sm:p-4">
                 <input
                   type="checkbox"
-                  className="w-5 h-5 text-[#CC0000] rounded focus:ring-[#CC0000]"
+                  className="h-5 w-5 rounded text-[#CC0000] focus:ring-[#CC0000]"
                   {...register('servicioVideo')}
                 />
                 <div className="flex items-center gap-2">
-                  <Video className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium">Video</span>
+                  <Video className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5" />
+                  <span className="text-sm font-medium sm:text-base">Video</span>
                 </div>
               </label>
             </div>
@@ -630,27 +630,27 @@ export function EventRequestForm() {
 
           {/* Informacion Adicional */}
           <section>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+            <h3 className="mb-3 border-b pb-2 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
               Informacion Adicional
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Descripcion del Evento
                 </label>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000]"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2"
                   rows={3}
                   placeholder="Describe brevemente el evento..."
                   {...register('descripcion')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Requerimientos Especiales
                 </label>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#CC0000]"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000] sm:py-2"
                   rows={3}
                   placeholder="Ej: Cobertura de momento especifico, tomas especiales..."
                   {...register('requerimientosEspeciales')}
@@ -660,22 +660,22 @@ export function EventRequestForm() {
           </section>
 
           {/* Submit */}
-          <div className="pt-4 border-t">
+          <div className="border-t pt-4">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-[#CC0000] text-white py-3 px-4 rounded-md font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-md bg-[#CC0000] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:text-base"
             >
               {isSubmitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent sm:h-5 sm:w-5"></div>
                   Enviando...
                 </>
               ) : (
                 'Enviar Solicitud'
               )}
             </button>
-            <p className="text-sm text-gray-500 text-center mt-4">
+            <p className="mt-3 text-center text-[10px] text-gray-500 sm:mt-4 sm:text-sm">
               Al enviar esta solicitud, aceptas que el equipo de multimedia evaluara
               la disponibilidad y te contactara para confirmar.
             </p>
@@ -683,7 +683,7 @@ export function EventRequestForm() {
         </form>
 
         {/* Footer */}
-        <p className="text-center mt-6 text-sm text-gray-500">
+        <p className="mt-4 text-center text-xs text-gray-500 sm:mt-6 sm:text-sm">
           Universidad de Quintana Roo - Oficina de Multimedia
         </p>
       </div>

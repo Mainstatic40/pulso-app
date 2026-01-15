@@ -19,7 +19,7 @@ export function CalendarTask({ task, onClick, compact = false }: CalendarTaskPro
     <button
       onClick={() => onClick(task)}
       className={cn(
-        'w-full text-left rounded px-2 py-1 text-xs font-medium transition-colors',
+        'w-full text-left rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors sm:px-2 sm:py-1 sm:text-xs',
         priorityColors[task.priority],
         compact ? 'truncate' : ''
       )}

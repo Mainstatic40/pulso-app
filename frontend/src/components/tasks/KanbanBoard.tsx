@@ -156,16 +156,18 @@ export function KanbanBoard({ tasks, onTaskClick }: KanbanBoardProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {columnConfigs.map((config) => (
-          <KanbanColumn
-            key={config.id}
-            config={config}
-            tasks={tasksByStatus[config.id]}
-            onTaskClick={onTaskClick}
-            isDragDisabled={(task) => !canDragTask(task)}
-          />
-        ))}
+      <div className="overflow-x-auto pb-4">
+        <div className="flex min-w-max gap-3 sm:min-w-0 sm:gap-4">
+          {columnConfigs.map((config) => (
+            <KanbanColumn
+              key={config.id}
+              config={config}
+              tasks={tasksByStatus[config.id]}
+              onTaskClick={onTaskClick}
+              isDragDisabled={(task) => !canDragTask(task)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Drag Overlay - shows the card being dragged */}

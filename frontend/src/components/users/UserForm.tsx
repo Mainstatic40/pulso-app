@@ -157,16 +157,16 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5">
       {/* Profile Image Section - Only shown when editing */}
       {isEditing && currentUser && (
-        <div className="flex flex-col items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:gap-4 sm:p-4">
           <div className="relative">
             <Avatar
               name={currentUser.name}
               profileImage={currentUser.profileImage}
               size="lg"
-              className="h-20 w-20 text-2xl"
+              className="h-16 w-16 text-xl sm:h-20 sm:w-20 sm:text-2xl"
             />
             {isImageLoading && (
               <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
@@ -189,8 +189,9 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={isImageLoading}
+              className="text-xs sm:text-sm"
             >
-              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              <Upload className="mr-1 h-3.5 w-3.5 sm:mr-1.5" />
               {currentUser.profileImage ? 'Cambiar' : 'Subir foto'}
             </Button>
             {currentUser.profileImage && (
@@ -200,19 +201,19 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
                 size="sm"
                 onClick={handleDeleteImage}
                 disabled={isImageLoading}
-                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="text-xs text-red-600 hover:bg-red-50 hover:text-red-700 sm:text-sm"
               >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                <Trash2 className="mr-1 h-3.5 w-3.5 sm:mr-1.5" />
                 Eliminar
               </Button>
             )}
           </div>
 
           {imageError && (
-            <p className="text-sm text-red-600">{imageError}</p>
+            <p className="text-xs text-red-600 sm:text-sm">{imageError}</p>
           )}
 
-          <p className="text-xs text-gray-500">JPG, PNG o WebP. Máximo 20MB</p>
+          <p className="text-[10px] text-gray-500 sm:text-xs">JPG, PNG o WebP. Máximo 20MB</p>
         </div>
       )}
 
@@ -248,32 +249,32 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
 
       {/* RFID Status - Read only with link to management */}
       {isEditing && (
-        <div className="rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CreditCard className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Credencial RFID</p>
+        <div className="rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <CreditCard className="h-4 w-4 flex-shrink-0 text-gray-400 sm:h-5 sm:w-5" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-700 sm:text-sm">Credencial RFID</p>
                 {currentUser?.rfidTag ? (
-                  <div className="mt-1 flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-700">
+                  <div className="mt-0.5 flex items-center gap-1.5 sm:mt-1 sm:gap-2">
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500 sm:h-4 sm:w-4" />
+                    <span className="truncate text-xs text-green-700 sm:text-sm">
                       Vinculada: {currentUser.rfidTag.length > 6
                         ? `${currentUser.rfidTag.slice(0, 4)}...${currentUser.rfidTag.slice(-2)}`
                         : currentUser.rfidTag}
                     </span>
                   </div>
                 ) : (
-                  <div className="mt-1 flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-500">Sin credencial vinculada</span>
+                  <div className="mt-0.5 flex items-center gap-1.5 sm:mt-1 sm:gap-2">
+                    <XCircle className="h-3.5 w-3.5 text-gray-400 sm:h-4 sm:w-4" />
+                    <span className="text-xs text-gray-500 sm:text-sm">Sin credencial vinculada</span>
                   </div>
                 )}
               </div>
             </div>
             <Link
               to="/rfid"
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+              className="flex items-center justify-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-blue-600 hover:bg-gray-50 hover:text-blue-700 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-sm"
             >
               Gestionar
               <ExternalLink className="h-3 w-3" />
@@ -282,23 +283,23 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 p-1">
         <input
           type="checkbox"
           id="isActive"
-          className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+          className="h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500 sm:h-4 sm:w-4"
           {...register('isActive')}
         />
-        <label htmlFor="isActive" className="text-sm text-gray-700">
+        <label htmlFor="isActive" className="text-xs text-gray-700 sm:text-sm">
           Usuario activo
         </label>
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 mt-6">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="mt-4 flex flex-col-reverse gap-2 border-t border-gray-100 pt-4 sm:mt-6 sm:flex-row sm:justify-end sm:gap-3 sm:pt-5">
+        <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
           Cancelar
         </Button>
-        <Button type="submit" isLoading={isLoading}>
+        <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
           {isEditing ? 'Guardar cambios' : 'Crear usuario'}
         </Button>
       </div>

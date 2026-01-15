@@ -121,21 +121,26 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
           <Spinner size="lg" />
         </div>
       ) : equipment ? (
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Header */}
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">{equipment.name}</h2>
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-lg font-semibold text-gray-900 sm:text-xl">{equipment.name}</h2>
               {equipment.serialNumber && (
-                <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
-                  <Hash className="h-4 w-4" />
-                  {equipment.serialNumber}
+                <p className="mt-1 flex items-center gap-1 text-xs text-gray-500 sm:text-sm">
+                  <Hash className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="truncate">{equipment.serialNumber}</span>
                 </p>
               )}
             </div>
             {isAdmin && (
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditing(true)}
+                  className="min-h-[36px] min-w-[36px] p-1.5 sm:min-h-0 sm:min-w-0 sm:p-2"
+                >
                   <Edit2 className="h-4 w-4" />
                 </Button>
                 <Button
@@ -143,6 +148,7 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
                   variant="danger"
                   onClick={handleDelete}
                   isLoading={deleteMutation.isPending}
+                  className="min-h-[36px] min-w-[36px] p-1.5 sm:min-h-0 sm:min-w-0 sm:p-2"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -158,34 +164,34 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
 
           {/* Description */}
           {equipment.description && (
-            <div className="mt-6">
-              <h3 className="text-sm font-medium text-gray-700">Descripción</h3>
-              <p className="mt-2 whitespace-pre-wrap text-gray-600">{equipment.description}</p>
+            <div className="mt-4 sm:mt-6">
+              <h3 className="text-xs font-medium text-gray-700 sm:text-sm">Descripción</h3>
+              <p className="mt-1.5 whitespace-pre-wrap text-sm text-gray-600 sm:mt-2">{equipment.description}</p>
             </div>
           )}
 
           {/* Active Assignment */}
           {equipment.assignments && equipment.assignments.length > 0 && (
-            <div className="mt-6 rounded-lg bg-red-50 p-4">
-              <h3 className="text-sm font-medium text-red-800">Actualmente en uso</h3>
+            <div className="mt-4 rounded-lg bg-red-50 p-3 sm:mt-6 sm:p-4">
+              <h3 className="text-xs font-medium text-red-800 sm:text-sm">Actualmente en uso</h3>
               {equipment.assignments.map((assignment) => (
-                <div key={assignment.id} className="mt-2 space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-red-700">
-                    <User className="h-4 w-4" />
+                <div key={assignment.id} className="mt-2 space-y-1.5 sm:space-y-2">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-red-700 sm:gap-2 sm:text-sm">
+                    <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span className="font-medium">{assignment.user?.name}</span>
-                    <span className="text-red-600">({assignment.user?.email})</span>
+                    <span className="hidden text-red-600 sm:inline">({assignment.user?.email})</span>
                   </div>
                   {assignment.event && (
-                    <div className="flex items-center gap-2 text-sm text-red-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>{assignment.event.name}</span>
+                    <div className="flex items-center gap-1.5 text-xs text-red-600 sm:gap-2 sm:text-sm">
+                      <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="truncate">{assignment.event.name}</span>
                     </div>
                   )}
-                  <p className="text-xs text-red-500">
+                  <p className="text-[10px] text-red-500 sm:text-xs">
                     Desde: {formatDateTime(assignment.startTime)}
                   </p>
                   {assignment.notes && (
-                    <p className="text-sm text-red-600 italic">"{assignment.notes}"</p>
+                    <p className="text-xs italic text-red-600 sm:text-sm">"{assignment.notes}"</p>
                   )}
                 </div>
               ))}
@@ -194,25 +200,26 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
 
           {/* RFID Tag Section */}
           {canManageRfid && (
-            <div className="mt-6">
-              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <CreditCard className="h-4 w-4" />
+            <div className="mt-4 sm:mt-6">
+              <h3 className="flex items-center gap-2 text-xs font-medium text-gray-700 sm:text-sm">
+                <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 RFID Tag
               </h3>
               <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
                 {equipment.rfidTag ? (
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-lg font-semibold text-gray-900">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="truncate font-mono text-base font-semibold text-gray-900 sm:text-lg">
                       {equipment.rfidTag}
                     </span>
                     {showUnlinkConfirm ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">¿Desvincular?</span>
+                        <span className="text-xs text-gray-500 sm:text-sm">¿Desvincular?</span>
                         <Button
                           size="sm"
                           variant="danger"
                           onClick={handleUnlinkRfid}
                           disabled={unlinkRfidMutation.isPending}
+                          className="min-h-[36px] px-3 sm:min-h-0"
                         >
                           {unlinkRfidMutation.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -224,6 +231,7 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
                           size="sm"
                           variant="outline"
                           onClick={() => setShowUnlinkConfirm(false)}
+                          className="min-h-[36px] px-3 sm:min-h-0"
                         >
                           No
                         </Button>
@@ -233,7 +241,7 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
                         size="sm"
                         variant="outline"
                         onClick={() => setShowUnlinkConfirm(true)}
-                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                        className="min-h-[36px] text-red-600 hover:bg-red-50 hover:text-red-700 sm:min-h-0"
                       >
                         <Unlink className="mr-1 h-3 w-3" />
                         Desvincular
@@ -242,8 +250,8 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-sm text-gray-500">Sin RFID asignado</p>
-                    <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-500 sm:text-sm">Sin RFID asignado</p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <Input
                         value={newRfidTag}
                         onChange={(e) => setNewRfidTag(e.target.value)}
@@ -254,6 +262,7 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
                         size="sm"
                         onClick={handleLinkRfid}
                         disabled={!newRfidTag.trim() || linkRfidMutation.isPending}
+                        className="min-h-[36px] w-full sm:min-h-0 sm:w-auto"
                       >
                         {linkRfidMutation.isPending ? (
                           <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -263,7 +272,7 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
                         Vincular
                       </Button>
                     </div>
-                    <div className="flex items-start gap-2 text-xs text-gray-500">
+                    <div className="flex items-start gap-2 text-[10px] text-gray-500 sm:text-xs">
                       <Info className="mt-0.5 h-3 w-3 flex-shrink-0" />
                       <span>
                         También puedes escanear el RFID en el lector y asignarlo desde la página de Credenciales RFID.
@@ -276,8 +285,8 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
           )}
 
           {/* Metadata */}
-          <div className="mt-6 border-t border-gray-200 pt-4">
-            <dl className="grid grid-cols-2 gap-4 text-sm">
+          <div className="mt-4 border-t border-gray-200 pt-3 sm:mt-6 sm:pt-4">
+            <dl className="grid grid-cols-2 gap-3 text-xs sm:gap-4 sm:text-sm">
               <div>
                 <dt className="text-gray-500">Categoría</dt>
                 <dd className="font-medium text-gray-900">
@@ -292,13 +301,13 @@ export function EquipmentModal({ equipmentId, isOpen, onClose }: EquipmentModalP
               </div>
               <div>
                 <dt className="text-gray-500">Creado</dt>
-                <dd className="font-medium text-gray-900">
+                <dd className="truncate font-medium text-gray-900">
                   {formatDateTime(equipment.createdAt)}
                 </dd>
               </div>
               <div>
                 <dt className="text-gray-500">Actualizado</dt>
-                <dd className="font-medium text-gray-900">
+                <dd className="truncate font-medium text-gray-900">
                   {formatDateTime(equipment.updatedAt)}
                 </dd>
               </div>

@@ -683,20 +683,21 @@ export function Events() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Eventos</h1>
+    <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Eventos</h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Selection Mode Controls */}
           {selectionMode ? (
             <>
-              <span className="text-sm text-gray-600">
+              <span className="text-xs text-gray-600 sm:text-sm">
                 {selectedEventIds.size} seleccionado(s)
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={selectAllVisible}
+                className="hidden sm:flex"
               >
                 Seleccionar todos
               </Button>
@@ -707,8 +708,8 @@ export function Events() {
                 disabled={selectedEventIds.size === 0 || isExporting}
                 isLoading={isExporting}
               >
-                <FileText className="mr-1 h-4 w-4" />
-                Exportar PDF
+                <FileText className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Exportar PDF</span>
               </Button>
               <Button
                 variant="ghost"
@@ -727,40 +728,40 @@ export function Events() {
                 onClick={() => setSelectionMode(true)}
                 title="Seleccionar eventos para exportar"
               >
-                <CheckSquare className="mr-1 h-4 w-4" />
-                Seleccionar
+                <CheckSquare className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Seleccionar</span>
               </Button>
 
               {/* View Toggle */}
               <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-1">
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:gap-1.5 sm:px-3 sm:text-sm ${
                     viewMode === 'list'
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
                   <List className="h-4 w-4" />
-                  Lista
+                  <span className="hidden sm:inline">Lista</span>
                 </button>
                 <button
                   onClick={() => setViewMode('board')}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:gap-1.5 sm:px-3 sm:text-sm ${
                     viewMode === 'board'
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
                   <LayoutGrid className="h-4 w-4" />
-                  Tablero
+                  <span className="hidden sm:inline">Tablero</span>
                 </button>
               </div>
 
               {canManageEvents && (
-                <Button onClick={() => setIsCreateModalOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nuevo Evento
+                <Button onClick={() => setIsCreateModalOpen(true)} className="flex-shrink-0">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Nuevo Evento</span>
                 </Button>
               )}
             </>
@@ -768,8 +769,8 @@ export function Events() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
+      <Card className="overflow-hidden">
+        <CardContent className="p-3 sm:p-4">
           {/* Desktop: single row */}
           <div className="hidden items-center gap-3 md:flex">
             {/* Search */}
@@ -895,20 +896,20 @@ export function Events() {
 
       {/* Month Selector for Board View */}
       {viewMode === 'board' && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={goToPreviousMonth}
-              className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 sm:p-2"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <h2 className="min-w-[180px] text-center text-lg font-semibold capitalize text-gray-900">
+            <h2 className="min-w-[140px] text-center text-sm font-semibold capitalize text-gray-900 sm:min-w-[180px] sm:text-lg">
               {formatMonthYear(selectedMonth)}
             </h2>
             <button
               onClick={goToNextMonth}
-              className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 sm:p-2"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -925,7 +926,7 @@ export function Events() {
         </div>
       ) : viewMode === 'board' ? (
         /* Board View */
-        <div className="min-h-[500px]">
+        <div className="-mx-4 min-h-[400px] px-4 sm:-mx-0 sm:min-h-[500px] sm:px-0">
           <EventKanbanBoard
             events={eventsResponse?.data || []}
             selectedMonth={selectedMonth}
@@ -933,17 +934,17 @@ export function Events() {
           />
         </div>
       ) : !hasEvents ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No hay eventos</h3>
-            <p className="mt-2 text-gray-500">
+        <Card className="overflow-hidden">
+          <CardContent className="py-8 text-center sm:py-12">
+            <Calendar className="mx-auto h-10 w-10 text-gray-400 sm:h-12 sm:w-12" />
+            <h3 className="mt-3 text-base font-medium text-gray-900 sm:mt-4 sm:text-lg">No hay eventos</h3>
+            <p className="mt-1 text-sm text-gray-500 sm:mt-2">
               {hasFilters
                 ? 'No se encontraron eventos con los filtros seleccionados.'
                 : 'Aun no hay eventos creados.'}
             </p>
             {canManageEvents && !hasFilters && (
-              <Button className="mt-4" onClick={() => setIsCreateModalOpen(true)}>
+              <Button className="mt-4 w-full sm:w-auto" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Crear primer evento
               </Button>
@@ -952,15 +953,15 @@ export function Events() {
         </Card>
       ) : (
         /* List View */
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Eventos Proximos */}
           {upcoming.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-green-600" />
+              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
+                <Calendar className="h-4 w-4 text-green-600 sm:h-5 sm:w-5" />
                 Proximos Eventos ({upcoming.length})
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                 {upcoming.map((event) => (
                   <div key={event.id} className="relative">
                     {selectionMode && (
@@ -969,19 +970,19 @@ export function Events() {
                           e.stopPropagation();
                           toggleEventSelection(event.id);
                         }}
-                        className="absolute -left-2 -top-2 z-10 rounded-full bg-white p-1 shadow-md border border-gray-200 hover:bg-gray-50"
+                        className="absolute -left-1 -top-1 z-10 rounded-full border border-gray-200 bg-white p-1 shadow-md hover:bg-gray-50 sm:-left-2 sm:-top-2"
                       >
                         {selectedEventIds.has(event.id) ? (
-                          <CheckSquare className="h-5 w-5 text-red-600" />
+                          <CheckSquare className="h-4 w-4 text-red-600 sm:h-5 sm:w-5" />
                         ) : (
-                          <Square className="h-5 w-5 text-gray-400" />
+                          <Square className="h-4 w-4 text-gray-400 sm:h-5 sm:w-5" />
                         )}
                       </button>
                     )}
                     <div
                       className={`transition-all ${
                         selectionMode && selectedEventIds.has(event.id)
-                          ? 'ring-2 ring-red-500 ring-offset-2 rounded-lg'
+                          ? 'rounded-lg ring-2 ring-red-500 ring-offset-2'
                           : ''
                       }`}
                     >
@@ -999,11 +1000,11 @@ export function Events() {
           {/* Eventos Pasados */}
           {past.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-gray-500 mb-4 flex items-center gap-2">
-                <Clock className="h-5 w-5 text-gray-400" />
+              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-500 sm:mb-4 sm:text-lg">
+                <Clock className="h-4 w-4 text-gray-400 sm:h-5 sm:w-5" />
                 Eventos Pasados ({past.length})
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 opacity-75">
+              <div className="grid grid-cols-1 gap-3 opacity-75 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                 {past.map((event) => (
                   <div key={event.id} className="relative">
                     {selectionMode && (
@@ -1012,19 +1013,19 @@ export function Events() {
                           e.stopPropagation();
                           toggleEventSelection(event.id);
                         }}
-                        className="absolute -left-2 -top-2 z-10 rounded-full bg-white p-1 shadow-md border border-gray-200 hover:bg-gray-50"
+                        className="absolute -left-1 -top-1 z-10 rounded-full border border-gray-200 bg-white p-1 shadow-md hover:bg-gray-50 sm:-left-2 sm:-top-2"
                       >
                         {selectedEventIds.has(event.id) ? (
-                          <CheckSquare className="h-5 w-5 text-red-600" />
+                          <CheckSquare className="h-4 w-4 text-red-600 sm:h-5 sm:w-5" />
                         ) : (
-                          <Square className="h-5 w-5 text-gray-400" />
+                          <Square className="h-4 w-4 text-gray-400 sm:h-5 sm:w-5" />
                         )}
                       </button>
                     )}
                     <div
                       className={`transition-all ${
                         selectionMode && selectedEventIds.has(event.id)
-                          ? 'ring-2 ring-red-500 ring-offset-2 rounded-lg'
+                          ? 'rounded-lg ring-2 ring-red-500 ring-offset-2'
                           : ''
                       }`}
                     >

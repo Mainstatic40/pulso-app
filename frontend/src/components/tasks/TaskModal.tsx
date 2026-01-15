@@ -592,22 +592,23 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
           <Spinner size="lg" />
         </div>
       ) : task ? (
-        <div className="p-6 space-y-4">
+        <div className="space-y-4 p-4 sm:p-6">
           {/* 1. Header */}
-          <div className="flex items-start justify-between gap-4">
-            <h2 className="text-xl font-semibold text-gray-900">{task.title}</h2>
-            <div className="flex gap-2">
+          <div className="flex items-start justify-between gap-2 sm:gap-4">
+            <h2 className="min-w-0 flex-1 text-lg font-semibold text-gray-900 sm:text-xl">{task.title}</h2>
+            <div className="flex flex-shrink-0 gap-1 sm:gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setIsExportModalOpen(true)}
                 title="Exportar como PNG"
+                className="min-h-[36px] min-w-[36px] p-1.5 sm:min-h-0 sm:min-w-0 sm:p-2"
               >
                 <Download className="h-4 w-4" />
               </Button>
               {isAdminOrSupervisor && (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                  <Button size="sm" variant="outline" onClick={() => setIsEditing(true)} className="min-h-[36px] min-w-[36px] p-1.5 sm:min-h-0 sm:min-w-0 sm:p-2">
                     <Edit2 className="h-4 w-4" />
                   </Button>
                   <Button
@@ -615,6 +616,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                     variant="danger"
                     onClick={handleDelete}
                     isLoading={deleteTaskMutation.isPending}
+                    className="min-h-[36px] min-w-[36px] p-1.5 sm:min-h-0 sm:min-w-0 sm:p-2"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -624,7 +626,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
           </div>
 
           {/* 2. Estado y Prioridad */}
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">Estado:</span>
               {user && (
@@ -632,7 +634,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   value={task.status}
                   onChange={handleStatusChange}
                   options={getAvailableStatuses(task.status, user.role)}
-                  className="w-40"
+                  className="w-full sm:w-40"
                   disabled={updateStatusMutation.isPending}
                 />
               )}
@@ -644,20 +646,20 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
           </div>
 
           {/* 3. Sección de Fechas */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
             <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Calendar className="h-4 w-4" />
               Fechas
             </h3>
-            <div className="mt-3 grid grid-cols-2 gap-4">
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:mt-3 sm:gap-4">
               <div>
                 <p className="text-xs text-gray-500">Fecha límite</p>
-                <p className="mt-1 font-medium text-gray-900">{formatDateShort(task.dueDate)}</p>
+                <p className="mt-1 text-sm font-medium text-gray-900 sm:text-base">{formatDateShort(task.dueDate)}</p>
               </div>
               {task.executionDate && (
                 <div>
                   <p className="text-xs text-gray-500">Fecha de ejecución</p>
-                  <p className="mt-1 font-medium text-gray-900">{formatDateShort(task.executionDate)}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900 sm:text-base">{formatDateShort(task.executionDate)}</p>
                 </div>
               )}
             </div>
@@ -665,16 +667,16 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
           {/* 4. Sección de Horario */}
           {task.shift && (task.morningStartTime || task.afternoonStartTime) && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Clock className="h-4 w-4" />
                 Horario
               </h3>
-              <div className="mt-3 space-y-2">
+              <div className="mt-2 space-y-2 sm:mt-3">
                 {(task.shift === 'morning' || task.shift === 'both') && task.morningStartTime && task.morningEndTime && (
                   <div className="flex items-center gap-2">
                     <Sun className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm text-gray-700">
+                    <span className="text-xs text-gray-700 sm:text-sm">
                       Mañana: <strong>{task.morningStartTime} - {task.morningEndTime}</strong>
                     </span>
                   </div>
@@ -682,7 +684,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                 {(task.shift === 'afternoon' || task.shift === 'both') && task.afternoonStartTime && task.afternoonEndTime && (
                   <div className="flex items-center gap-2">
                     <Sunset className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm text-gray-700">
+                    <span className="text-xs text-gray-700 sm:text-sm">
                       Tarde: <strong>{task.afternoonStartTime} - {task.afternoonEndTime}</strong>
                     </span>
                   </div>
@@ -693,23 +695,23 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
           {/* 5. Sección de Descripción */}
           {task.description && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <FileText className="h-4 w-4" />
                 Descripción
               </h3>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">{task.description}</p>
+              <p className="mt-2 whitespace-pre-wrap text-xs text-gray-600 sm:text-sm">{task.description}</p>
             </div>
           )}
 
           {/* 6. Sección de Requisitos del Cliente */}
           {task.clientRequirements && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 sm:p-4">
               <h3 className="flex items-center gap-2 text-sm font-medium text-amber-800">
                 <ClipboardList className="h-4 w-4" />
                 Requisitos del Cliente
               </h3>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-amber-700">
+              <p className="mt-2 whitespace-pre-wrap text-xs text-amber-700 sm:text-sm">
                 {task.clientRequirements}
               </p>
             </div>
@@ -731,29 +733,29 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
           {/* 9. Sección de Distribución de Equipos */}
           {equipmentByUserAndShift.length > 0 && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-5">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Camera className="h-4 w-4" />
                 Distribución de Equipos
               </h3>
-              <div className="mt-3 space-y-4">
+              <div className="mt-2 space-y-3 sm:mt-3 sm:space-y-4">
                 {equipmentByUserAndShift.map((userEquipment) => (
                   <div
                     key={userEquipment.userId}
-                    className="rounded-lg border border-gray-200 bg-white p-3"
+                    className="rounded-lg border border-gray-200 bg-white p-2 sm:p-3"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-gray-500" />
-                        <p className="font-medium text-gray-900">{userEquipment.userName}</p>
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <User className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <p className="truncate text-sm font-medium text-gray-900 sm:text-base">{userEquipment.userName}</p>
                       </div>
                       {isAdminOrSupervisor && (
-                        <div className="flex gap-1">
+                        <div className="flex flex-shrink-0 gap-1">
                           <button
                             onClick={() => setReplacingUserId(
                               replacingUserId === `eq_${userEquipment.userId}` ? null : `eq_${userEquipment.userId}`
                             )}
-                            className={`rounded-full p-1.5 transition-colors ${
+                            className={`min-h-[32px] min-w-[32px] rounded-full p-1.5 transition-colors sm:min-h-0 sm:min-w-0 ${
                               replacingUserId === `eq_${userEquipment.userId}`
                                 ? 'bg-blue-100 text-blue-600'
                                 : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'
@@ -765,7 +767,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                           </button>
                           <button
                             onClick={() => handleReleaseEquipment(userEquipment.userId, userEquipment.userName)}
-                            className="rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            className="min-h-[32px] min-w-[32px] rounded-full p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 sm:min-h-0 sm:min-w-0"
                             title="Liberar equipo"
                             disabled={releaseEquipmentMutation.isPending}
                           >
@@ -777,9 +779,9 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
                     {/* Dropdown para seleccionar reemplazo de equipo */}
                     {replacingUserId === `eq_${userEquipment.userId}` && usersData?.data && (
-                      <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                        <p className="text-xs text-blue-700 mb-2">Transferir equipo a:</p>
-                        <div className="max-h-40 overflow-y-auto space-y-1">
+                      <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:mt-3 sm:p-3">
+                        <p className="mb-2 text-xs text-blue-700">Transferir equipo a:</p>
+                        <div className="max-h-40 space-y-1 overflow-y-auto">
                           {usersData.data
                             .filter((u) => u.id !== userEquipment.userId)
                             .map((u) => (
@@ -787,10 +789,10 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                                 key={u.id}
                                 onClick={() => handleTransferEquipment(userEquipment.userId, u.id)}
                                 disabled={transferEquipmentMutation.isPending}
-                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-blue-100 transition-colors disabled:opacity-50"
+                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-blue-100 disabled:opacity-50"
                               >
                                 <Avatar name={u.name} profileImage={u.profileImage} size="xs" />
-                                <span className="text-gray-700">{u.name}</span>
+                                <span className="truncate text-gray-700">{u.name}</span>
                               </button>
                             ))}
                         </div>
@@ -805,20 +807,20 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
                     {/* Morning Shift Equipment */}
                     {userEquipment.shifts.morning.length > 0 && (
-                      <div className="mt-3">
-                        <div className="flex items-center gap-2 text-sm">
+                      <div className="mt-2 sm:mt-3">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm">
                           <Sun className="h-4 w-4 text-amber-500" />
                           <span className="text-gray-600">
                             Mañana {userEquipment.morningTimeRange && `(${userEquipment.morningTimeRange})`}
                           </span>
                         </div>
-                        <div className="mt-2 flex flex-wrap gap-1">
+                        <div className="mt-1.5 flex flex-wrap gap-1 sm:mt-2">
                           {userEquipment.shifts.morning.map((eq) => {
                             const config = categoryConfig[eq.category];
                             return (
                               <span
                                 key={eq.id}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium sm:text-xs ${config.color}`}
                               >
                                 {config.label}: {eq.name}
                               </span>
@@ -830,20 +832,20 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
                     {/* Afternoon Shift Equipment */}
                     {userEquipment.shifts.afternoon.length > 0 && (
-                      <div className="mt-3">
-                        <div className="flex items-center gap-2 text-sm">
+                      <div className="mt-2 sm:mt-3">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm">
                           <Sunset className="h-4 w-4 text-orange-500" />
                           <span className="text-gray-600">
                             Tarde {userEquipment.afternoonTimeRange && `(${userEquipment.afternoonTimeRange})`}
                           </span>
                         </div>
-                        <div className="mt-2 flex flex-wrap gap-1">
+                        <div className="mt-1.5 flex flex-wrap gap-1 sm:mt-2">
                           {userEquipment.shifts.afternoon.map((eq) => {
                             const config = categoryConfig[eq.category];
                             return (
                               <span
                                 key={eq.id}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium sm:text-xs ${config.color}`}
                               >
                                 {config.label}: {eq.name}
                               </span>
@@ -856,8 +858,8 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                 ))}
               </div>
               {isAdminOrSupervisor && (
-                <p className="mt-3 text-xs text-gray-500">
-                  <RefreshCw className="inline h-3 w-3 mr-1" />Transferir mueve el equipo a otro usuario
+                <p className="mt-2 text-[10px] text-gray-500 sm:mt-3 sm:text-xs">
+                  <RefreshCw className="mr-1 inline h-3 w-3" />Transferir mueve el equipo a otro usuario
                 </p>
               )}
             </div>
@@ -865,26 +867,26 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
           {/* 10. Sección de Personas Asignadas */}
           {task.assignees && task.assignees.length > 0 && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Users className="h-4 w-4" />
                 Asignados
               </h3>
-              <div className="mt-3 space-y-2">
+              <div className="mt-2 space-y-2 sm:mt-3">
                 {task.assignees.map((assignee) => (
                   <div key={assignee.user.id}>
                     <div className="flex items-center gap-2">
-                      <div className="flex flex-1 items-center gap-2 rounded-full bg-white border border-gray-200 py-1 pl-1 pr-3">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3">
                         <Avatar name={assignee.user.name} profileImage={assignee.user.profileImage} size="sm" />
-                        <span className="text-sm text-gray-700">{assignee.user.name}</span>
+                        <span className="truncate text-xs text-gray-700 sm:text-sm">{assignee.user.name}</span>
                       </div>
                       {isAdminOrSupervisor && (
-                        <div className="flex gap-1">
+                        <div className="flex flex-shrink-0 gap-1">
                           <button
                             onClick={() => setReplacingUserId(
                               replacingUserId === assignee.user.id ? null : assignee.user.id
                             )}
-                            className={`rounded-full p-1.5 transition-colors ${
+                            className={`min-h-[32px] min-w-[32px] rounded-full p-1.5 transition-colors sm:min-h-0 sm:min-w-0 ${
                               replacingUserId === assignee.user.id
                                 ? 'bg-blue-100 text-blue-600'
                                 : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'
@@ -896,7 +898,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                           </button>
                           <button
                             onClick={() => handleRemoveAssignee(assignee.user.id, assignee.user.name)}
-                            className="rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            className="min-h-[32px] min-w-[32px] rounded-full p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 sm:min-h-0 sm:min-w-0"
                             title="Quitar (libera equipo)"
                             disabled={removeAssigneeMutation.isPending}
                           >
@@ -907,9 +909,9 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                     </div>
                     {/* Dropdown para seleccionar reemplazo */}
                     {replacingUserId === assignee.user.id && usersData?.data && (
-                      <div className="mt-2 ml-8 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                        <p className="text-xs text-blue-700 mb-2">Selecciona el reemplazo:</p>
-                        <div className="max-h-40 overflow-y-auto space-y-1">
+                      <div className="ml-4 mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:ml-8 sm:p-3">
+                        <p className="mb-2 text-xs text-blue-700">Selecciona el reemplazo:</p>
+                        <div className="max-h-40 space-y-1 overflow-y-auto">
                           {usersData.data
                             .filter((u) => !task.assignees?.some((a) => a.user.id === u.id))
                             .map((u) => (
@@ -917,10 +919,10 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                                 key={u.id}
                                 onClick={() => handleReplaceAssignee(assignee.user.id, u.id)}
                                 disabled={replaceAssigneeMutation.isPending}
-                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-blue-100 transition-colors disabled:opacity-50"
+                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-blue-100 disabled:opacity-50"
                               >
                                 <Avatar name={u.name} profileImage={u.profileImage} size="xs" />
-                                <span className="text-gray-700">{u.name}</span>
+                                <span className="truncate text-gray-700">{u.name}</span>
                               </button>
                             ))}
                         </div>
@@ -936,34 +938,35 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                 ))}
               </div>
               {isAdminOrSupervisor && (
-                <p className="mt-3 text-xs text-gray-500">
-                  <RefreshCw className="inline h-3 w-3 mr-1" />Reemplazar transfiere el equipo asignado
+                <p className="mt-2 text-[10px] text-gray-500 sm:mt-3 sm:text-xs">
+                  <RefreshCw className="mr-1 inline h-3 w-3" />Reemplazar transfiere el equipo asignado
                 </p>
               )}
             </div>
           )}
 
           {/* 11. Comments Section */}
-          <div className="mt-8 border-t border-gray-200 pt-6">
+          <div className="mt-6 border-t border-gray-200 pt-4 sm:mt-8 sm:pt-6">
             <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <MessageSquare className="h-4 w-4" />
               Comentarios ({comments?.length || 0})
             </h3>
 
             {/* Comment Form */}
-            <form onSubmit={handleAddComment} className="mt-4">
+            <form onSubmit={handleAddComment} className="mt-3 sm:mt-4">
               <div className="flex gap-2">
                 <Textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Escribe un comentario..."
                   rows={2}
-                  className="flex-1"
+                  className="min-w-0 flex-1 text-sm sm:text-base"
                 />
                 <Button
                   type="submit"
                   isLoading={addCommentMutation.isPending}
                   disabled={!newComment.trim()}
+                  className="flex-shrink-0 px-3 sm:px-4"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -971,21 +974,21 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </form>
 
             {/* Comments List */}
-            <div className="mt-4 space-y-4">
+            <div className="mt-3 space-y-3 sm:mt-4 sm:space-y-4">
               {isLoadingComments ? (
                 <div className="flex justify-center py-4">
                   <Spinner />
                 </div>
               ) : comments && comments.length > 0 ? (
                 comments.map((comment: CommentWithUser) => (
-                  <div key={comment.id} className="flex gap-3">
+                  <div key={comment.id} className="flex gap-2 sm:gap-3">
                     <Avatar name={comment.user.name} profileImage={comment.user.profileImage} size="sm" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                        <span className="text-xs font-medium text-gray-900 sm:text-sm">
                           {comment.user.name}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-[10px] text-gray-500 sm:text-xs">
                           {formatDateTime(comment.createdAt)}
                         </span>
                         {(user?.id === comment.userId || isAdminOrSupervisor) && (
@@ -995,18 +998,18 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                                 deleteCommentMutation.mutate(comment.id);
                               }
                             }}
-                            className="ml-auto text-gray-400 hover:text-red-600"
+                            className="ml-auto min-h-[28px] min-w-[28px] p-1 text-gray-400 hover:text-red-600 sm:min-h-0 sm:min-w-0"
                           >
                             <Trash2 className="h-3 w-3" />
                           </button>
                         )}
                       </div>
-                      <p className="mt-1 text-sm text-gray-600">{comment.content}</p>
+                      <p className="mt-1 text-xs text-gray-600 sm:text-sm">{comment.content}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="py-4 text-center text-sm text-gray-500">
+                <p className="py-4 text-center text-xs text-gray-500 sm:text-sm">
                   No hay comentarios aún
                 </p>
               )}
@@ -1025,13 +1028,13 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
       title="Exportar Tarea como Imagen"
       size="lg"
     >
-      <div className="p-4">
-        <p className="mb-4 text-sm text-gray-600">
+      <div className="p-3 sm:p-4">
+        <p className="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
           Vista previa de la imagen que se generará:
         </p>
 
         {/* Preview container with scroll */}
-        <div className="mb-4 max-h-[60vh] overflow-auto rounded-lg border border-gray-200 bg-gray-100 p-4">
+        <div className="mb-3 max-h-[50vh] overflow-auto rounded-lg border border-gray-200 bg-gray-100 p-2 sm:mb-4 sm:max-h-[60vh] sm:p-4">
           {task && (
             <TaskExportView
               ref={exportRef}
@@ -1042,16 +1045,18 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
           <Button
             variant="outline"
             onClick={() => setIsExportModalOpen(false)}
+            className="w-full sm:w-auto"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleExport}
             isLoading={isExporting}
+            className="w-full sm:w-auto"
           >
             <Download className="mr-2 h-4 w-4" />
             Descargar PNG

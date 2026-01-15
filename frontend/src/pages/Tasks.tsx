@@ -182,50 +182,50 @@ export function Tasks() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Tareas</h1>
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Tareas</h1>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* View Toggle */}
           <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-1">
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:gap-1.5 sm:px-3 sm:text-sm ${
                 viewMode === 'list'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               <List className="h-4 w-4" />
-              Lista
+              <span className="hidden xs:inline sm:inline">Lista</span>
             </button>
             <button
               onClick={() => setViewMode('board')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:gap-1.5 sm:px-3 sm:text-sm ${
                 viewMode === 'board'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               <LayoutGrid className="h-4 w-4" />
-              Tablero
+              <span className="hidden xs:inline sm:inline">Tablero</span>
             </button>
           </div>
 
           {isAdminOrSupervisor && (
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Tarea
+            <Button onClick={() => setIsCreateModalOpen(true)} className="flex-shrink-0">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nueva Tarea</span>
             </Button>
           )}
         </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end">
+      <Card className="overflow-hidden">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-end">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -238,22 +238,22 @@ export function Tasks() {
                 />
               </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <div className="w-40">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              <div className="w-full min-w-[120px] flex-1 sm:w-40 sm:flex-none">
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   options={allStatusOptions}
                 />
               </div>
-              <div className="w-40">
+              <div className="w-full min-w-[120px] flex-1 sm:w-40 sm:flex-none">
                 <Select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
                   options={allPriorityOptions}
                 />
               </div>
-              <div className="w-40">
+              <div className="w-full min-w-[120px] flex-1 sm:w-40 sm:flex-none">
                 <Select
                   value={shiftFilter}
                   onChange={(e) => setShiftFilter(e.target.value)}
@@ -272,24 +272,24 @@ export function Tasks() {
         </div>
       ) : viewMode === 'board' ? (
         /* Kanban Board View */
-        <div className="min-h-[500px]">
+        <div className="-mx-4 min-h-[400px] px-4 sm:-mx-0 sm:min-h-[500px] sm:px-0">
           <KanbanBoard
             tasks={tasks}
             onTaskClick={(taskId) => setSelectedTaskId(taskId)}
           />
         </div>
       ) : tasks.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Filter className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No hay tareas</h3>
-            <p className="mt-2 text-gray-500">
+        <Card className="overflow-hidden">
+          <CardContent className="py-8 text-center sm:py-12">
+            <Filter className="mx-auto h-10 w-10 text-gray-400 sm:h-12 sm:w-12" />
+            <h3 className="mt-3 text-base font-medium text-gray-900 sm:mt-4 sm:text-lg">No hay tareas</h3>
+            <p className="mt-1 text-sm text-gray-500 sm:mt-2">
               {searchQuery || statusFilter || priorityFilter || shiftFilter
                 ? 'No se encontraron tareas con los filtros seleccionados.'
                 : 'Aún no hay tareas creadas.'}
             </p>
             {isAdminOrSupervisor && !searchQuery && !statusFilter && !priorityFilter && !shiftFilter && (
-              <Button className="mt-4" onClick={() => setIsCreateModalOpen(true)}>
+              <Button className="mt-4 w-full sm:w-auto" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Crear primera tarea
               </Button>
@@ -298,7 +298,7 @@ export function Tasks() {
         </Card>
       ) : (
         /* List View */
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {tasks.map((task: TaskWithRelations) => (
             <TaskCard
               key={task.id}

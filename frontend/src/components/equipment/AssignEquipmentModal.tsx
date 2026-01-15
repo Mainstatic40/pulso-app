@@ -173,10 +173,10 @@ export function AssignEquipmentModal({ isOpen, onClose }: AssignEquipmentModalPr
           <Spinner size="lg" />
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6 p-6">
+        <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:space-y-6 sm:p-6">
           {error && (
-            <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-              <AlertCircle className="h-4 w-4" />
+            <div className="flex items-center gap-2 rounded-lg bg-red-50 p-2.5 text-xs text-red-700 sm:p-3 sm:text-sm">
+              <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               {error}
             </div>
           )}
@@ -207,10 +207,10 @@ export function AssignEquipmentModal({ isOpen, onClose }: AssignEquipmentModalPr
 
           {/* Equipment selection */}
           <div>
-            <label className="mb-3 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-xs font-medium text-gray-700 sm:mb-3 sm:text-sm">
               Equipos a asignar ({selectedCount} seleccionados)
             </label>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
               {(Object.keys(categoryLabels) as EquipmentCategory[]).map((category) => {
                 const categoryEquipment = equipmentByCategory[category];
                 const options = [
@@ -222,11 +222,11 @@ export function AssignEquipmentModal({ isOpen, onClose }: AssignEquipmentModalPr
                 ];
 
                 return (
-                  <div key={category} className="rounded-lg border border-gray-200 p-3">
-                    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <div key={category} className="rounded-lg border border-gray-200 p-2.5 sm:p-3">
+                    <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-700 sm:mb-2 sm:gap-2 sm:text-sm">
                       {categoryIcons[category]}
                       {categoryLabels[category]}
-                      <span className="text-xs text-gray-400">
+                      <span className="text-[10px] text-gray-400 sm:text-xs">
                         ({categoryEquipment.length} disponibles)
                       </span>
                     </div>
@@ -252,14 +252,15 @@ export function AssignEquipmentModal({ isOpen, onClose }: AssignEquipmentModalPr
           />
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
+          <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end sm:gap-3">
+            <Button type="button" variant="outline" onClick={handleClose} className="w-full sm:w-auto">
               Cancelar
             </Button>
             <Button
               type="submit"
               isLoading={createMutation.isPending}
               disabled={selectedCount === 0 || !userId}
+              className="w-full sm:w-auto"
             >
               Asignar {selectedCount > 0 && `(${selectedCount})`}
             </Button>

@@ -30,14 +30,14 @@ export function EquipmentInUse({
   const displayAssignments = assignments.slice(0, maxItems);
 
   return (
-    <Card>
+    <Card className="w-full overflow-hidden">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Camera className="h-5 w-5 text-green-600" />
-          {isBecario ? 'Mis Equipos en Uso' : 'Equipos en Uso'}
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Camera className="h-5 w-5 flex-shrink-0 text-green-600" />
+          <span className="truncate">{isBecario ? 'Mis Equipos en Uso' : 'Equipos en Uso'}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Spinner />
@@ -51,7 +51,7 @@ export function EquipmentInUse({
           </div>
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 overflow-hidden">
               {displayAssignments.map((assignment) => {
                 const equipment = assignment.equipment;
                 if (!equipment) return null;

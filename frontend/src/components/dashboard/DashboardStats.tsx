@@ -14,20 +14,20 @@ interface StatCardProps {
 function StatCard({ icon, iconBg, label, value, subLabel, isLoading }: StatCardProps) {
   return (
     <Card className="transition-shadow hover:shadow-md">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${iconBg}`}>
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12 sm:rounded-xl ${iconBg}`}>
             {icon}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-gray-500">{label}</p>
+            <p className="text-xs text-gray-500 sm:text-sm">{label}</p>
             {isLoading ? (
               <Spinner size="sm" />
             ) : (
               <>
-                <p className="text-2xl font-bold text-gray-900">{value}</p>
+                <p className="text-lg font-bold text-gray-900 sm:text-2xl">{value}</p>
                 {subLabel && (
-                  <p className="text-xs text-gray-400">{subLabel}</p>
+                  <p className="text-[10px] text-gray-400 sm:text-xs">{subLabel}</p>
                 )}
               </>
             )}
@@ -61,7 +61,7 @@ export function DashboardStats({
   isLoading = {},
 }: DashboardStatsProps) {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid w-full grid-cols-2 gap-3 overflow-hidden sm:gap-4 lg:grid-cols-4">
       <StatCard
         icon={<Clock className="h-6 w-6 text-blue-600" />}
         iconBg="bg-blue-100"

@@ -60,14 +60,14 @@ export function UpcomingEventsList({
   const displayEvents = events.slice(0, maxItems);
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full w-full flex-col overflow-hidden">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Calendar className="h-5 w-5 text-purple-600" />
-          {isBecario ? 'Mis Próximos Eventos' : 'Próximos Eventos'}
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Calendar className="h-5 w-5 flex-shrink-0 text-purple-600" />
+          <span className="truncate">{isBecario ? 'Mis Próximos Eventos' : 'Próximos Eventos'}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col">
+      <CardContent className="flex flex-1 flex-col overflow-hidden">
         {isLoading ? (
           <div className="flex flex-1 items-center justify-center py-8">
             <Spinner />

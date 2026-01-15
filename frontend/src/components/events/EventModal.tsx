@@ -304,24 +304,24 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Detalle del Evento" size="2xl">
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {/* 1. Header - Nombre */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">{fullEvent.name}</h2>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="flex items-start justify-between gap-2 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold text-gray-900 sm:text-xl">{fullEvent.name}</h2>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
               <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
               {eventTypeInfo && (
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${eventTypeInfo.color}`}>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs ${eventTypeInfo.color}`}>
                   {eventTypeInfo.icon}
-                  {eventTypeInfo.label}
+                  <span className="hidden sm:inline">{eventTypeInfo.label}</span>
                 </span>
               )}
             </div>
           </div>
           {canEdit && (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+            <div className="flex flex-shrink-0 gap-1 sm:gap-2">
+              <Button size="sm" variant="outline" onClick={() => setIsEditing(true)} className="min-h-[36px] min-w-[36px] p-1.5 sm:min-h-0 sm:min-w-0 sm:p-2">
                 <Edit2 className="h-4 w-4" />
               </Button>
               {isAdmin && (
@@ -330,6 +330,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
                   variant="danger"
                   onClick={handleDelete}
                   isLoading={deleteEventMutation.isPending}
+                  className="min-h-[36px] min-w-[36px] p-1.5 sm:min-h-0 sm:min-w-0 sm:p-2"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -339,13 +340,13 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
         </div>
 
         {/* 2. Date - Fecha */}
-        <div className="mt-6">
-          <div className="flex items-center gap-3 text-gray-600">
-            <Calendar className="h-5 w-5 text-gray-400" />
-            <div>
-              <p className="font-medium">{formatFullDate(fullEvent.startDatetime)}</p>
+        <div className="mt-4 sm:mt-6">
+          <div className="flex items-start gap-2 text-gray-600 sm:items-center sm:gap-3">
+            <Calendar className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400 sm:mt-0 sm:h-5 sm:w-5" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium sm:text-base">{formatFullDate(fullEvent.startDatetime)}</p>
               {!isSameDay(fullEvent.startDatetime, fullEvent.endDatetime) && (
-                <p className="text-sm text-gray-500">
+                <p className="text-xs text-gray-500 sm:text-sm">
                   hasta {formatFullDate(fullEvent.endDatetime)} ({getDaysCount(fullEvent.startDatetime, fullEvent.endDatetime)} días)
                 </p>
               )}
@@ -355,30 +356,30 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
 
         {/* 3. Description - Descripción */}
         {fullEvent.description && (
-          <div className="mt-6">
+          <div className="mt-4 sm:mt-6">
             <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <FileText className="h-4 w-4" />
               Descripción
             </h3>
-            <p className="mt-2 whitespace-pre-wrap text-gray-600">{fullEvent.description}</p>
+            <p className="mt-2 whitespace-pre-wrap text-xs text-gray-600 sm:text-sm">{fullEvent.description}</p>
           </div>
         )}
 
         {/* 4. Client Requirements - Requisitos */}
         {fullEvent.clientRequirements && (
-          <div className="mt-6 rounded-lg bg-yellow-50 p-4">
+          <div className="mt-4 rounded-lg bg-yellow-50 p-3 sm:mt-6 sm:p-4">
             <h3 className="flex items-center gap-2 text-sm font-medium text-yellow-800">
               <FileText className="h-4 w-4" />
               Requisitos del Cliente
             </h3>
-            <p className="mt-2 whitespace-pre-wrap text-yellow-700">
+            <p className="mt-2 whitespace-pre-wrap text-xs text-yellow-700 sm:text-sm">
               {fullEvent.clientRequirements}
             </p>
           </div>
         )}
 
         {/* 5. Attachments - Archivos adjuntos */}
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <AttachmentsList
             attachments={fullEvent.attachments || []}
             eventId={fullEvent.id}
@@ -388,15 +389,20 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
 
         {/* 6. Days and Shifts - Turnos */}
         {fullEvent.days && fullEvent.days.length > 0 && (
-          <div className="mt-6">
+          <div className="mt-4 sm:mt-6">
             <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Users className="h-4 w-4" />
-              {isSameDay(fullEvent.startDatetime, fullEvent.endDatetime)
-                ? `Turnos (${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'})`
-                : `Días y Turnos (${fullEvent.days.length} ${fullEvent.days.length === 1 ? 'día' : 'días'}, ${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'})`
-              }
+              <span className="hidden sm:inline">
+                {isSameDay(fullEvent.startDatetime, fullEvent.endDatetime)
+                  ? `Turnos (${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'})`
+                  : `Días y Turnos (${fullEvent.days.length} ${fullEvent.days.length === 1 ? 'día' : 'días'}, ${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'})`
+                }
+              </span>
+              <span className="sm:hidden">
+                Turnos ({totalShifts})
+              </span>
             </h3>
-            <div className="mt-3">
+            <div className="mt-2 sm:mt-3">
               <EventDaysDisplay days={fullEvent.days} />
             </div>
           </div>
@@ -404,9 +410,9 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
 
         {/* Yearbook-specific info */}
         {fullEvent.eventType === 'yearbook' && (
-          <div className="mt-6 rounded-lg bg-blue-50 p-4">
+          <div className="mt-4 rounded-lg bg-blue-50 p-3 sm:mt-6 sm:p-4">
             <h3 className="text-sm font-medium text-blue-800">Configuración de Anuario</h3>
-            <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-blue-700">
+            <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-blue-700 sm:grid-cols-2 sm:gap-4 sm:text-sm">
               {fullEvent.morningStartTime && fullEvent.morningEndTime && (
                 <div>
                   <span className="font-medium">Mañana:</span> {fullEvent.morningStartTime} - {fullEvent.morningEndTime}
@@ -418,7 +424,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
                 </div>
               )}
               {fullEvent.usePresetEquipment && (
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <span className="font-medium">Equipo preset:</span> Activado
                 </div>
               )}
@@ -427,7 +433,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
         )}
 
         {/* 7. Checklist Section */}
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <EventChecklist
             eventId={fullEvent.id}
             items={fullEvent.checklistItems || []}
@@ -436,26 +442,27 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
         </div>
 
         {/* 8. Comments Section */}
-        <div className="mt-8 border-t border-gray-200 pt-6">
+        <div className="mt-6 border-t border-gray-200 pt-4 sm:mt-8 sm:pt-6">
           <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <MessageSquare className="h-4 w-4" />
             Comentarios ({comments?.length || 0})
           </h3>
 
           {/* Comment Form */}
-          <form onSubmit={handleAddComment} className="mt-4">
+          <form onSubmit={handleAddComment} className="mt-3 sm:mt-4">
             <div className="flex gap-2">
               <Textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Escribe un comentario..."
                 rows={2}
-                className="flex-1"
+                className="min-w-0 flex-1 text-sm sm:text-base"
               />
               <Button
                 type="submit"
                 isLoading={addCommentMutation.isPending}
                 disabled={!newComment.trim()}
+                className="flex-shrink-0 px-3 sm:px-4"
               >
                 <Send className="h-4 w-4" />
               </Button>
@@ -463,21 +470,21 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
           </form>
 
           {/* Comments List */}
-          <div className="mt-4 space-y-4">
+          <div className="mt-3 space-y-3 sm:mt-4 sm:space-y-4">
             {isLoadingComments ? (
               <div className="flex justify-center py-4">
                 <Spinner />
               </div>
             ) : comments && comments.length > 0 ? (
               comments.map((comment: CommentWithUser) => (
-                <div key={comment.id} className="flex gap-3">
+                <div key={comment.id} className="flex gap-2 sm:gap-3">
                   <Avatar name={comment.user.name} profileImage={comment.user.profileImage} size="sm" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                      <span className="text-xs font-medium text-gray-900 sm:text-sm">
                         {comment.user.name}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-[10px] text-gray-500 sm:text-xs">
                         {formatDateTime(comment.createdAt)}
                       </span>
                       {(user?.id === comment.userId || canEdit) && (
@@ -487,18 +494,18 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
                               deleteCommentMutation.mutate(comment.id);
                             }
                           }}
-                          className="ml-auto text-gray-400 hover:text-red-600"
+                          className="ml-auto min-h-[28px] min-w-[28px] p-1 text-gray-400 hover:text-red-600 sm:min-h-0 sm:min-w-0"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
                       )}
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">{comment.content}</p>
+                    <p className="mt-1 text-xs text-gray-600 sm:text-sm">{comment.content}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="py-4 text-center text-sm text-gray-500">
+              <p className="py-4 text-center text-xs text-gray-500 sm:text-sm">
                 No hay comentarios aún
               </p>
             )}
@@ -507,8 +514,8 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
 
         {/* Creator info */}
         {fullEvent.creator && (
-          <div className="mt-6 border-t border-gray-200 pt-4">
-            <p className="text-xs text-gray-500">
+          <div className="mt-4 border-t border-gray-200 pt-3 sm:mt-6 sm:pt-4">
+            <p className="text-[10px] text-gray-500 sm:text-xs">
               Creado por {fullEvent.creator.name}
             </p>
           </div>

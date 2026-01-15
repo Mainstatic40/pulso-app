@@ -72,13 +72,13 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Simulador de Escaneo RFID" size="md">
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Instructions */}
-        <div className="rounded-lg bg-blue-50 p-4">
-          <div className="flex gap-3">
-            <Wifi className="h-5 w-5 flex-shrink-0 text-blue-600" />
+        <div className="rounded-lg bg-blue-50 p-3 sm:p-4">
+          <div className="flex gap-2 sm:gap-3">
+            <Wifi className="h-4 w-4 flex-shrink-0 text-blue-600 sm:h-5 sm:w-5" />
             <div>
-              <p className="text-sm text-blue-800">
+              <p className="text-xs text-blue-800 sm:text-sm">
                 Este simulador permite probar el sistema de registro de horas sin necesidad del hardware RFID.
               </p>
             </div>
@@ -86,11 +86,11 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
         </div>
 
         {/* Input */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
+        <div className="space-y-2 sm:space-y-3">
+          <label className="block text-xs font-medium text-gray-700 sm:text-sm">
             ID RFID
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={rfidTag}
               onChange={(e) => setRfidTag(e.target.value)}
@@ -101,7 +101,7 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
             <Button
               onClick={handleScan}
               disabled={scanMutation.isPending}
-              className="min-w-[100px]"
+              className="min-h-[44px] w-full sm:min-h-0 sm:w-auto sm:min-w-[100px]"
             >
               {scanMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -186,8 +186,8 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
 
         {/* Quick Access */}
         {usersWithRfid.length > 0 && (
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">
+          <div className="space-y-2 sm:space-y-3">
+            <label className="block text-xs font-medium text-gray-700 sm:text-sm">
               RFID de prueba disponibles
             </label>
             <div className="space-y-2">
@@ -196,13 +196,13 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
                   key={user.id}
                   onClick={() => handleQuickScan(user.rfidTag!)}
                   disabled={scanMutation.isPending}
-                  className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 disabled:opacity-50"
+                  className="flex min-h-[48px] w-full items-center justify-between rounded-lg border border-gray-200 p-2.5 text-left transition-colors hover:bg-gray-50 disabled:opacity-50 sm:min-h-0 sm:p-3"
                 >
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Clock className="h-3.5 w-3.5 text-gray-400 sm:h-4 sm:w-4" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500">{user.rfidTag}</p>
+                      <p className="text-xs font-medium text-gray-900 sm:text-sm">{user.name}</p>
+                      <p className="text-[10px] text-gray-500 sm:text-xs">{user.rfidTag}</p>
                     </div>
                   </div>
                   <span className="text-xs text-blue-600">Escanear</span>
@@ -213,8 +213,8 @@ export function RfidSimulatorModal({ isOpen, onClose }: RfidSimulatorModalProps)
         )}
 
         {usersWithRfid.length === 0 && (
-          <div className="rounded-lg bg-gray-50 p-4 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="rounded-lg bg-gray-50 p-3 text-center sm:p-4">
+            <p className="text-xs text-gray-500 sm:text-sm">
               No hay usuarios con RFID vinculado. Vincula un RFID a un usuario primero.
             </p>
           </div>

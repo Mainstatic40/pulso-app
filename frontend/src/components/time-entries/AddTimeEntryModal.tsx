@@ -197,13 +197,13 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* User Select - disabled when editing */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
             Becario *
           </label>
           <select
             {...register('userId')}
             disabled={isEditing}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:bg-gray-100"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:bg-gray-100 sm:py-2"
           >
             <option value="">Seleccionar becario</option>
             {users.map((user) => (
@@ -213,10 +213,10 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
             ))}
           </select>
           {errors.userId && (
-            <p className="mt-1 text-sm text-red-600">{errors.userId.message}</p>
+            <p className="mt-1 text-xs text-red-600 sm:text-sm">{errors.userId.message}</p>
           )}
           {isEditing && selectedUser && (
-            <p className="mt-1 text-sm text-gray-500">Usuario: {selectedUser.name}</p>
+            <p className="mt-1 text-xs text-gray-500 sm:text-sm">Usuario: {selectedUser.name}</p>
           )}
         </div>
 
@@ -230,12 +230,12 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
 
         {/* Mode Toggle - only show when not editing */}
         {!isEditing && (
-          <div className="flex gap-2 rounded-lg bg-gray-100 p-1">
+          <div className="flex gap-1.5 rounded-lg bg-gray-100 p-1 sm:gap-2">
             <button
               type="button"
               onClick={() => setInputMode('quick')}
               className={cn(
-                'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                'flex-1 rounded-md px-2 py-2.5 text-xs font-medium transition-colors sm:px-3 sm:py-2 sm:text-sm',
                 inputMode === 'quick'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -247,7 +247,7 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
               type="button"
               onClick={() => setInputMode('manual')}
               className={cn(
-                'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                'flex-1 rounded-md px-2 py-2.5 text-xs font-medium transition-colors sm:px-3 sm:py-2 sm:text-sm',
                 inputMode === 'manual'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -261,17 +261,17 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
         {/* Quick Mode - Hour buttons */}
         {inputMode === 'quick' && !isEditing && (
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs font-medium text-gray-700 sm:text-sm">
               Horas a registrar *
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
               {QUICK_HOURS.map((h) => (
                 <button
                   key={h}
                   type="button"
                   onClick={() => setQuickHours(h)}
                   className={cn(
-                    'rounded-lg border-2 px-3 py-3 text-center font-semibold transition-all',
+                    'min-h-[44px] rounded-lg border-2 px-2 py-2 text-center text-sm font-semibold transition-all sm:min-h-0 sm:px-3 sm:py-3 sm:text-base',
                     quickHours === h
                       ? 'border-red-500 bg-red-50 text-red-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -284,20 +284,20 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
 
             {/* Start time for quick mode */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
+              <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                 Hora de inicio
               </label>
               <input
                 type="time"
                 value={quickStartTime}
                 onChange={(e) => setQuickStartTime(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 sm:py-2"
               />
             </div>
 
             {/* Preview */}
-            <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-50 p-3 text-sm">
-              <Clock className="h-4 w-4 text-blue-600" />
+            <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-50 p-2.5 text-xs sm:p-3 sm:text-sm">
+              <Clock className="h-3.5 w-3.5 text-blue-600 sm:h-4 sm:w-4" />
               <span className="text-blue-700">
                 {quickStartTime} - {calculateEndTime(quickStartTime, quickHours)} ({quickHours} horas)
               </span>
@@ -307,7 +307,7 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
 
         {/* Manual Mode - Time inputs */}
         {(inputMode === 'manual' || isEditing) && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <Input
               label="Hora de entrada *"
               type="time"
@@ -325,8 +325,8 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
 
         {/* Duration display for manual mode */}
         {inputMode === 'manual' && watchedClockIn && watchedClockOut && watchedClockOut > watchedClockIn && (
-          <div className="flex items-center justify-center gap-2 rounded-lg bg-gray-50 p-2 text-sm text-gray-600">
-            <Clock className="h-4 w-4" />
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-gray-50 p-2 text-xs text-gray-600 sm:text-sm">
+            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span>
               Duración: {(() => {
                 const [h1, m1] = watchedClockIn.split(':').map(Number);
@@ -342,12 +342,12 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
 
         {/* Event Select */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
             Evento relacionado (opcional)
           </label>
           <select
             {...register('eventId')}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 sm:py-2"
           >
             <option value="">Sin evento</option>
             {events.map((event) => (
@@ -360,33 +360,33 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
 
         {/* Notes */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
             Notas (opcional)
           </label>
           <textarea
             {...register('notes')}
             rows={2}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 sm:py-2"
             placeholder="Descripción de las actividades realizadas..."
           />
           {errors.notes && (
-            <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>
+            <p className="mt-1 text-xs text-red-600 sm:text-sm">{errors.notes.message}</p>
           )}
         </div>
 
         {/* Error message */}
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-md bg-red-50 p-2.5 text-xs text-red-700 sm:p-3 sm:text-sm">
             {error instanceof Error ? error.message : 'Error al guardar el registro'}
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading}>
+        <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end sm:gap-3">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button type="submit" isLoading={isLoading}>
+          <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
             {isEditing ? 'Guardar cambios' : 'Agregar registro'}
           </Button>
         </div>

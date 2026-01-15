@@ -86,15 +86,15 @@ export function EventKanbanCard({ event, onClick }: EventKanbanCardProps) {
   return (
     <div
       onClick={onClick}
-      className={`cursor-pointer rounded-lg border border-l-4 bg-white p-3 shadow-sm transition-all hover:shadow-md ${borderColor}`}
+      className={`w-full cursor-pointer overflow-hidden rounded-lg border border-l-4 bg-white p-2.5 shadow-sm transition-all hover:shadow-md sm:p-3 ${borderColor}`}
     >
       {/* Title */}
-      <h4 className="font-medium text-gray-900 line-clamp-2 text-sm">{event.name}</h4>
+      <h4 className="line-clamp-2 text-xs font-medium text-gray-900 sm:text-sm">{event.name}</h4>
 
       {/* Event Type Badge */}
       {eventTypeInfo && (
-        <div className="mt-2">
-          <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+        <div className="mt-1.5 sm:mt-2">
+          <span className="inline-flex items-center gap-1 text-[10px] text-gray-500 sm:text-xs">
             {eventTypeInfo.icon}
             {eventTypeInfo.label}
           </span>
@@ -102,17 +102,17 @@ export function EventKanbanCard({ event, onClick }: EventKanbanCardProps) {
       )}
 
       {/* Date and Time */}
-      <div className="mt-2 space-y-1">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <Calendar className="h-3 w-3" />
-          <span>
+      <div className="mt-1.5 space-y-0.5 sm:mt-2 sm:space-y-1">
+        <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs">
+          <Calendar className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">
             {formatDateTime(event.startDatetime)}
             {!isSameDay && ` - ${formatDateTime(event.endDatetime)}`}
           </span>
         </div>
         {timeRange && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <Clock className="h-3 w-3" />
+          <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs">
+            <Clock className="h-3 w-3 flex-shrink-0" />
             <span>{timeRange.start} - {timeRange.end}</span>
           </div>
         )}
@@ -120,8 +120,8 @@ export function EventKanbanCard({ event, onClick }: EventKanbanCardProps) {
 
       {/* Assignees */}
       {assignees.length > 0 && (
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-xs text-gray-400">
+        <div className="mt-2 flex items-center justify-between sm:mt-3">
+          <span className="text-[10px] text-gray-400 sm:text-xs">
             {assignees.length} asignado{assignees.length !== 1 ? 's' : ''}
           </span>
           <AvatarGroup users={assignees} max={3} size="sm" />

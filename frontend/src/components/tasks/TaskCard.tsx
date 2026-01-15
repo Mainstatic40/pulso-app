@@ -96,22 +96,22 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   return (
     <Card
-      className="cursor-pointer transition-shadow hover:shadow-md"
+      className="w-full cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
       onClick={onClick}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2 sm:gap-4">
           <div className="min-w-0 flex-1">
-            <h3 className="truncate font-medium text-gray-900">{task.title}</h3>
+            <h3 className="truncate text-sm font-medium text-gray-900 sm:text-base">{task.title}</h3>
             {task.description && (
-              <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+              <p className="mt-1 line-clamp-2 text-xs text-gray-500 sm:text-sm">
                 {task.description}
               </p>
             )}
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:mt-4 sm:gap-2">
           <TaskStatusBadge status={task.status} />
           <TaskPriorityBadge priority={task.priority} />
           {task.shift && shiftConfig[task.shift as TaskShift] && (() => {
@@ -119,10 +119,10 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             const ShiftIcon = config.icon;
             return (
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.bgColor} ${config.textColor}`}
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:py-1 sm:text-xs ${config.bgColor} ${config.textColor}`}
               >
                 <ShiftIcon className="h-3 w-3" />
-                {config.label}
+                <span className="hidden sm:inline">{config.label}</span>
               </span>
             );
           })()}
@@ -130,15 +130,15 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
         {/* Equipment assigned to this task */}
         {taskEquipment.length > 0 && (
-          <div className="mt-3 flex items-center gap-2">
-            <Camera className="h-4 w-4 text-gray-400" />
-            <div className="flex flex-wrap gap-1">
+          <div className="mt-2 flex items-center gap-2 sm:mt-3">
+            <Camera className="h-4 w-4 flex-shrink-0 text-gray-400" />
+            <div className="flex min-w-0 flex-wrap gap-1">
               {taskEquipment.map((eq) => {
                 const config = categoryConfig[eq.category];
                 return (
                   <span
                     key={eq.id}
-                    className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${config?.color || 'bg-gray-100 text-gray-800'}`}
+                    className={`inline-flex max-w-[100px] items-center truncate rounded px-1 py-0.5 text-[10px] font-medium sm:max-w-none sm:px-1.5 ${config?.color || 'bg-gray-100 text-gray-800'}`}
                     title={eq.name}
                   >
                     {eq.name}
@@ -149,10 +149,10 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-1 text-sm text-gray-500">
-            <Calendar className="h-4 w-4" />
-            <span className={overdue ? 'font-medium text-red-600' : ''}>
+        <div className="mt-3 flex items-center justify-between gap-2 sm:mt-4">
+          <div className="flex min-w-0 items-center gap-1 text-xs text-gray-500 sm:text-sm">
+            <Calendar className="h-4 w-4 flex-shrink-0" />
+            <span className={`truncate ${overdue ? 'font-medium text-red-600' : ''}`}>
               {formatDate(task.dueDate)}
               {overdue && ' (Vencida)'}
             </span>

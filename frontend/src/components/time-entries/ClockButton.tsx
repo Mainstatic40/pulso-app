@@ -63,7 +63,7 @@ export function ClockButton({
         onClick={handleClick}
         disabled={isLoading}
         className={cn(
-          'group relative flex h-40 w-40 flex-col items-center justify-center rounded-full transition-all duration-300',
+          'group relative flex h-32 w-32 flex-col items-center justify-center rounded-full transition-all duration-300 sm:h-40 sm:w-40',
           'focus:outline-none focus:ring-4 focus:ring-offset-2',
           isLoading && 'cursor-not-allowed opacity-70',
           isActive
@@ -79,27 +79,27 @@ export function ClockButton({
         <div className="relative z-10 flex flex-col items-center">
           {isActive ? (
             <>
-              <StopCircle className="h-12 w-12" />
-              <span className="mt-2 text-sm font-medium">Registrar Salida</span>
+              <StopCircle className="h-10 w-10 sm:h-12 sm:w-12" />
+              <span className="mt-1 text-xs font-medium sm:mt-2 sm:text-sm">Registrar Salida</span>
             </>
           ) : (
             <>
-              <PlayCircle className="h-12 w-12" />
-              <span className="mt-2 text-sm font-medium">Registrar Entrada</span>
+              <PlayCircle className="h-10 w-10 sm:h-12 sm:w-12" />
+              <span className="mt-1 text-xs font-medium sm:mt-2 sm:text-sm">Registrar Entrada</span>
             </>
           )}
         </div>
       </button>
 
       {/* Elapsed time display */}
-      <div className="mt-4 text-center">
+      <div className="mt-3 text-center sm:mt-4">
         {isActive ? (
           <>
-            <p className="font-mono text-3xl font-bold text-green-600">{elapsedTime}</p>
-            <p className="mt-1 text-sm text-gray-500">Tiempo transcurrido</p>
+            <p className="font-mono text-2xl font-bold text-green-600 sm:text-3xl">{elapsedTime}</p>
+            <p className="mt-1 text-xs text-gray-500 sm:text-sm">Tiempo transcurrido</p>
           </>
         ) : (
-          <p className="text-sm text-gray-500">Sin sesión activa</p>
+          <p className="text-xs text-gray-500 sm:text-sm">Sin sesión activa</p>
         )}
       </div>
     </div>

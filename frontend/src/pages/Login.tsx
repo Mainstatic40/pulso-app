@@ -40,21 +40,21 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4">
+    <div className="flex min-h-screen items-center justify-center bg-white px-4 py-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <h1 className="text-3xl font-bold text-[#CC0000]">PULSO</h1>
+        <CardHeader className="px-4 py-4 text-center sm:px-6 sm:py-6">
+          <div className="mx-auto mb-3 sm:mb-4">
+            <h1 className="text-2xl font-bold text-[#CC0000] sm:text-3xl">PULSO</h1>
           </div>
-          <CardTitle>Iniciar Sesión</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Iniciar Sesión</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Sistema de Gestión de Horas y Tareas
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {getErrorMessage() && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              <div className="rounded-md border border-red-200 bg-red-50 p-2.5 text-xs text-red-600 sm:p-3 sm:text-sm">
                 {getErrorMessage()}
               </div>
             )}
@@ -77,7 +77,7 @@ export function Login() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="min-h-[48px] w-full sm:min-h-0"
               isLoading={isLoginLoading}
             >
               Iniciar Sesión

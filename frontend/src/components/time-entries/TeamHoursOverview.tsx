@@ -87,23 +87,23 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Detalle - ${becario.userName}`} size="lg">
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Summary */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-lg bg-blue-50 p-4 text-center">
-            <p className="text-2xl font-bold text-blue-700">{becario.weekdayHours.toFixed(1)}</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+          <div className="rounded-lg bg-blue-50 p-3 text-center sm:p-4">
+            <p className="text-lg font-bold text-blue-700 sm:text-2xl">{becario.weekdayHours.toFixed(1)}</p>
             <p className="text-xs text-blue-600">Horas L-V</p>
           </div>
-          <div className="rounded-lg bg-purple-50 p-4 text-center">
-            <p className="text-2xl font-bold text-purple-700">{becario.weekendHours.toFixed(1)}</p>
+          <div className="rounded-lg bg-purple-50 p-3 text-center sm:p-4">
+            <p className="text-lg font-bold text-purple-700 sm:text-2xl">{becario.weekendHours.toFixed(1)}</p>
             <p className="text-xs text-purple-600">Horas S-D</p>
           </div>
-          <div className="rounded-lg bg-gray-50 p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{becario.totalSessions}</p>
+          <div className="rounded-lg bg-gray-50 p-3 text-center sm:p-4">
+            <p className="text-lg font-bold text-gray-900 sm:text-2xl">{becario.totalSessions}</p>
             <p className="text-xs text-gray-500">Sesiones</p>
           </div>
-          <div className="rounded-lg bg-gray-50 p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="rounded-lg bg-gray-50 p-3 text-center sm:p-4">
+            <p className="text-lg font-bold text-gray-900 sm:text-2xl">
               {becario.totalSessions > 0
                 ? (Number(becario.totalHours) / becario.totalSessions).toFixed(1)
                 : '0'}
@@ -114,28 +114,28 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
 
         {/* Weekly breakdown */}
         <div>
-          <h3 className="mb-4 font-medium text-gray-900">Horas por Semana</h3>
+          <h3 className="mb-3 text-sm font-medium text-gray-900 sm:mb-4 sm:text-base">Horas por Semana</h3>
           {isLoading ? (
-            <div className="flex justify-center py-8">
+            <div className="flex justify-center py-6 sm:py-8">
               <Spinner />
             </div>
           ) : weeks.length === 0 ? (
-            <p className="py-4 text-center text-gray-500">Sin registros este mes</p>
+            <p className="py-4 text-center text-sm text-gray-500">Sin registros este mes</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {weeks.map((week) => {
                 const weekDate = new Date(week.weekStart);
                 const weekLabel = `Semana del ${weekDate.getDate()} de ${weekDate.toLocaleDateString('es-MX', { month: 'short' })}`;
 
                 return (
                   <div key={week.weekStart} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex flex-col gap-0.5 text-xs sm:flex-row sm:items-center sm:justify-between sm:text-sm">
                       <span className="text-gray-600">{weekLabel}</span>
                       <span className="font-medium text-gray-900">
                         {week.hours.toFixed(1)}h ({week.sessions} sesiones)
                       </span>
                     </div>
-                    <div className="h-6 w-full overflow-hidden rounded bg-gray-100">
+                    <div className="h-5 w-full overflow-hidden rounded bg-gray-100 sm:h-6">
                       <div
                         className="flex h-full items-center justify-end rounded bg-blue-500 px-2 text-xs font-medium text-white transition-all duration-300"
                         style={{ width: `${(week.hours / maxWeekHours) * 100}%` }}
@@ -152,15 +152,16 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
 
         {/* Recent entries with edit/delete */}
         <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-medium text-gray-900">Registros del Mes</h3>
+          <div className="mb-3 flex items-center justify-between sm:mb-4">
+            <h3 className="text-sm font-medium text-gray-900 sm:text-base">Registros del Mes</h3>
             <Button
               size="sm"
               variant="outline"
               onClick={() => onAddEntry(becario.userId)}
             >
               <Plus className="mr-1 h-4 w-4" />
-              Agregar
+              <span className="hidden sm:inline">Agregar</span>
+              <span className="sm:hidden">+</span>
             </Button>
           </div>
           {isLoading ? (
@@ -168,9 +169,9 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
               <Spinner />
             </div>
           ) : !entries?.data || entries.data.length === 0 ? (
-            <p className="py-4 text-center text-gray-500">Sin registros</p>
+            <p className="py-4 text-center text-sm text-gray-500">Sin registros</p>
           ) : (
-            <div className="max-h-72 space-y-2 overflow-y-auto">
+            <div className="max-h-60 space-y-2 overflow-y-auto sm:max-h-72">
               {entries.data.map((entry) => {
                 const entryDate = new Date(entry.clockIn);
                 const isWeekend = entryDate.getDay() === 0 || entryDate.getDay() === 6;
@@ -178,17 +179,17 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
                 return (
                   <div
                     key={entry.id}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                    className={`flex flex-wrap items-center justify-between gap-1 rounded-lg px-2 py-2 text-xs sm:flex-nowrap sm:gap-2 sm:px-3 sm:text-sm ${
                       isWeekend ? 'bg-purple-50' : 'bg-gray-50'
                     }`}
                   >
-                    <span className="text-gray-600">
+                    <span className="min-w-[70px] text-gray-600 sm:min-w-[90px]">
                       {entryDate.toLocaleDateString('es-MX', {
                         weekday: 'short',
                         day: 'numeric',
                         month: 'short',
                       })}
-                      {isWeekend && <span className="ml-1 text-purple-500">*</span>}
+                      {isWeekend && <span className="ml-0.5 text-purple-500">*</span>}
                     </span>
                     <span className="text-gray-500">
                       {entryDate.toLocaleTimeString('es-MX', {
@@ -208,13 +209,13 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
                     <span className="font-medium text-gray-900">
                       {entry.totalHours ? Number(entry.totalHours).toFixed(1) : '0'}h
                     </span>
-                    <div className="flex gap-1">
+                    <div className="flex gap-0.5 sm:gap-1">
                       <button
                         onClick={() => onEditEntry(entry)}
                         className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-blue-600"
                         title="Editar"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(entry)}
@@ -222,7 +223,7 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
                         title="Eliminar"
                         disabled={deleteMutation.isPending}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </button>
                     </div>
                   </div>
@@ -525,91 +526,93 @@ export function TeamHoursOverview() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Control de Horas del Equipo</h1>
-          <div className="mt-1 flex items-center gap-2">
-            <p className="text-sm text-gray-500">
-              Meta: {targetHours} hrs ({totalWorkdays} días × {hoursPerDay}h)
-              {configStartDate && (
-                <span className="ml-1 text-orange-600">
-                  • Desde {new Date(configStartDate + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
-                </span>
-              )}
-            </p>
-            <button
-              onClick={() => setIsTargetModalOpen(true)}
-              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              title="Configurar meta"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Control de Horas del Equipo</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-2">
+              <p className="text-xs text-gray-500 sm:text-sm">
+                Meta: {targetHours} hrs ({totalWorkdays} días × {hoursPerDay}h)
+                {configStartDate && (
+                  <span className="ml-1 text-orange-600">
+                    • Desde {new Date(configStartDate + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                  </span>
+                )}
+              </p>
+              <button
+                onClick={() => setIsTargetModalOpen(true)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="Configurar meta"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 sm:mt-0">
+            <MonthSelector year={year} month={month} onChange={handleMonthChange} />
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => handleAddEntry()}>
-            <Plus className="mr-2 h-4 w-4" />
-            Agregar horas
-          </Button>
-          <MonthSelector year={year} month={month} onChange={handleMonthChange} />
-        </div>
+        <Button onClick={() => handleAddEntry()} className="w-full sm:w-auto sm:self-start">
+          <Plus className="mr-2 h-4 w-4" />
+          Agregar horas
+        </Button>
       </div>
 
       {/* Team Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2 text-blue-600">
-                <Users className="h-5 w-5" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <Card className="overflow-hidden">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-shrink-0 rounded-lg bg-blue-100 p-1.5 text-blue-600 sm:p-2">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{becarios.length}</p>
-                <p className="text-sm text-gray-500">Becarios activos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-green-100 p-2 text-green-600">
-                <Clock className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{teamWeekdayHours.toFixed(1)}</p>
-                <p className="text-sm text-gray-500">Horas L-V</p>
+              <div className="min-w-0">
+                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{becarios.length}</p>
+                <p className="truncate text-xs text-gray-500 sm:text-sm">Becarios activos</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 p-2 text-purple-600">
-                <Star className="h-5 w-5" />
+        <Card className="overflow-hidden">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-shrink-0 rounded-lg bg-green-100 p-1.5 text-green-600 sm:p-2">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{teamWeekendHours.toFixed(1)}</p>
-                <p className="text-sm text-gray-500">Horas extra (S-D)</p>
+              <div className="min-w-0">
+                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{teamWeekdayHours.toFixed(1)}</p>
+                <p className="truncate text-xs text-gray-500 sm:text-sm">Horas L-V</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-orange-100 p-2 text-orange-600">
-                <Calendar className="h-5 w-5" />
+        <Card className="overflow-hidden">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-shrink-0 rounded-lg bg-purple-100 p-1.5 text-purple-600 sm:p-2">
+                <Star className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{workdaysElapsed} / {totalWorkdays}</p>
-                <p className="text-sm text-gray-500">
+              <div className="min-w-0">
+                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{teamWeekendHours.toFixed(1)}</p>
+                <p className="truncate text-xs text-gray-500 sm:text-sm">Horas extra (S-D)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-shrink-0 rounded-lg bg-orange-100 p-1.5 text-orange-600 sm:p-2">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{workdaysElapsed} / {totalWorkdays}</p>
+                <p className="truncate text-xs text-gray-500 sm:text-sm">
                   {configStartDate
                     ? `Desde ${new Date(configStartDate + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}`
                     : 'Días laborables'}
@@ -622,11 +625,11 @@ export function TeamHoursOverview() {
 
       {/* Team Progress */}
       {becarios.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">Progreso del equipo (horas L-V)</span>
-              <span className="text-sm text-gray-500">
+        <Card className="overflow-hidden">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs font-medium text-gray-700 sm:text-sm">Progreso del equipo (horas L-V)</span>
+              <span className="text-xs text-gray-500 sm:text-sm">
                 {teamWeekdayHours.toFixed(1)} / {teamTarget} horas ({teamPercentage.toFixed(0)}%)
               </span>
             </div>
@@ -651,17 +654,17 @@ export function TeamHoursOverview() {
           <Spinner size="lg" />
         </div>
       ) : becarios.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">Sin becarios activos</h3>
-            <p className="mt-2 text-gray-500">
+        <Card className="overflow-hidden">
+          <CardContent className="py-8 text-center sm:py-12">
+            <Users className="mx-auto h-10 w-10 text-gray-400 sm:h-12 sm:w-12" />
+            <h3 className="mt-3 text-base font-medium text-gray-900 sm:mt-4 sm:text-lg">Sin becarios activos</h3>
+            <p className="mt-1 text-sm text-gray-500 sm:mt-2">
               No hay becarios registrados en el sistema.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {becarios.map((becario) => (
             <BecarioHoursCard
               key={becario.userId}

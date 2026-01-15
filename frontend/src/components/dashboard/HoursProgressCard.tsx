@@ -34,16 +34,18 @@ export function HoursProgressCard({
   const maxWeekdayHours = Math.max(...weeklyHours.map((w) => w.hours), 8);
 
   return (
-    <Card>
+    <Card className="w-full overflow-hidden">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-            {isBecario ? 'Mi Progreso' : 'Progreso del Equipo'} - {monthName} {year}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex min-w-0 items-center gap-2 text-sm sm:text-base">
+            <TrendingUp className="h-5 w-5 flex-shrink-0 text-blue-600" />
+            <span className="truncate">
+              {isBecario ? 'Mi Progreso' : 'Progreso del Equipo'} - {monthName} {year}
+            </span>
           </CardTitle>
           <Link
             to="/time-entries"
-            className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+            className="flex flex-shrink-0 items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             Ver detalle
             <ChevronRight className="h-4 w-4" />
@@ -59,11 +61,11 @@ export function HoursProgressCard({
           <div className="space-y-4">
             {/* Main progress bar */}
             <div>
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-2xl font-bold text-gray-900">
+              <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <span className="text-xl font-bold text-gray-900 sm:text-2xl">
                   {monthlyHours.toFixed(1)} hrs
                 </span>
-                <span className="text-sm text-gray-500">
+                <span className="text-xs text-gray-500 sm:text-sm">
                   de {targetHours} horas ({percentage.toFixed(0)}%)
                 </span>
               </div>

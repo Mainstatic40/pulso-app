@@ -33,12 +33,12 @@ export function KanbanColumn({ config, tasks, onTaskClick, isDragDisabled }: Kan
   const taskIds = tasks.map((t) => t.id);
 
   return (
-    <div className="flex h-full min-w-[280px] max-w-[320px] flex-1 flex-col">
+    <div className="flex h-full w-64 flex-shrink-0 flex-col sm:w-72 sm:min-w-[280px] sm:max-w-[320px] sm:flex-1 sm:flex-shrink">
       {/* Column Header */}
-      <div className="mb-3 flex items-center gap-2">
-        <div className={`h-3 w-3 rounded-full ${config.color}`} />
-        <h3 className="font-semibold text-gray-700">{config.title}</h3>
-        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+      <div className="mb-2 flex items-center gap-2 sm:mb-3">
+        <div className={`h-2.5 w-2.5 rounded-full sm:h-3 sm:w-3 ${config.color}`} />
+        <h3 className="text-sm font-semibold text-gray-700 sm:text-base">{config.title}</h3>
+        <span className="rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 sm:px-2 sm:text-xs">
           {tasks.length}
         </span>
       </div>
@@ -46,16 +46,16 @@ export function KanbanColumn({ config, tasks, onTaskClick, isDragDisabled }: Kan
       {/* Column Content */}
       <div
         ref={setNodeRef}
-        className={`flex-1 overflow-y-auto rounded-lg border-2 border-dashed p-2 transition-colors ${
+        className={`flex-1 overflow-y-auto rounded-lg border-2 border-dashed p-1.5 transition-colors sm:p-2 ${
           isOver
             ? 'border-red-400 bg-red-50'
             : `border-gray-200 ${config.bgColor}`
         }`}
       >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
+          <div className="space-y-1.5 sm:space-y-2">
             {tasks.length === 0 ? (
-              <div className="flex h-24 items-center justify-center text-sm text-gray-400">
+              <div className="flex h-20 items-center justify-center text-xs text-gray-400 sm:h-24 sm:text-sm">
                 Sin tareas
               </div>
             ) : (

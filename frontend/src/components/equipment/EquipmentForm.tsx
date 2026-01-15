@@ -63,7 +63,7 @@ export function EquipmentForm({ equipment, onSubmit, onCancel, isLoading }: Equi
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 p-6">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 p-4 sm:p-6">
       <Input
         label="Nombre"
         placeholder="Ej: Canon R5, Sigma 24-70mm"
@@ -102,11 +102,11 @@ export function EquipmentForm({ equipment, onSubmit, onCancel, isLoading }: Equi
         />
       )}
 
-      <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end sm:gap-3">
+        <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
           Cancelar
         </Button>
-        <Button type="submit" isLoading={isLoading}>
+        <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
           {isEditing ? 'Guardar cambios' : 'Crear equipo'}
         </Button>
       </div>

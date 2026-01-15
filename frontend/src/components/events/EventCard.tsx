@@ -97,35 +97,35 @@ export function EventCard({ event, onClick }: EventCardProps) {
   const eventTypeInfo = event.eventType ? eventTypeConfig[event.eventType] : null;
 
   return (
-    <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={onClick}>
-      <CardContent className="p-4">
+    <Card className="w-full cursor-pointer overflow-hidden transition-shadow hover:shadow-md" onClick={onClick}>
+      <CardContent className="p-3 sm:p-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-gray-900 truncate">{event.name}</h3>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-medium text-gray-900 sm:text-base">{event.name}</h3>
+            <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-1.5">
               {eventTypeInfo && (
-                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${eventTypeInfo.color}`}>
+                <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:text-xs ${eventTypeInfo.color}`}>
                   {eventTypeInfo.icon}
-                  {eventTypeInfo.label}
+                  <span className="hidden sm:inline">{eventTypeInfo.label}</span>
                 </span>
               )}
               {daysCount > 1 && (
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 sm:px-2 sm:text-xs">
                   {daysCount} días
                 </span>
               )}
             </div>
           </div>
-          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+          <Badge variant={statusInfo.variant} className="flex-shrink-0 text-[10px] sm:text-xs">{statusInfo.label}</Badge>
         </div>
 
         {event.description && (
-          <p className="mt-2 line-clamp-2 text-sm text-gray-500">{event.description}</p>
+          <p className="mt-2 line-clamp-2 text-xs text-gray-500 sm:text-sm">{event.description}</p>
         )}
 
-        <div className="mt-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Calendar className="h-4 w-4 text-gray-400" />
+        <div className="mt-3 sm:mt-4">
+          <div className="flex flex-wrap items-center gap-1 text-xs text-gray-600 sm:gap-2 sm:text-sm">
+            <Calendar className="h-3.5 w-3.5 flex-shrink-0 text-gray-400 sm:h-4 sm:w-4" />
             <span>{formatDate(event.startDatetime)}</span>
             {daysCount > 1 && (
               <span className="text-gray-400">
@@ -136,17 +136,17 @@ export function EventCard({ event, onClick }: EventCardProps) {
         </div>
 
         {event.clientRequirements && (
-          <div className="mt-3 rounded bg-yellow-50 p-2">
-            <div className="flex items-start gap-2">
-              <FileText className="mt-0.5 h-4 w-4 text-yellow-600" />
-              <p className="line-clamp-2 text-xs text-yellow-700">{event.clientRequirements}</p>
+          <div className="mt-2 rounded bg-yellow-50 p-1.5 sm:mt-3 sm:p-2">
+            <div className="flex items-start gap-1.5 sm:gap-2">
+              <FileText className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-yellow-600 sm:h-4 sm:w-4" />
+              <p className="line-clamp-2 text-[10px] text-yellow-700 sm:text-xs">{event.clientRequirements}</p>
             </div>
           </div>
         )}
 
         {assignees.length > 0 && (
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-xs text-gray-500">
+          <div className="mt-3 flex items-center justify-between sm:mt-4">
+            <span className="text-[10px] text-gray-500 sm:text-xs">
               {assignees.length} asignado{assignees.length !== 1 ? 's' : ''}
             </span>
             <AvatarGroup users={assignees} max={4} />

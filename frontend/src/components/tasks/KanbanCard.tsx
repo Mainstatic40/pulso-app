@@ -52,7 +52,7 @@ export function KanbanCard({ task, onClick, isDragDisabled = false }: KanbanCard
     <div
       ref={setNodeRef}
       style={style}
-      className={`group rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md ${
+      className={`group w-full overflow-hidden rounded-lg border bg-white p-2.5 shadow-sm transition-shadow hover:shadow-md sm:p-3 ${
         isDragging ? 'opacity-50 shadow-lg ring-2 ring-red-500' : ''
       } ${isDragDisabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
       onClick={() => {
@@ -63,32 +63,32 @@ export function KanbanCard({ task, onClick, isDragDisabled = false }: KanbanCard
       }}
     >
       {/* Drag handle and title */}
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-1.5 sm:gap-2">
         {!isDragDisabled && (
           <button
             {...attributes}
             {...listeners}
-            className="mt-0.5 flex-shrink-0 cursor-grab text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+            className="mt-0.5 min-h-[24px] min-w-[24px] flex-shrink-0 cursor-grab p-1 text-gray-400 opacity-100 transition-opacity active:cursor-grabbing sm:min-h-0 sm:min-w-0 sm:opacity-0 sm:group-hover:opacity-100"
             onClick={(e) => e.stopPropagation()}
           >
             <GripVertical className="h-4 w-4" />
           </button>
         )}
-        <h4 className="flex-1 text-sm font-medium text-gray-900 line-clamp-2">
+        <h4 className="min-w-0 flex-1 text-xs font-medium text-gray-900 line-clamp-2 sm:text-sm">
           {task.title}
         </h4>
       </div>
 
       {/* Priority badge */}
-      <div className="mt-2">
+      <div className="mt-1.5 sm:mt-2">
         <TaskPriorityBadge priority={task.priority} />
       </div>
 
       {/* Footer: date and assignees */}
-      <div className="mt-3 flex items-center justify-between">
-        <div className={`flex items-center gap-1 text-xs ${overdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-          <Calendar className="h-3 w-3" />
-          <span>{formatDate(task.dueDate)}</span>
+      <div className="mt-2 flex items-center justify-between gap-2 sm:mt-3">
+        <div className={`flex min-w-0 items-center gap-1 text-[10px] sm:text-xs ${overdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+          <Calendar className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">{formatDate(task.dueDate)}</span>
         </div>
 
         {assignees.length > 0 && (

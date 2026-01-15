@@ -72,29 +72,29 @@ export function BecarioHoursCard({
   return (
     <div
       onClick={onClick}
-      className={`rounded-lg border border-gray-200 bg-white p-4 transition-all ${
+      className={`overflow-hidden rounded-lg border border-gray-200 bg-white p-3 transition-all sm:p-4 ${
         onClick ? 'cursor-pointer hover:border-gray-300 hover:shadow-md' : ''
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <Avatar name={data.userName} profileImage={data.userProfileImage} size="md" />
-          <div>
-            <h3 className="font-medium text-gray-900">{data.userName}</h3>
-            <p className="text-sm text-gray-500">{data.userEmail}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <Avatar name={data.userName} profileImage={data.userProfileImage} size="md" className="flex-shrink-0" />
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-medium text-gray-900 sm:text-base">{data.userName}</h3>
+            <p className="truncate text-xs text-gray-500 sm:text-sm">{data.userEmail}</p>
           </div>
         </div>
         {onClick && (
-          <ChevronRight className="h-5 w-5 text-gray-400" />
+          <ChevronRight className="h-5 w-5 flex-shrink-0 text-gray-400" />
         )}
       </div>
 
-      <div className="mt-4">
-        <div className="flex items-center justify-between text-sm">
+      <div className="mt-3 sm:mt-4">
+        <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
           <span className="text-gray-600">
-            {weekdayHours.toFixed(1)} / {targetHours} horas
+            {weekdayHours.toFixed(1)} / {targetHours} hrs
           </span>
-          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
+          <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
             {config.label}
           </span>
         </div>
@@ -108,13 +108,13 @@ export function BecarioHoursCard({
           />
         </div>
 
-        <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-xs text-gray-500">
           <span>{percentage.toFixed(0)}% completado</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <span>{data.totalSessions} sesiones</span>
             {weekendHours > 0 && (
-              <span className="rounded bg-purple-100 px-1.5 py-0.5 text-purple-700">
-                +{weekendHours.toFixed(1)}h extra
+              <span className="rounded bg-purple-100 px-1 py-0.5 text-purple-700 sm:px-1.5">
+                +{weekendHours.toFixed(1)}h
               </span>
             )}
           </div>

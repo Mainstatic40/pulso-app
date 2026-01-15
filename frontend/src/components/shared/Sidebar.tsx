@@ -14,6 +14,7 @@ import {
   MessageCircle,
   CreditCard,
   FileText,
+  X,
 } from 'lucide-react';
 import { useAuthContext } from '../../stores/auth.store.tsx';
 import { cn } from '../../lib/utils';
@@ -36,7 +37,12 @@ const navItems = [
   { to: '/reports', icon: BarChart3, label: 'Reportes', roles: ['admin', 'supervisor'] },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user } = useAuthContext();
   const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
 
@@ -63,9 +69,22 @@ export function Sidebar() {
   );
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-60 border-r border-gray-200 bg-white">
-      <div className="flex h-16 items-center justify-center border-b border-gray-200">
+    <aside
+      className={cn(
+        'fixed left-0 top-0 z-50 h-screen w-60 border-r border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-in-out lg:z-40 lg:translate-x-0 lg:shadow-none',
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      )}
+    >
+      {/* Header con logo y botón cerrar */}
+      <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4">
         <h1 className="text-2xl font-bold text-[#CC0000]">PULSO</h1>
+        {/* Botón cerrar - solo móvil */}
+        <button
+          onClick={onClose}
+          className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:hidden"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       <nav className="flex flex-col gap-1 p-4">

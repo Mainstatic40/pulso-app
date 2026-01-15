@@ -60,57 +60,88 @@ export function TimeEntryList({ entries, isLoading }: TimeEntryListProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Fecha
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Entrada
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Salida
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Duración
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Evento
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {entries.map((entry) => (
-            <tr key={entry.id} className="hover:bg-gray-50">
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                {formatDate(entry.clockIn)}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                {formatTime(entry.clockIn)}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm">
-                {entry.clockOut ? (
-                  <span className="text-gray-900">{formatTime(entry.clockOut)}</span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-green-600">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-                    En curso
-                  </span>
-                )}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                {entry.clockOut ? formatDuration(entry.totalHours) : '-'}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                {entry.event?.name || '-'}
-              </td>
+    <>
+      {/* Desktop table */}
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 sm:block">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Fecha
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Entrada
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Salida
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Duración
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Evento
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {entries.map((entry) => (
+              <tr key={entry.id} className="hover:bg-gray-50">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                  {formatDate(entry.clockIn)}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                  {formatTime(entry.clockIn)}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm">
+                  {entry.clockOut ? (
+                    <span className="text-gray-900">{formatTime(entry.clockOut)}</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-green-600">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                      En curso
+                    </span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                  {entry.clockOut ? formatDuration(entry.totalHours) : '-'}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  {entry.event?.name || '-'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="space-y-2 sm:hidden">
+        {entries.map((entry) => (
+          <div
+            key={entry.id}
+            className="rounded-lg border border-gray-200 p-3"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-900">{formatDate(entry.clockIn)}</p>
+              <p className={cn(
+                'text-sm font-medium',
+                entry.clockOut ? 'text-gray-900' : 'text-green-600'
+              )}>
+                {entry.clockOut ? formatDuration(entry.totalHours) : 'Activo'}
+              </p>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+              <span>
+                {formatTime(entry.clockIn)} - {entry.clockOut ? formatTime(entry.clockOut) : 'En curso'}
+              </span>
+              {entry.event && (
+                <span className="truncate max-w-[120px]">{entry.event.name}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 

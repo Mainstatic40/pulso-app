@@ -99,10 +99,10 @@ export function Calendar() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Calendario</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Calendario</h1>
+        <p className="mt-0.5 text-xs text-gray-500 sm:mt-1 sm:text-sm">
           Visualiza eventos y tareas programadas
         </p>
       </div>

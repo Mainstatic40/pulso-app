@@ -225,7 +225,7 @@ export function Dashboard() {
   const isClockLoading = clockInMutation.isPending || clockOutMutation.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -247,7 +247,7 @@ export function Dashboard() {
           'border-2 transition-colors',
           activeSession ? 'border-green-500 bg-green-50' : 'border-gray-200'
         )}>
-          <CardContent className="flex items-center justify-between p-4 sm:p-6">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <h3 className="font-medium text-gray-900">
                 {activeSession ? 'Sesión Activa' : 'Sin sesión activa'}
@@ -263,7 +263,7 @@ export function Dashboard() {
               variant={activeSession ? 'danger' : 'primary'}
               onClick={handleClockToggle}
               isLoading={isClockLoading || isLoadingActive}
-              className="min-w-[160px]"
+              className="w-full sm:w-auto sm:min-w-[160px]"
             >
               {activeSession ? (
                 <>
@@ -297,17 +297,21 @@ export function Dashboard() {
       />
 
       {/* Tasks and Events */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <PendingTasksList
-          tasks={pendingTasks}
-          isLoading={isLoadingTasks}
-          isBecario={isBecario}
-        />
-        <UpcomingEventsList
-          events={upcomingEvents || []}
-          isLoading={isLoadingEvents}
-          isBecario={isBecario}
-        />
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <div className="min-w-0">
+          <PendingTasksList
+            tasks={pendingTasks}
+            isLoading={isLoadingTasks}
+            isBecario={isBecario}
+          />
+        </div>
+        <div className="min-w-0">
+          <UpcomingEventsList
+            events={upcomingEvents || []}
+            isLoading={isLoadingEvents}
+            isBecario={isBecario}
+          />
+        </div>
       </div>
 
       {/* Equipment in Use */}
