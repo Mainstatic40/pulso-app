@@ -17,7 +17,7 @@ api.interceptors.request.use((config) => {
 });
 
 // Rutas públicas que no deben redirigir a login
-const PUBLIC_ROUTES = ['/login', '/solicitar', '/mis-solicitudes'];
+const PUBLIC_ROUTES = ['/login', '/solicitar', '/mis-solicitudes', '/kiosko'];
 
 function isPublicRoute(): boolean {
   const path = window.location.pathname;

@@ -16,4 +16,7 @@ export const config = {
   rfid: {
     apiKey: process.env.RFID_API_KEY || 'pulso-rfid-secret-key-2024',
   },
+  kiosk: {
+    pin: process.env.KIOSK_PIN || '1234',
+  },
 };

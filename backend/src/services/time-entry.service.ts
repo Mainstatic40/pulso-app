@@ -153,7 +153,7 @@ export const timeEntryService = {
     const activeSession = await this.getActiveSession(userId);
 
     if (activeSession) {
-      throw new ValidationError('You already have an active session. Please clock out first.');
+      throw new ValidationError('Ya tienes una sesion activa. Registra tu salida primero.');
     }
 
     // Validate eventId if provided
@@ -183,7 +183,7 @@ export const timeEntryService = {
     const activeSession = await this.getActiveSession(userId);
 
     if (!activeSession) {
-      throw new ValidationError('No active session found. Please clock in first.');
+      throw new ValidationError('No hay sesion activa. Registra tu entrada primero.');
     }
 
     const clockOut = new Date();

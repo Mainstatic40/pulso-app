@@ -24,6 +24,7 @@ import notificationRoutes from './routes/notification.routes';
 import rfidRoutes from './routes/rfid.routes';
 import equipmentLoanRoutes from './routes/equipment-loan.routes';
 import eventRequestRoutes from './routes/event-request.routes';
+import kioskRoutes from './routes/kiosk.routes';
 
 const app = express();
 
@@ -124,6 +125,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/rfid', rfidRoutes);
 app.use('/api/equipment-loans', equipmentLoanRoutes);
 app.use('/api/event-requests', eventRequestRoutes);
+app.use('/api/kiosk', kioskRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

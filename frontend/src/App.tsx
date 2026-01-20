@@ -21,6 +21,7 @@ import { EventRequests } from './pages/EventRequests';
 import { SolicitorPortal } from './pages/public/SolicitorPortal';
 import { EventRequestForm } from './pages/public/EventRequestForm';
 import { MyEventRequests } from './pages/public/MyEventRequests';
+import { Kiosk } from './pages/public/Kiosk';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/kiosko" element={<Kiosk />} />
             <Route path="/solicitar/:accessCode" element={<SolicitorPortal />} />
             <Route path="/solicitar/:accessCode/nuevo" element={<EventRequestForm />} />
             <Route path="/mis-solicitudes/:token" element={<MyEventRequests />} />
@@ -50,12 +52,27 @@ function App() {
               </Route>
             </Route>
 
-            {/* Admin/Supervisor only routes */}
-            <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor']} />}>
+            {/* Permission-protected routes */}
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor']} requiredPermission="canManageUsers" />}>
               <Route element={<Layout />}>
                 <Route path="/users" element={<Users />} />
+              </Route>
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor']} requiredPermission="canManageRfid" />}>
+              <Route element={<Layout />}>
                 <Route path="/rfid" element={<RfidManagement />} />
+              </Route>
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor']} requiredPermission="canViewReports" />}>
+              <Route element={<Layout />}>
                 <Route path="/reports" element={<Reports />} />
+              </Route>
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor']} requiredPermission="canManageEvents" />}>
+              <Route element={<Layout />}>
                 <Route path="/solicitudes" element={<EventRequests />} />
               </Route>
             </Route>
