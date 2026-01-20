@@ -1,6 +1,19 @@
 import { z } from 'zod';
 import { UserRole } from '@prisma/client';
 
+// Schema for supervisor permissions
+export const supervisorPermissionsSchema = z.object({
+  canManageUsers: z.boolean().optional().default(false),
+  canManageTasks: z.boolean().optional().default(false),
+  canManageEvents: z.boolean().optional().default(false),
+  canManageEquipment: z.boolean().optional().default(false),
+  canManageTimeEntries: z.boolean().optional().default(false),
+  canApproveTasks: z.boolean().optional().default(false),
+  canViewReports: z.boolean().optional().default(false),
+  canViewAllLogs: z.boolean().optional().default(false),
+  canManageRfid: z.boolean().optional().default(false),
+});
+
 export const createUserSchema = z.object({
   body: z.object({
     name: z
@@ -23,6 +36,7 @@ export const createUserSchema = z.object({
       errorMap: () => ({ message: 'Role must be admin, supervisor, or becario' }),
     }).optional(),
     isActive: z.boolean().optional(),
+    permissions: supervisorPermissionsSchema.optional().nullable(),
   }),
 });
 
@@ -54,6 +68,7 @@ export const updateUserSchema = z.object({
       errorMap: () => ({ message: 'Role must be admin, supervisor, or becario' }),
     }).optional(),
     isActive: z.boolean().optional(),
+    permissions: supervisorPermissionsSchema.optional().nullable(),
   }),
 });
 

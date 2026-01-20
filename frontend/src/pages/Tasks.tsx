@@ -11,7 +11,7 @@ import { Modal } from '../components/ui/Modal';
 import { TaskCard, TaskModal, TaskForm, KanbanBoard, statusOptions, priorityOptions } from '../components/tasks';
 import { taskService, type TaskWithRelations, type CreateTaskRequest, type UpdateTaskRequest } from '../services/task.service';
 import { equipmentAssignmentService } from '../services/equipment-assignment.service';
-import { useAuthContext } from '../stores/auth.store.tsx';
+import { usePermissions } from '../hooks/usePermissions';
 import type { TaskStatus, TaskPriority } from '../types';
 import type { EquipmentAssignments } from '../components/tasks/TaskForm';
 
@@ -27,7 +27,7 @@ const shiftOptions = [
 ];
 
 export function Tasks() {
-  const { user } = useAuthContext();
+  const { canManageTasks } = usePermissions();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -39,8 +39,6 @@ export function Tasks() {
   const [shiftFilter, setShiftFilter] = useState<string>('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
 
   // Handle ?open=ID parameter from notifications
   useEffect(() => {
@@ -213,7 +211,7 @@ export function Tasks() {
             </button>
           </div>
 
-          {isAdminOrSupervisor && (
+          {canManageTasks && (
             <Button onClick={() => setIsCreateModalOpen(true)} className="flex-shrink-0">
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Nueva Tarea</span>
@@ -288,7 +286,7 @@ export function Tasks() {
                 ? 'No se encontraron tareas con los filtros seleccionados.'
                 : 'Aún no hay tareas creadas.'}
             </p>
-            {isAdminOrSupervisor && !searchQuery && !statusFilter && !priorityFilter && !shiftFilter && (
+            {canManageTasks && !searchQuery && !statusFilter && !priorityFilter && !shiftFilter && (
               <Button className="mt-4 w-full sm:w-auto" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Crear primera tarea

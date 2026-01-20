@@ -1,16 +1,29 @@
 import { useState, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
-import { Trash2, Upload, CreditCard, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { Trash2, Upload, CreditCard, CheckCircle, XCircle, ExternalLink, CheckSquare, Square } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
 import { userService } from '../../services/user.service';
-import type { User } from '../../types';
+import type { User, SupervisorPermissions } from '../../types';
+import { PERMISSION_LABELS, PERMISSION_KEYS, DEFAULT_SUPERVISOR_PERMISSIONS } from '../../types';
+
+const permissionsSchema = z.object({
+  canManageUsers: z.boolean().optional(),
+  canManageTasks: z.boolean().optional(),
+  canManageEvents: z.boolean().optional(),
+  canManageEquipment: z.boolean().optional(),
+  canManageTimeEntries: z.boolean().optional(),
+  canApproveTasks: z.boolean().optional(),
+  canViewReports: z.boolean().optional(),
+  canViewAllLogs: z.boolean().optional(),
+  canManageRfid: z.boolean().optional(),
+});
 
 const createUserSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -21,6 +34,7 @@ const createUserSchema = z.object({
   }),
   rfidTag: z.string().optional(),
   isActive: z.boolean(),
+  permissions: permissionsSchema.optional(),
 });
 
 const updateUserSchema = z.object({
@@ -32,6 +46,7 @@ const updateUserSchema = z.object({
   }),
   rfidTag: z.string().optional(),
   isActive: z.boolean(),
+  permissions: permissionsSchema.optional(),
 });
 
 type CreateUserFormData = z.infer<typeof createUserSchema>;
@@ -62,9 +77,19 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
   const [currentUser, setCurrentUser] = useState<User | null>(user || null);
   const [imageError, setImageError] = useState<string | null>(null);
 
+  // Get initial permissions for supervisor (default to all if not set)
+  const getInitialPermissions = (): SupervisorPermissions => {
+    if (user?.role === 'supervisor' && user?.permissions) {
+      return { ...DEFAULT_SUPERVISOR_PERMISSIONS, ...user.permissions };
+    }
+    return DEFAULT_SUPERVISOR_PERMISSIONS;
+  };
+
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors },
   } = useForm<UserFormData>({
     resolver: zodResolver(isEditing ? updateUserSchema : createUserSchema),
@@ -75,8 +100,26 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
       role: user?.role || 'becario',
       rfidTag: user?.rfidTag || '',
       isActive: user?.isActive ?? true,
+      permissions: getInitialPermissions(),
     },
   });
+
+  // Watch the role field to show/hide permissions section
+  const watchedRole = useWatch({ control, name: 'role' });
+  const isSupervisor = watchedRole === 'supervisor';
+
+  // Helper functions for select all / deselect all
+  const selectAllPermissions = () => {
+    PERMISSION_KEYS.forEach((key) => {
+      setValue(`permissions.${key}`, true, { shouldDirty: true });
+    });
+  };
+
+  const deselectAllPermissions = () => {
+    PERMISSION_KEYS.forEach((key) => {
+      setValue(`permissions.${key}`, false, { shouldDirty: true });
+    });
+  };
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => userService.uploadProfileImage(user!.id, file),
@@ -136,7 +179,7 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
 
   const handleFormSubmit = (data: UserFormData) => {
     // Clean up data before sending
-    const cleanData: Record<string, any> = {
+    const cleanData: Record<string, unknown> = {
       name: data.name.trim(),
       email: data.email.trim(),
       role: data.role,
@@ -151,6 +194,11 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
     // Only include rfidTag if provided (not empty string)
     if (data.rfidTag && data.rfidTag.trim() !== '') {
       cleanData.rfidTag = data.rfidTag.trim();
+    }
+
+    // Include permissions only for supervisors
+    if (data.role === 'supervisor' && data.permissions) {
+      cleanData.permissions = data.permissions;
     }
 
     onSubmit(cleanData as UserFormData);
@@ -246,6 +294,55 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
         error={errors.role?.message}
         {...register('role')}
       />
+
+      {/* Supervisor Permissions Section */}
+      {isSupervisor && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 sm:p-4 transition-all duration-200">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h4 className="text-sm font-medium text-blue-900">Permisos del Supervisor</h4>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={selectAllPermissions}
+                className="text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
+              >
+                <CheckSquare className="mr-1 h-3 w-3" />
+                Seleccionar todos
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={deselectAllPermissions}
+                className="text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
+              >
+                <Square className="mr-1 h-3 w-3" />
+                Deseleccionar
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            {PERMISSION_KEYS.map((key) => (
+              <label
+                key={key}
+                className="flex items-center gap-2 rounded-md bg-white p-2 cursor-pointer hover:bg-blue-50 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  {...register(`permissions.${key}`)}
+                />
+                <span className="text-xs text-gray-700 sm:text-sm">
+                  {PERMISSION_LABELS[key]}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* RFID Status - Read only with link to management */}
       {isEditing && (

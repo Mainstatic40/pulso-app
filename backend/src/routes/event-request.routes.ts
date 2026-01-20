@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { eventRequestController } from '../controllers/event-request.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, requirePermission } from '../middlewares/auth.middleware';
 
 const router = Router();
 
@@ -12,9 +12,9 @@ router.post('/public/recover-access', eventRequestController.recoverAccess);
 router.put('/public/update/:id', eventRequestController.updateRequest);
 router.get('/public/status/:code', eventRequestController.getStatusByCode);
 
-// ========== RUTAS PRIVADAS ==========
+// ========== RUTAS PRIVADAS (requires canManageEvents permission) ==========
 router.use(authenticate);
-router.use(authorize('admin', 'supervisor'));
+router.use(requirePermission('canManageEvents'));
 
 router.get('/', eventRequestController.getAll);
 router.get('/pending', eventRequestController.getPending);

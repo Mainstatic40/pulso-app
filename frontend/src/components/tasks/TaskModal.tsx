@@ -19,6 +19,7 @@ import { equipmentAssignmentService } from '../../services/equipment-assignment.
 import { userService } from '../../services/user.service';
 import { exportTaskToImage } from '../../utils/exportTaskToImage';
 import { useAuthContext } from '../../stores/auth.store.tsx';
+import { usePermissions } from '../../hooks/usePermissions';
 import type { TaskStatus, EquipmentCategory, EquipmentAssignment } from '../../types';
 
 const categoryConfig: Record<EquipmentCategory, { label: string; color: string }> = {
@@ -78,13 +79,13 @@ function formatDateTime(dateString: string): string {
 function canChangeStatus(
   currentStatus: TaskStatus,
   newStatus: TaskStatus,
-  role: string
+  hasApprovePermission: boolean
 ): boolean {
-  if (role === 'admin' || role === 'supervisor') {
+  if (hasApprovePermission) {
     return true;
   }
 
-  // Becarios can only go: pending -> in_progress -> review
+  // Users without approve permission can only go: pending -> in_progress -> review
   const allowedTransitions: Record<TaskStatus, TaskStatus[]> = {
     pending: ['in_progress'],
     in_progress: ['review'],
@@ -95,20 +96,21 @@ function canChangeStatus(
   return allowedTransitions[currentStatus]?.includes(newStatus) || false;
 }
 
-function getAvailableStatuses(currentStatus: TaskStatus, role: string): typeof statusOptions {
-  if (role === 'admin' || role === 'supervisor') {
+function getAvailableStatuses(currentStatus: TaskStatus, hasApprovePermission: boolean): typeof statusOptions {
+  if (hasApprovePermission) {
     return statusOptions;
   }
 
   return statusOptions.filter(
     (opt) =>
       opt.value === currentStatus ||
-      canChangeStatus(currentStatus, opt.value as TaskStatus, role)
+      canChangeStatus(currentStatus, opt.value as TaskStatus, hasApprovePermission)
   );
 }
 
 export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   const { user } = useAuthContext();
+  const { canManageTasks, canApproveTasks } = usePermissions();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -116,8 +118,6 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   const [isExporting, setIsExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [replacingUserId, setReplacingUserId] = useState<string | null>(null);
-
-  const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
 
   const { data: task, isLoading: isLoadingTask } = useQuery({
     queryKey: ['tasks', taskId],
@@ -520,7 +520,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as TaskStatus;
-    if (task && canChangeStatus(task.status, newStatus, user?.role || '')) {
+    if (task && canChangeStatus(task.status, newStatus, canApproveTasks)) {
       updateStatusMutation.mutate(newStatus);
     }
   };
@@ -606,7 +606,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               >
                 <Download className="h-4 w-4" />
               </Button>
-              {isAdminOrSupervisor && (
+              {canManageTasks && (
                 <>
                   <Button size="sm" variant="outline" onClick={() => setIsEditing(true)} className="min-h-[36px] min-w-[36px] p-1.5 sm:min-h-0 sm:min-w-0 sm:p-2">
                     <Edit2 className="h-4 w-4" />
@@ -629,15 +629,13 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">Estado:</span>
-              {user && (
-                <Select
-                  value={task.status}
-                  onChange={handleStatusChange}
-                  options={getAvailableStatuses(task.status, user.role)}
-                  className="w-full sm:w-40"
-                  disabled={updateStatusMutation.isPending}
-                />
-              )}
+              <Select
+                value={task.status}
+                onChange={handleStatusChange}
+                options={getAvailableStatuses(task.status, canApproveTasks)}
+                className="w-full sm:w-40"
+                disabled={updateStatusMutation.isPending}
+              />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">Prioridad:</span>
@@ -749,7 +747,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                         <User className="h-4 w-4 flex-shrink-0 text-gray-500" />
                         <p className="truncate text-sm font-medium text-gray-900 sm:text-base">{userEquipment.userName}</p>
                       </div>
-                      {isAdminOrSupervisor && (
+                      {canManageTasks && (
                         <div className="flex flex-shrink-0 gap-1">
                           <button
                             onClick={() => setReplacingUserId(
@@ -857,7 +855,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   </div>
                 ))}
               </div>
-              {isAdminOrSupervisor && (
+              {canManageTasks && (
                 <p className="mt-2 text-[10px] text-gray-500 sm:mt-3 sm:text-xs">
                   <RefreshCw className="mr-1 inline h-3 w-3" />Transferir mueve el equipo a otro usuario
                 </p>
@@ -880,7 +878,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                         <Avatar name={assignee.user.name} profileImage={assignee.user.profileImage} size="sm" />
                         <span className="truncate text-xs text-gray-700 sm:text-sm">{assignee.user.name}</span>
                       </div>
-                      {isAdminOrSupervisor && (
+                      {canManageTasks && (
                         <div className="flex flex-shrink-0 gap-1">
                           <button
                             onClick={() => setReplacingUserId(
@@ -937,7 +935,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   </div>
                 ))}
               </div>
-              {isAdminOrSupervisor && (
+              {canManageTasks && (
                 <p className="mt-2 text-[10px] text-gray-500 sm:mt-3 sm:text-xs">
                   <RefreshCw className="mr-1 inline h-3 w-3" />Reemplazar transfiere el equipo asignado
                 </p>
@@ -991,7 +989,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                         <span className="text-[10px] text-gray-500 sm:text-xs">
                           {formatDateTime(comment.createdAt)}
                         </span>
-                        {(user?.id === comment.userId || isAdminOrSupervisor) && (
+                        {(user?.id === comment.userId || canManageTasks) && (
                           <button
                             onClick={() => {
                               if (window.confirm('¿Eliminar este comentario?')) {

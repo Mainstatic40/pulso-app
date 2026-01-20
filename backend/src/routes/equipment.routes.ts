@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { equipmentController } from '../controllers/equipment.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import {
   listEquipmentSchema,
@@ -38,26 +38,26 @@ router.get(
   equipmentController.getById
 );
 
-// POST /api/equipment - Create equipment (admin only)
+// POST /api/equipment - Create equipment (requires canManageEquipment permission)
 router.post(
   '/',
-  authorize('admin'),
+  requirePermission('canManageEquipment'),
   validate(createEquipmentSchema),
   equipmentController.create
 );
 
-// PUT /api/equipment/:id - Update equipment (admin only)
+// PUT /api/equipment/:id - Update equipment (requires canManageEquipment permission)
 router.put(
   '/:id',
-  authorize('admin'),
+  requirePermission('canManageEquipment'),
   validate(updateEquipmentSchema),
   equipmentController.update
 );
 
-// PATCH /api/equipment/:id/status - Change equipment status (admin/supervisor)
+// PATCH /api/equipment/:id/status - Change equipment status (requires canManageEquipment permission)
 router.patch(
   '/:id/status',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageEquipment'),
   validate(updateEquipmentStatusSchema),
   equipmentController.updateStatus
 );
@@ -70,17 +70,17 @@ router.delete(
   equipmentController.delete
 );
 
-// POST /api/equipment/:id/link-rfid - Link RFID to equipment (admin/supervisor)
+// POST /api/equipment/:id/link-rfid - Link RFID to equipment (requires canManageEquipment permission)
 router.post(
   '/:id/link-rfid',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageEquipment'),
   equipmentController.linkRfid
 );
 
-// DELETE /api/equipment/:id/unlink-rfid - Unlink RFID from equipment (admin/supervisor)
+// DELETE /api/equipment/:id/unlink-rfid - Unlink RFID from equipment (requires canManageEquipment permission)
 router.delete(
   '/:id/unlink-rfid',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageEquipment'),
   equipmentController.unlinkRfid
 );
 

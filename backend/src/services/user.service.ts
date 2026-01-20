@@ -1,7 +1,9 @@
 import bcrypt from 'bcrypt';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient, UserRole, Prisma } from '@prisma/client';
 import { ValidationError, NotFoundError } from '../utils/app-error';
 import type { CreateUserInput, UpdateUserInput, ListUsersQuery } from '../schemas/user.schema';
+import { DEFAULT_SUPERVISOR_PERMISSIONS, SupervisorPermissions } from '../constants/permissions';
+import { parsePermissions } from '../utils/permissions';
 
 const prisma = new PrismaClient();
 
@@ -12,6 +14,7 @@ const userSelect = {
   rfidTag: true,
   profileImage: true,
   role: true,
+  permissions: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -24,10 +27,19 @@ export type UserResponse = {
   rfidTag: string | null;
   profileImage: string | null;
   role: UserRole;
+  permissions: SupervisorPermissions | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
+
+// Helper to transform raw DB user to UserResponse with parsed permissions
+function transformUser(user: Prisma.UserGetPayload<{ select: typeof userSelect }>): UserResponse {
+  return {
+    ...user,
+    permissions: parsePermissions(user.permissions),
+  };
+}
 
 export interface PaginatedResult<T> {
   data: T[];
@@ -60,7 +72,7 @@ export const userService = {
     ]);
 
     return {
-      data: users,
+      data: users.map(transformUser),
       meta: {
         total,
         page,
@@ -70,7 +82,7 @@ export const userService = {
     };
   },
 
-  async findById(id: string) {
+  async findById(id: string): Promise<UserResponse> {
     const user = await prisma.user.findUnique({
       where: { id },
       select: userSelect,
@@ -80,11 +92,11 @@ export const userService = {
       throw new NotFoundError('User not found');
     }
 
-    return user;
+    return transformUser(user);
   },
 
-  async create(input: CreateUserInput) {
-    const { email, password, rfidTag, ...rest } = input;
+  async create(input: CreateUserInput): Promise<UserResponse> {
+    const { email, password, rfidTag, permissions, ...rest } = input;
 
     // Check if email already exists
     const existingEmail = await prisma.user.findUnique({
@@ -108,20 +120,29 @@ export const userService = {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Handle permissions: if role is supervisor, set permissions (default to all if not provided)
+    const role = rest.role || 'becario';
+    let permissionsData: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput = Prisma.DbNull;
+
+    if (role === 'supervisor') {
+      permissionsData = (permissions || DEFAULT_SUPERVISOR_PERMISSIONS) as unknown as Prisma.InputJsonValue;
+    }
+
     const user = await prisma.user.create({
       data: {
         ...rest,
         email: email.toLowerCase(),
         passwordHash,
         rfidTag: rfidTag || null,
+        permissions: permissionsData,
       },
       select: userSelect,
     });
 
-    return user;
+    return transformUser(user);
   },
 
-  async update(id: string, input: UpdateUserInput) {
+  async update(id: string, input: UpdateUserInput): Promise<UserResponse> {
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { id },
@@ -131,7 +152,7 @@ export const userService = {
       throw new NotFoundError('User not found');
     }
 
-    const { email, password, rfidTag, ...rest } = input;
+    const { email, password, rfidTag, permissions, ...rest } = input;
     const updateData: Record<string, unknown> = { ...rest };
 
     // Check if new email is unique
@@ -166,16 +187,33 @@ export const userService = {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
+    // Handle permissions based on role change
+    const newRole = rest.role || existingUser.role;
+
+    if (newRole === 'supervisor') {
+      // If becoming or staying a supervisor, update permissions if provided
+      if (permissions !== undefined) {
+        updateData.permissions = permissions as unknown as Prisma.InputJsonValue;
+      } else if (existingUser.role !== 'supervisor') {
+        // If changing TO supervisor and no permissions provided, set defaults
+        updateData.permissions = DEFAULT_SUPERVISOR_PERMISSIONS as unknown as Prisma.InputJsonValue;
+      }
+      // If staying as supervisor and no permissions provided, keep existing
+    } else {
+      // If not supervisor (admin or becario), clear permissions
+      updateData.permissions = Prisma.DbNull;
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: updateData,
       select: userSelect,
     });
 
-    return user;
+    return transformUser(user);
   },
 
-  async delete(id: string) {
+  async delete(id: string): Promise<UserResponse> {
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { id },
@@ -192,7 +230,7 @@ export const userService = {
       select: userSelect,
     });
 
-    return user;
+    return transformUser(user);
   },
 
   async hardDelete(id: string) {
@@ -361,7 +399,7 @@ export const userService = {
     return { message: 'Usuario eliminado permanentemente' };
   },
 
-  async updateProfileImage(id: string, imagePath: string) {
+  async updateProfileImage(id: string, imagePath: string): Promise<UserResponse> {
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { id },
@@ -377,10 +415,10 @@ export const userService = {
       select: userSelect,
     });
 
-    return user;
+    return transformUser(user);
   },
 
-  async deleteProfileImage(id: string) {
+  async deleteProfileImage(id: string): Promise<{ user: UserResponse; previousImage: string | null }> {
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { id },
@@ -396,6 +434,6 @@ export const userService = {
       select: userSelect,
     });
 
-    return { user, previousImage: existingUser.profileImage };
+    return { user: transformUser(user), previousImage: existingUser.profileImage };
   },
 };

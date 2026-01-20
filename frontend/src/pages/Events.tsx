@@ -11,7 +11,7 @@ import { Spinner } from '../components/ui/Spinner';
 import { Modal } from '../components/ui/Modal';
 import { EventCard, EventModal, EventForm, EventKanbanBoard } from '../components/events';
 import { eventService, type EventWithRelations, type CreateEventRequest } from '../services/event.service';
-import { useAuthContext } from '../stores/auth.store.tsx';
+import { usePermissions } from '../hooks/usePermissions';
 import { getImageUrl } from '../lib/utils';
 import type { EventType } from '../types';
 
@@ -50,7 +50,7 @@ const EVENT_TYPE_OPTIONS = [
 ];
 
 export function Events() {
-  const { user } = useAuthContext();
+  const { canManageEvents } = usePermissions();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -71,8 +71,6 @@ export function Events() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
-
-  const canManageEvents = user?.role === 'admin' || user?.role === 'supervisor';
 
   // Toggle event selection
   const toggleEventSelection = (eventId: string) => {

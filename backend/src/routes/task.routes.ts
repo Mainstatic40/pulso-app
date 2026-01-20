@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { taskController } from '../controllers/task.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, requirePermission } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import {
   listTasksSchema,
@@ -29,62 +29,63 @@ router.get(
   taskController.getById
 );
 
-// POST /api/tasks - Create task (admin/supervisor only)
+// POST /api/tasks - Create task (requires canManageTasks permission)
 router.post(
   '/',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageTasks'),
   validate(createTaskSchema),
   taskController.create
 );
 
-// PUT /api/tasks/:id - Update task (admin/supervisor only)
+// PUT /api/tasks/:id - Update task (requires canManageTasks permission)
 router.put(
   '/:id',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageTasks'),
   validate(updateTaskSchema),
   taskController.update
 );
 
 // PATCH /api/tasks/:id/status - Change task status (special rules apply)
+// Note: Moving to 'completed' requires canApproveTasks, checked in service
 router.patch(
   '/:id/status',
   validate(updateStatusSchema),
   taskController.updateStatus
 );
 
-// DELETE /api/tasks/:id - Delete task (admin/supervisor only)
+// DELETE /api/tasks/:id - Delete task (requires canManageTasks permission)
 router.delete(
   '/:id',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageTasks'),
   validate(getTaskSchema),
   taskController.delete
 );
 
-// DELETE /api/tasks/:id/assignees/:userId - Remove assignee from task (admin/supervisor only)
+// DELETE /api/tasks/:id/assignees/:userId - Remove assignee from task (requires canManageTasks permission)
 router.delete(
   '/:id/assignees/:userId',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageTasks'),
   taskController.removeAssignee
 );
 
-// POST /api/tasks/:id/assignees/:userId/replace - Replace assignee with another (admin/supervisor only)
+// POST /api/tasks/:id/assignees/:userId/replace - Replace assignee with another (requires canManageTasks permission)
 router.post(
   '/:id/assignees/:userId/replace',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageTasks'),
   taskController.replaceAssignee
 );
 
-// POST /api/tasks/:id/equipment/:userId/release - Release equipment for a user (admin/supervisor only)
+// POST /api/tasks/:id/equipment/:userId/release - Release equipment for a user (requires canManageTasks permission)
 router.post(
   '/:id/equipment/:userId/release',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageTasks'),
   taskController.releaseEquipment
 );
 
-// POST /api/tasks/:id/equipment/:userId/transfer - Transfer equipment to another user (admin/supervisor only)
+// POST /api/tasks/:id/equipment/:userId/transfer - Transfer equipment to another user (requires canManageTasks permission)
 router.post(
   '/:id/equipment/:userId/transfer',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageTasks'),
   taskController.transferEquipment
 );
 

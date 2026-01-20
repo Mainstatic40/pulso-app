@@ -2,7 +2,8 @@ import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { generateTokens, verifyRefreshToken } from '../utils/jwt';
 import { UnauthorizedError, ValidationError } from '../utils/app-error';
-import type { JwtPayload } from '../types';
+import type { JwtPayload, SupervisorPermissions } from '../types';
+import { getEffectivePermissions, parsePermissions } from '../utils/permissions';
 
 const prisma = new PrismaClient();
 
@@ -20,6 +21,7 @@ export interface AuthResponse {
     rfidTag: string | null;
     profileImage: string | null;
     isActive: boolean;
+    permissions: SupervisorPermissions;
     createdAt: Date;
   };
   accessToken: string;
@@ -57,10 +59,15 @@ export const authService = {
       throw new UnauthorizedError('Invalid email or password');
     }
 
+    // Parse and compute effective permissions
+    const parsedPermissions = parsePermissions(user.permissions);
+    const effectivePermissions = getEffectivePermissions(user.role, parsedPermissions);
+
     const payload: JwtPayload = {
       userId: user.id,
       email: user.email,
       role: user.role,
+      permissions: effectivePermissions,
     };
 
     const tokens = generateTokens(payload);
@@ -74,6 +81,7 @@ export const authService = {
         rfidTag: user.rfidTag,
         profileImage: user.profileImage,
         isActive: user.isActive,
+        permissions: effectivePermissions,
         createdAt: user.createdAt,
       },
       ...tokens,
@@ -100,10 +108,15 @@ export const authService = {
       throw new UnauthorizedError('User not found or deactivated');
     }
 
+    // Parse and compute effective permissions
+    const parsedPermissions = parsePermissions(user.permissions);
+    const effectivePermissions = getEffectivePermissions(user.role, parsedPermissions);
+
     const newPayload: JwtPayload = {
       userId: user.id,
       email: user.email,
       role: user.role,
+      permissions: effectivePermissions,
     };
 
     return generateTokens(newPayload);
@@ -119,6 +132,7 @@ export const authService = {
         role: true,
         rfidTag: true,
         profileImage: true,
+        permissions: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -133,6 +147,13 @@ export const authService = {
       throw new UnauthorizedError('Account is deactivated');
     }
 
-    return user;
+    // Parse and compute effective permissions
+    const parsedPermissions = parsePermissions(user.permissions);
+    const effectivePermissions = getEffectivePermissions(user.role, parsedPermissions);
+
+    return {
+      ...user,
+      permissions: effectivePermissions,
+    };
   },
 };

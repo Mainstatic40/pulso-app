@@ -22,25 +22,26 @@ import {
 } from '../services/weekly-log.service';
 import { userService } from '../services/user.service';
 import { useAuthContext } from '../stores/auth.store.tsx';
+import { usePermissions } from '../hooks/usePermissions';
 
 export function WeeklyLog() {
   const { user } = useAuthContext();
+  const { canViewAllLogs } = usePermissions();
   const queryClient = useQueryClient();
 
   // State for week selection
   const [selectedWeek, setSelectedWeek] = useState(() => getWeekDates(new Date()));
   const [selectedUserId, setSelectedUserId] = useState<string>('');
 
-  const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
   const isCurrentWeek = isSameWeek(selectedWeek.start, new Date());
-  const effectiveUserId = isAdminOrSupervisor && selectedUserId ? selectedUserId : user?.id;
-  const isViewingOtherUser = !!(isAdminOrSupervisor && selectedUserId && selectedUserId !== user?.id);
+  const effectiveUserId = canViewAllLogs && selectedUserId ? selectedUserId : user?.id;
+  const isViewingOtherUser = !!(canViewAllLogs && selectedUserId && selectedUserId !== user?.id);
 
-  // Fetch users for admin/supervisor filter
+  // Fetch users for users with canViewAllLogs permission
   const { data: usersResponse } = useQuery({
     queryKey: ['users', { limit: 100 }],
     queryFn: () => userService.getAll({ limit: 100 }),
-    enabled: isAdminOrSupervisor,
+    enabled: canViewAllLogs,
   });
 
   const users = usersResponse?.data || [];
@@ -156,8 +157,8 @@ export function WeeklyLog() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Bitácora Semanal</h1>
 
-        {/* User filter for admin/supervisor */}
-        {isAdminOrSupervisor && (
+        {/* User filter for users with canViewAllLogs permission */}
+        {canViewAllLogs && (
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-gray-500" />
             <Select

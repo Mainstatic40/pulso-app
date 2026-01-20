@@ -17,11 +17,23 @@ import {
   X,
 } from 'lucide-react';
 import { useAuthContext } from '../../stores/auth.store.tsx';
+import { usePermissions } from '../../hooks/usePermissions';
 import { cn } from '../../lib/utils';
 import { conversationService } from '../../services/conversation.service';
 import { eventRequestService } from '../../services/event-request.service';
+import type { PermissionKey } from '../../types';
 
-const navItems = [
+interface NavItem {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  roles: string[];
+  permission?: PermissionKey;
+  hasBadge?: boolean;
+  hasPendingBadge?: boolean;
+}
+
+const navItems: NavItem[] = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/time-entries', icon: Clock, label: 'Registro de Horas', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/tasks', icon: CheckSquare, label: 'Tareas', roles: ['admin', 'supervisor', 'becario'] },
@@ -31,10 +43,10 @@ const navItems = [
   { to: '/equipment-loans', icon: Package, label: 'Uso Equipos', roles: ['admin', 'supervisor', 'becario'] },
   { to: '/chat', icon: MessageCircle, label: 'Chat', roles: ['admin', 'supervisor', 'becario'], hasBadge: true },
   { to: '/weekly-log', icon: BookOpen, label: 'Bitacora Semanal', roles: ['admin', 'supervisor', 'becario'] },
-  { to: '/users', icon: Users, label: 'Usuarios', roles: ['admin', 'supervisor'] },
-  { to: '/rfid', icon: CreditCard, label: 'Credenciales RFID', roles: ['admin', 'supervisor'] },
-  { to: '/solicitudes', icon: FileText, label: 'Solicitudes', roles: ['admin', 'supervisor'], hasPendingBadge: true },
-  { to: '/reports', icon: BarChart3, label: 'Reportes', roles: ['admin', 'supervisor'] },
+  { to: '/users', icon: Users, label: 'Usuarios', roles: ['admin', 'supervisor'], permission: 'canManageUsers' },
+  { to: '/rfid', icon: CreditCard, label: 'Credenciales RFID', roles: ['admin', 'supervisor'], permission: 'canManageRfid' },
+  { to: '/solicitudes', icon: FileText, label: 'Solicitudes', roles: ['admin', 'supervisor'], permission: 'canManageEvents', hasPendingBadge: true },
+  { to: '/reports', icon: BarChart3, label: 'Reportes', roles: ['admin', 'supervisor'], permission: 'canViewReports' },
 ];
 
 interface SidebarProps {
@@ -44,7 +56,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user } = useAuthContext();
-  const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
+  const { isAdmin, hasPermission, canManageEvents } = usePermissions();
 
   // Fetch unread message count with polling
   const { data: unreadData } = useQuery({
@@ -58,15 +70,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     queryKey: ['event-requests-stats'],
     queryFn: eventRequestService.getStats,
     refetchInterval: 60000, // Poll every minute
-    enabled: isAdminOrSupervisor,
+    enabled: canManageEvents, // Only fetch if user has permission
   });
 
   const unreadCount = unreadData?.unreadCount || 0;
   const pendingRequestsCount = eventRequestStats?.pending || 0;
 
-  const filteredNavItems = navItems.filter((item) =>
-    item.roles.includes(user?.role || '')
-  );
+  // Filter nav items based on role and permissions
+  const filteredNavItems = navItems.filter((item) => {
+    // First check if the user's role is allowed
+    if (!item.roles.includes(user?.role || '')) {
+      return false;
+    }
+
+    // If there's a permission requirement, check it (admin always passes)
+    if (item.permission && !isAdmin && !hasPermission(item.permission)) {
+      return false;
+    }
+
+    return true;
+  });
 
   return (
     <aside

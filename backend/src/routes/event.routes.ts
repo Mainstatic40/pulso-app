@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { eventController } from '../controllers/event.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import {
   listEventsSchema,
@@ -31,18 +31,18 @@ router.get(
   eventController.getById
 );
 
-// POST /api/events - Create event (admin and supervisor)
+// POST /api/events - Create event (requires canManageEvents permission)
 router.post(
   '/',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageEvents'),
   validate(createEventSchema),
   eventController.create
 );
 
-// PUT /api/events/:id - Update event (admin and supervisor)
+// PUT /api/events/:id - Update event (requires canManageEvents permission)
 router.put(
   '/:id',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageEvents'),
   validate(updateEventSchema),
   eventController.update
 );
@@ -55,17 +55,17 @@ router.delete(
   eventController.delete
 );
 
-// POST /api/events/:id/equipment/:userId/release - Release equipment for a user (admin/supervisor only)
+// POST /api/events/:id/equipment/:userId/release - Release equipment for a user (requires canManageEvents permission)
 router.post(
   '/:id/equipment/:userId/release',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageEvents'),
   eventController.releaseEquipment
 );
 
-// POST /api/events/:id/equipment/:userId/transfer - Transfer equipment to another user (admin/supervisor only)
+// POST /api/events/:id/equipment/:userId/transfer - Transfer equipment to another user (requires canManageEvents permission)
 router.post(
   '/:id/equipment/:userId/transfer',
-  authorize('admin', 'supervisor'),
+  requirePermission('canManageEvents'),
   eventController.transferEquipment
 );
 

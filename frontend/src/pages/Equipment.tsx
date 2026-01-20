@@ -8,7 +8,7 @@ import { EquipmentModal, CreateEquipmentModal } from '../components/equipment/Eq
 import { AssignEquipmentModal } from '../components/equipment/AssignEquipmentModal';
 import { ActiveAssignments } from '../components/equipment/ActiveAssignments';
 import { equipmentService } from '../services/equipment.service';
-import { useAuthContext } from '../stores/auth.store';
+import { usePermissions } from '../hooks/usePermissions';
 import type { EquipmentCategory, EquipmentStatus } from '../types';
 
 const categoryTabs: { value: EquipmentCategory | 'all'; label: string }[] = [
@@ -27,9 +27,7 @@ const statusOptions = [
 ];
 
 export function Equipment() {
-  const { user } = useAuthContext();
-  const isAdmin = user?.role === 'admin';
-  const canAssign = user?.role === 'admin' || user?.role === 'supervisor';
+  const { canManageEquipment } = usePermissions();
 
   const [activeCategory, setActiveCategory] = useState<EquipmentCategory | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<EquipmentStatus | 'all'>('all');
@@ -62,13 +60,13 @@ export function Equipment() {
           <h1 className="text-2xl font-bold text-gray-900">Equipos</h1>
         </div>
         <div className="flex gap-2">
-          {canAssign && (
+          {canManageEquipment && (
             <Button variant="outline" onClick={() => setIsAssignModalOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" />
               Asignar Equipo
             </Button>
           )}
-          {isAdmin && (
+          {canManageEquipment && (
             <Button onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Equipo
@@ -127,7 +125,7 @@ export function Equipment() {
               ? 'Aún no se han registrado equipos.'
               : 'No se encontraron equipos con los filtros seleccionados.'}
           </p>
-          {isAdmin && activeCategory === 'all' && statusFilter === 'all' && (
+          {canManageEquipment && activeCategory === 'all' && statusFilter === 'all' && (
             <Button className="mt-4" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Agregar primer equipo
