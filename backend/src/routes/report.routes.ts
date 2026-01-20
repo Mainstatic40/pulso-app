@@ -1,29 +1,29 @@
 import { Router } from 'express';
 import { reportController } from '../controllers/report.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, requirePermission, requireAnyPermission } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// All routes require authentication and admin/supervisor role
+// All routes require authentication
 router.use(authenticate);
-router.use(authorize('admin', 'supervisor'));
 
 // GET /api/reports/hours-by-user - Hours worked by user
-router.get('/hours-by-user', reportController.getHoursByUser);
+// Accessible with canViewReports OR canManageTimeEntries (needed for TeamHoursOverview)
+router.get('/hours-by-user', requireAnyPermission('canViewReports', 'canManageTimeEntries'), reportController.getHoursByUser);
 
 // GET /api/reports/hours-by-event - Hours worked by event
-router.get('/hours-by-event', reportController.getHoursByEvent);
+router.get('/hours-by-event', requirePermission('canViewReports'), reportController.getHoursByEvent);
 
 // GET /api/reports/tasks-summary - Tasks summary
-router.get('/tasks-summary', reportController.getTasksSummary);
+router.get('/tasks-summary', requirePermission('canViewReports'), reportController.getTasksSummary);
 
 // GET /api/reports/productivity - Team productivity
-router.get('/productivity', reportController.getProductivity);
+router.get('/productivity', requirePermission('canViewReports'), reportController.getProductivity);
 
 // GET /api/reports/weekly-logs - Weekly logs report
-router.get('/weekly-logs', reportController.getWeeklyLogsReport);
+router.get('/weekly-logs', requirePermission('canViewReports'), reportController.getWeeklyLogsReport);
 
 // GET /api/reports/export/:type - Export to Excel
-router.get('/export/:type', reportController.exportToExcel);
+router.get('/export/:type', requirePermission('canViewReports'), reportController.exportToExcel);
 
 export default router;

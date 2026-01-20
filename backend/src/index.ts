@@ -65,10 +65,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rate limiting general (más permisivo en desarrollo)
+// Rate limiting general (más permisivo para uso normal de la app)
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 en desarrollo, 100 en producción
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: process.env.NODE_ENV === 'production' ? 200 : 1000, // 200 por minuto en producción, 1000 en desarrollo
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { message: 'Demasiadas solicitudes, intenta mas tarde' } }
@@ -77,11 +77,11 @@ app.use(generalLimiter);
 
 // Rate limiting estricto para login
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'production' ? 10 : 100, // 100 en desarrollo, 10 en producción
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: process.env.NODE_ENV === 'production' ? 15 : 100, // 15 intentos en 5 min en producción
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: { message: 'Demasiados intentos de login, intenta en 15 minutos' } }
+  message: { success: false, error: { message: 'Demasiados intentos de login, intenta en 5 minutos' } }
 });
 app.use('/api/auth/login', loginLimiter);
 

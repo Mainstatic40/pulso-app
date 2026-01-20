@@ -458,7 +458,11 @@ function TargetHoursModal({ isOpen, onClose, year, month, config }: TargetHoursM
   );
 }
 
-export function TeamHoursOverview() {
+interface TeamHoursOverviewProps {
+  hideHeader?: boolean;
+}
+
+export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -529,10 +533,9 @@ export function TeamHoursOverview() {
     <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:gap-4">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Control de Horas del Equipo</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-2">
+        {hideHeader ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
               <p className="text-xs text-gray-500 sm:text-sm">
                 Meta: {targetHours} hrs ({totalWorkdays} días × {hoursPerDay}h)
                 {configStartDate && (
@@ -549,11 +552,35 @@ export function TeamHoursOverview() {
                 <Settings className="h-4 w-4" />
               </button>
             </div>
-          </div>
-          <div className="mt-2 sm:mt-0">
             <MonthSelector year={year} month={month} onChange={handleMonthChange} />
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Control de Horas del Equipo</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-2">
+                <p className="text-xs text-gray-500 sm:text-sm">
+                  Meta: {targetHours} hrs ({totalWorkdays} días × {hoursPerDay}h)
+                  {configStartDate && (
+                    <span className="ml-1 text-orange-600">
+                      • Desde {new Date(configStartDate + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </p>
+                <button
+                  onClick={() => setIsTargetModalOpen(true)}
+                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  title="Configurar meta"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="mt-2 sm:mt-0">
+              <MonthSelector year={year} month={month} onChange={handleMonthChange} />
+            </div>
+          </div>
+        )}
         <Button onClick={() => handleAddEntry()} className="w-full sm:w-auto sm:self-start">
           <Plus className="mr-2 h-4 w-4" />
           Agregar horas

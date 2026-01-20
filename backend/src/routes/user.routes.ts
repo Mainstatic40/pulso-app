@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { userController } from '../controllers/user.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, authorize, requireAnyPermission } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { uploadProfileImage } from '../middlewares/upload.middleware';
 import {
@@ -19,10 +19,11 @@ router.use(authenticate);
 // Note: This must be before /:id to avoid conflict
 router.get('/me', userController.getMe);
 
-// GET /api/users - List users (admin and supervisor only)
+// GET /api/users - List users (requires canManageUsers or canManageTimeEntries permission)
+// canManageTimeEntries needs to see becarios to assign hours
 router.get(
   '/',
-  authorize('admin', 'supervisor'),
+  requireAnyPermission('canManageUsers', 'canManageTimeEntries'),
   validate(listUsersSchema),
   userController.getAll
 );

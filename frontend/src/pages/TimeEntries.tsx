@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, Calendar, CheckCircle, Timer, Sun, CalendarDays } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, Timer, Sun, CalendarDays, User, Users } from 'lucide-react';
+
+type ViewMode = 'personal' | 'team';
 import { Card, CardContent } from '../components/ui/Card';
 import { Spinner } from '../components/ui/Spinner';
 import { ClockButton, TimeEntryList, TeamHoursOverview, MonthSelector, getMonthDateRange, formatDateForApi } from '../components/time-entries';
 import { timeEntryService, type TimeEntryWithEvent } from '../services/time-entry.service';
-import { useAuthContext } from '../stores/auth.store.tsx';
+import { usePermissions } from '../hooks/usePermissions';
 
 const monthNames = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -21,7 +23,7 @@ function formatDuration(hours: number): string {
 }
 
 // Becario view component with month selector
-function BecarioTimeEntries() {
+function BecarioTimeEntries({ hideHeader = false }: { hideHeader?: boolean }) {
   const queryClient = useQueryClient();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -121,10 +123,16 @@ function BecarioTimeEntries() {
   return (
     <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
       {/* Header with Month Selector */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Registro de Horas</h1>
-        <MonthSelector year={year} month={month} onChange={handleMonthChange} />
-      </div>
+      {hideHeader ? (
+        <div className="flex justify-end">
+          <MonthSelector year={year} month={month} onChange={handleMonthChange} />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Registro de Horas</h1>
+          <MonthSelector year={year} month={month} onChange={handleMonthChange} />
+        </div>
+      )}
 
       {/* Clock Button Section - Only show in current month */}
       {isCurrentMonth && (
@@ -231,14 +239,48 @@ function BecarioTimeEntries() {
 }
 
 export function TimeEntries() {
-  const { user } = useAuthContext();
+  const { canManageTimeEntries } = usePermissions();
+  const [viewMode, setViewMode] = useState<ViewMode>('team');
 
-  const isAdminOrSupervisor = user?.role === 'admin' || user?.role === 'supervisor';
-
-  // Show team overview for admin/supervisor, individual view for becario
-  if (isAdminOrSupervisor) {
-    return <TeamHoursOverview />;
+  // Users without canManageTimeEntries permission only see their personal view
+  if (!canManageTimeEntries) {
+    return <BecarioTimeEntries />;
   }
 
-  return <BecarioTimeEntries />;
+  // Users with canManageTimeEntries can toggle between personal and team views
+  return (
+    <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
+      {/* Header with Toggle */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Registro de Horas</h1>
+        <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+          <button
+            onClick={() => setViewMode('personal')}
+            className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:gap-1.5 sm:px-3 sm:text-sm ${
+              viewMode === 'personal'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <User className="h-4 w-4" />
+            <span>Mi Registro</span>
+          </button>
+          <button
+            onClick={() => setViewMode('team')}
+            className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:gap-1.5 sm:px-3 sm:text-sm ${
+              viewMode === 'team'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Equipo</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Render view based on mode */}
+      {viewMode === 'personal' ? <BecarioTimeEntries hideHeader /> : <TeamHoursOverview hideHeader />}
+    </div>
+  );
 }
