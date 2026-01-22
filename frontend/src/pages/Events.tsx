@@ -271,12 +271,28 @@ export function Events() {
         })
       );
 
+      // Load PULSO logo
+      const pulsoLogo = await loadImageAsBase64('/pulso.png');
+
       const pdf = new jsPDF('p', 'mm', 'letter');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 15;
       const contentWidth = pageWidth - margin * 2;
       let yPosition = 20;
+
+      // Add PULSO logo at the top
+      if (pulsoLogo) {
+        try {
+          const logoWidth = 30;
+          const logoHeight = 15;
+          const logoX = (pageWidth - logoWidth) / 2;
+          pdf.addImage(pulsoLogo, 'PNG', logoX, yPosition, logoWidth, logoHeight);
+          yPosition += logoHeight + 8;
+        } catch (error) {
+          console.error('Error adding logo to PDF:', error);
+        }
+      }
 
       // Event type labels
       const eventTypeLabels: Record<EventType, string> = {
@@ -298,7 +314,7 @@ export function Events() {
       const checkNewPage = (neededHeight: number) => {
         if (yPosition + neededHeight > pageHeight - 20) {
           pdf.addPage();
-          yPosition = 20;
+          yPosition = 10;
           return true;
         }
         return false;
@@ -307,20 +323,26 @@ export function Events() {
       // Document title
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Eventos Seleccionados', pageWidth / 2, yPosition, { align: 'center' });
+      pdf.text('Eventos del fin de semana', pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 10;
 
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
-      pdf.text(`Generado: ${new Date().toLocaleDateString('es-MX', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })}`, pageWidth / 2, yPosition, { align: 'center' });
+
+      // Get date range from selected events
+      const startDates = fullEvents.map(e => new Date(e.startDatetime));
+      const endDates = fullEvents.map(e => new Date(e.endDatetime));
+      const firstDate = new Date(Math.min(...startDates.map(d => d.getTime())));
+      const lastDate = new Date(Math.max(...endDates.map(d => d.getTime())));
+
+      const firstDay = firstDate.toLocaleDateString('es-MX', { day: 'numeric' });
+      const lastDay = lastDate.toLocaleDateString('es-MX', { day: 'numeric' });
+      const month = lastDate.toLocaleDateString('es-MX', { month: 'long' });
+      const year = lastDate.toLocaleDateString('es-MX', { year: 'numeric' });
+
+      const dateRangeText = `Del ${firstDay} al ${lastDay} de ${month} de ${year}`;
+      pdf.text(dateRangeText, pageWidth / 2, yPosition, { align: 'center' });
       pdf.setTextColor(0, 0, 0);
       yPosition += 5;
 
