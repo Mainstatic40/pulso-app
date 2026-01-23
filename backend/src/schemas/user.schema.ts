@@ -35,6 +35,7 @@ export const createUserSchema = z.object({
     role: z.nativeEnum(UserRole, {
       errorMap: () => ({ message: 'Role must be admin, supervisor, or becario' }),
     }).optional(),
+    tracksHours: z.boolean().optional(),
     isActive: z.boolean().optional(),
     permissions: supervisorPermissionsSchema.optional().nullable(),
   }),
@@ -67,6 +68,7 @@ export const updateUserSchema = z.object({
     role: z.nativeEnum(UserRole, {
       errorMap: () => ({ message: 'Role must be admin, supervisor, or becario' }),
     }).optional(),
+    tracksHours: z.boolean().optional(),
     isActive: z.boolean().optional(),
     permissions: supervisorPermissionsSchema.optional().nullable(),
   }),

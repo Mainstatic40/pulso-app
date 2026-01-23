@@ -14,6 +14,7 @@ const userSelect = {
   rfidTag: true,
   profileImage: true,
   role: true,
+  tracksHours: true,
   permissions: true,
   isActive: true,
   createdAt: true,
@@ -27,6 +28,7 @@ export type UserResponse = {
   rfidTag: string | null;
   profileImage: string | null;
   role: UserRole;
+  tracksHours: boolean;
   permissions: SupervisorPermissions | null;
   isActive: boolean;
   createdAt: Date;
@@ -128,12 +130,19 @@ export const userService = {
       permissionsData = (permissions || DEFAULT_SUPERVISOR_PERMISSIONS) as unknown as Prisma.InputJsonValue;
     }
 
+    // Handle tracksHours based on role (unless explicitly provided)
+    let tracksHours = rest.tracksHours;
+    if (tracksHours === undefined) {
+      tracksHours = role === 'becario'; // becarios always track hours, others default to false
+    }
+
     const user = await prisma.user.create({
       data: {
         ...rest,
         email: email.toLowerCase(),
         passwordHash,
         rfidTag: rfidTag || null,
+        tracksHours,
         permissions: permissionsData,
       },
       select: userSelect,
@@ -202,6 +211,20 @@ export const userService = {
     } else {
       // If not supervisor (admin or becario), clear permissions
       updateData.permissions = Prisma.DbNull;
+    }
+
+    // Handle tracksHours based on role change
+    if (rest.tracksHours !== undefined) {
+      // If explicitly provided, use that value
+      updateData.tracksHours = rest.tracksHours;
+    } else if (rest.role && rest.role !== existingUser.role) {
+      // If role is changing and tracksHours not explicitly provided
+      if (newRole === 'becario') {
+        updateData.tracksHours = true; // becarios always track hours
+      } else if (newRole === 'admin') {
+        updateData.tracksHours = false; // admins never track hours
+      }
+      // For supervisors, keep existing value when role changes
     }
 
     const user = await prisma.user.update({

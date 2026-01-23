@@ -82,6 +82,7 @@ export interface User {
   rfidTag?: string;
   profileImage?: string | null;
   role: UserRole;
+  tracksHours: boolean;
   permissions?: SupervisorPermissions | null;
   isActive: boolean;
   createdAt: string;

@@ -18,6 +18,10 @@ export const kioskService = {
     const users = await prisma.user.findMany({
       where: {
         isActive: true,
+        OR: [
+          { tracksHours: true },
+          { role: 'supervisor' }
+        ]
       },
       select: {
         id: true,

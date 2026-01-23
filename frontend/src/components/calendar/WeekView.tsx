@@ -1,4 +1,5 @@
 import { cn } from '../../lib/utils';
+import { getTaskCalendarDate, isSameDay, isToday } from '../../lib/date-utils';
 import { CalendarEvent } from './CalendarEvent';
 import { CalendarTask } from './CalendarTask';
 import type { EventWithRelations } from '../../services/event.service';
@@ -30,18 +31,6 @@ function getWeekDays(date: Date): Date[] {
   }
 
   return days;
-}
-
-function isSameDay(date1: Date, date2: Date): boolean {
-  return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
-  );
-}
-
-function isToday(date: Date): boolean {
-  return isSameDay(date, new Date());
 }
 
 function getEventsForDayAndHour(
@@ -85,8 +74,8 @@ function getEventsForDayAndHour(
 
 function getTasksForDay(tasks: TaskWithRelations[], date: Date): TaskWithRelations[] {
   return tasks.filter((task) => {
-    // Use executionDate if available, otherwise dueDate
-    const taskDate = task.executionDate ? new Date(task.executionDate) : new Date(task.dueDate);
+    // Usa executionDate si existe, sino dueDate (con parseo seguro de timezone)
+    const taskDate = getTaskCalendarDate(task);
     return isSameDay(taskDate, date);
   });
 }

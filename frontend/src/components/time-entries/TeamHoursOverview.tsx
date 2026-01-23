@@ -57,14 +57,18 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
 
   if (!becario) return null;
 
-  // Group entries by week
+  // Group entries by week (Monday to Sunday)
   const entriesByWeek: Record<string, { hours: number; sessions: number }> = {};
 
   if (entries?.data) {
     entries.data.forEach((entry) => {
       const date = new Date(entry.clockIn);
       const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay() + 1);
+      // Calculate Monday of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+      const dayOfWeek = date.getDay();
+      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Sunday goes back 6 days, others go to Monday
+      weekStart.setDate(date.getDate() + diff);
+      weekStart.setHours(0, 0, 0, 0);
       const weekKey = weekStart.toISOString().split('T')[0];
 
       if (!entriesByWeek[weekKey]) {

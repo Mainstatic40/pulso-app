@@ -79,8 +79,15 @@ export function BecarioHoursCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Avatar name={data.userName} profileImage={data.userProfileImage} size="md" className="flex-shrink-0" />
-          <div className="min-w-0">
-            <h3 className="truncate text-sm font-medium text-gray-900 sm:text-base">{data.userName}</h3>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-sm font-medium text-gray-900 sm:text-base">{data.userName}</h3>
+              {data.userRole === 'supervisor' && (
+                <span className="flex-shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                  Supervisor
+                </span>
+              )}
+            </div>
             <p className="truncate text-xs text-gray-500 sm:text-sm">{data.userEmail}</p>
           </div>
         </div>

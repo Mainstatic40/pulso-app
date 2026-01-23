@@ -32,6 +32,7 @@ const createUserSchema = z.object({
   role: z.enum(['admin', 'supervisor', 'becario'], {
     required_error: 'El rol es requerido',
   }),
+  tracksHours: z.boolean().optional(),
   rfidTag: z.string().optional(),
   isActive: z.boolean(),
   permissions: permissionsSchema.optional(),
@@ -44,6 +45,7 @@ const updateUserSchema = z.object({
   role: z.enum(['admin', 'supervisor', 'becario'], {
     required_error: 'El rol es requerido',
   }),
+  tracksHours: z.boolean().optional(),
   rfidTag: z.string().optional(),
   isActive: z.boolean(),
   permissions: permissionsSchema.optional(),
@@ -98,15 +100,17 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
       email: user?.email || '',
       password: '',
       role: user?.role || 'becario',
+      tracksHours: user?.tracksHours ?? (user?.role === 'becario'),
       rfidTag: user?.rfidTag || '',
       isActive: user?.isActive ?? true,
       permissions: getInitialPermissions(),
     },
   });
 
-  // Watch the role field to show/hide permissions section
+  // Watch the role field to show/hide permissions section and tracksHours checkbox
   const watchedRole = useWatch({ control, name: 'role' });
   const isSupervisor = watchedRole === 'supervisor';
+  const showTracksHours = watchedRole === 'supervisor'; // Only supervisors can configure this
 
   // Helper functions for select all / deselect all
   const selectAllPermissions = () => {
@@ -194,6 +198,18 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
     // Only include rfidTag if provided (not empty string)
     if (data.rfidTag && data.rfidTag.trim() !== '') {
       cleanData.rfidTag = data.rfidTag.trim();
+    }
+
+    // Handle tracksHours based on role
+    if (data.role === 'supervisor') {
+      // For supervisors, include the checkbox value
+      cleanData.tracksHours = data.tracksHours ?? false;
+    } else if (data.role === 'becario') {
+      // Becarios always track hours
+      cleanData.tracksHours = true;
+    } else if (data.role === 'admin') {
+      // Admins never track hours
+      cleanData.tracksHours = false;
     }
 
     // Include permissions only for supervisors
@@ -294,6 +310,28 @@ export function UserForm({ user, onSubmit, onCancel, isLoading, onUserUpdate }: 
         error={errors.role?.message}
         {...register('role')}
       />
+
+      {/* TracksHours Checkbox - Only for supervisors */}
+      {showTracksHours && (
+        <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="tracksHours"
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              {...register('tracksHours')}
+            />
+            <div className="flex-1">
+              <label htmlFor="tracksHours" className="block cursor-pointer text-sm font-medium text-purple-900">
+                Registra horas (obligaciones de becario)
+              </label>
+              <p className="mt-1 text-xs text-purple-700">
+                Este supervisor debe registrar sus horas de trabajo como un becario.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Supervisor Permissions Section */}
       {isSupervisor && (
