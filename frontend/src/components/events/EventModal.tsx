@@ -164,8 +164,8 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: () => commentService.createForEvent(event!.id, { content: newComment }),
-    onMutate: async () => {
+    mutationFn: (content: string) => commentService.createForEvent(event!.id, { content }),
+    onMutate: async (content) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['event', event?.id, 'comments'] });
 
@@ -175,7 +175,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
       // Optimistically add comment
       const optimisticComment = {
         id: `temp-${Date.now()}`,
-        content: newComment,
+        content,
         createdAt: new Date().toISOString(),
         userId: user?.id,
         user: {
@@ -248,7 +248,7 @@ export function EventModal({ event, isOpen, onClose }: EventModalProps) {
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
-      addCommentMutation.mutate();
+      addCommentMutation.mutate(newComment.trim());
     }
   };
 

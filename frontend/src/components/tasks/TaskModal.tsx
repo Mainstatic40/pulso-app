@@ -392,8 +392,8 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: () => commentService.create(taskId!, { content: newComment }),
-    onMutate: async () => {
+    mutationFn: (content: string) => commentService.create(taskId!, { content }),
+    onMutate: async (content) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['tasks', taskId, 'comments'] });
 
@@ -403,7 +403,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
       // Optimistically add comment
       const optimisticComment = {
         id: `temp-${Date.now()}`,
-        content: newComment,
+        content,
         createdAt: new Date().toISOString(),
         userId: user?.id,
         user: {
@@ -534,7 +534,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
-      addCommentMutation.mutate();
+      addCommentMutation.mutate(newComment.trim());
     }
   };
 
