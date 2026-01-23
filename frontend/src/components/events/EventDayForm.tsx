@@ -20,6 +20,7 @@ interface EventDayFormProps {
   eventStartDate?: Date;
   defaultShiftStart?: string;
   defaultShiftEnd?: string;
+  yearbookShiftSelection?: 'morning' | 'afternoon' | 'both';
 }
 
 const NOTE_PLACEHOLDERS: Record<EventType, string> = {
@@ -84,6 +85,7 @@ export function EventDayForm({
   presetEquipment,
   defaultShiftStart = '09:00',
   defaultShiftEnd = '13:00',
+  yearbookShiftSelection = 'both',
 }: EventDayFormProps) {
   // Update day note
   const handleNoteChange = (note: string) => {
@@ -243,73 +245,77 @@ export function EventDayForm({
       {/* Yearbook Mode - Fixed Morning/Afternoon Shifts */}
       {eventType === 'yearbook' ? (
         <div className="space-y-3">
-          {/* Morning Shift */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Sun className="h-5 w-5 text-amber-600" />
-              <span className="font-medium text-amber-800">
-                Mañana ({morningStartTime} - {morningEndTime})
-              </span>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Asignar a:</label>
-                <Select
-                  value={getMorningShift()?.userId || ''}
-                  onChange={(e) => updateYearbookShift('morning', e.target.value)}
-                  options={userOptions}
-                />
+          {/* Morning Shift - only show if morning or both */}
+          {(yearbookShiftSelection === 'morning' || yearbookShiftSelection === 'both') && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Sun className="h-5 w-5 text-amber-600" />
+                <span className="font-medium text-amber-800">
+                  Mañana ({morningStartTime} - {morningEndTime})
+                </span>
               </div>
-              {getMorningShift()?.userId && (
-                <div className="rounded border border-amber-200 bg-white p-3">
-                  <ShiftEquipmentSelector
-                    equipment={getMorningShift()?.equipment || {}}
-                    onChange={(equipment) => updateShiftEquipment(getMorningShiftIndex(), equipment)}
-                    shiftDate={dayDate}
-                    startTime={morningStartTime}
-                    endTime={morningEndTime}
-                    usePreset={usePresetEquipment}
-                    presetEquipment={presetEquipment}
-                    excludeEquipmentIds={getOccupiedEquipmentForShift(getMorningShiftIndex())}
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Asignar a:</label>
+                  <Select
+                    value={getMorningShift()?.userId || ''}
+                    onChange={(e) => updateYearbookShift('morning', e.target.value)}
+                    options={userOptions}
                   />
                 </div>
-              )}
+                {getMorningShift()?.userId && (
+                  <div className="rounded border border-amber-200 bg-white p-3">
+                    <ShiftEquipmentSelector
+                      equipment={getMorningShift()?.equipment || {}}
+                      onChange={(equipment) => updateShiftEquipment(getMorningShiftIndex(), equipment)}
+                      shiftDate={dayDate}
+                      startTime={morningStartTime}
+                      endTime={morningEndTime}
+                      usePreset={usePresetEquipment}
+                      presetEquipment={presetEquipment}
+                      excludeEquipmentIds={getOccupiedEquipmentForShift(getMorningShiftIndex())}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Afternoon Shift */}
-          <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Sunset className="h-5 w-5 text-orange-600" />
-              <span className="font-medium text-orange-800">
-                Tarde ({afternoonStartTime} - {afternoonEndTime})
-              </span>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Asignar a:</label>
-                <Select
-                  value={getAfternoonShift()?.userId || ''}
-                  onChange={(e) => updateYearbookShift('afternoon', e.target.value)}
-                  options={userOptions}
-                />
+          {/* Afternoon Shift - only show if afternoon or both */}
+          {(yearbookShiftSelection === 'afternoon' || yearbookShiftSelection === 'both') && (
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Sunset className="h-5 w-5 text-orange-600" />
+                <span className="font-medium text-orange-800">
+                  Tarde ({afternoonStartTime} - {afternoonEndTime})
+                </span>
               </div>
-              {getAfternoonShift()?.userId && (
-                <div className="rounded border border-orange-200 bg-white p-3">
-                  <ShiftEquipmentSelector
-                    equipment={getAfternoonShift()?.equipment || {}}
-                    onChange={(equipment) => updateShiftEquipment(getAfternoonShiftIndex(), equipment)}
-                    shiftDate={dayDate}
-                    startTime={afternoonStartTime}
-                    endTime={afternoonEndTime}
-                    usePreset={usePresetEquipment}
-                    presetEquipment={presetEquipment}
-                    excludeEquipmentIds={getOccupiedEquipmentForShift(getAfternoonShiftIndex())}
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Asignar a:</label>
+                  <Select
+                    value={getAfternoonShift()?.userId || ''}
+                    onChange={(e) => updateYearbookShift('afternoon', e.target.value)}
+                    options={userOptions}
                   />
                 </div>
-              )}
+                {getAfternoonShift()?.userId && (
+                  <div className="rounded border border-orange-200 bg-white p-3">
+                    <ShiftEquipmentSelector
+                      equipment={getAfternoonShift()?.equipment || {}}
+                      onChange={(equipment) => updateShiftEquipment(getAfternoonShiftIndex(), equipment)}
+                      shiftDate={dayDate}
+                      startTime={afternoonStartTime}
+                      endTime={afternoonEndTime}
+                      usePreset={usePresetEquipment}
+                      presetEquipment={presetEquipment}
+                      excludeEquipmentIds={getOccupiedEquipmentForShift(getAfternoonShiftIndex())}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ) : (
         /* Other Event Types - Custom Shifts */

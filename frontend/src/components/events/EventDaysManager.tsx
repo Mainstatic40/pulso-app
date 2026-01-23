@@ -20,6 +20,7 @@ interface EventDaysManagerProps {
   presetEquipment?: ShiftEquipment;
   defaultShiftStart?: string;
   defaultShiftEnd?: string;
+  yearbookShiftSelection?: 'morning' | 'afternoon' | 'both';
 }
 
 function formatDateShort(date: Date): string {
@@ -74,6 +75,7 @@ export function EventDaysManager({
   presetEquipment,
   defaultShiftStart,
   defaultShiftEnd,
+  yearbookShiftSelection = 'both',
 }: EventDaysManagerProps) {
   // Generate days when dates change
   useEffect(() => {
@@ -188,7 +190,12 @@ export function EventDaysManager({
 
   // Quick assignment state for yearbook (assign same person to multiple days)
   const [quickAssignUser, setQuickAssignUser] = useState('');
-  const [quickAssignShiftType, setQuickAssignShiftType] = useState<'morning' | 'afternoon' | 'both'>('morning');
+  const [quickAssignShiftType, setQuickAssignShiftType] = useState<'morning' | 'afternoon' | 'both'>(() => {
+    // Initialize based on yearbookShiftSelection
+    if (yearbookShiftSelection === 'morning') return 'morning';
+    if (yearbookShiftSelection === 'afternoon') return 'afternoon';
+    return 'morning'; // Default to morning when both are available
+  });
   const [quickAssignFromDay, setQuickAssignFromDay] = useState(1);
   const [quickAssignToDay, setQuickAssignToDay] = useState(days.length || 1);
 
@@ -201,6 +208,16 @@ export function EventDaysManager({
       setQuickAssignFromDay(1);
     }
   }, [days.length, quickAssignFromDay, quickAssignToDay]);
+
+  // Reset quickAssignShiftType when yearbookShiftSelection changes
+  useEffect(() => {
+    if (yearbookShiftSelection === 'morning') {
+      setQuickAssignShiftType('morning');
+    } else if (yearbookShiftSelection === 'afternoon') {
+      setQuickAssignShiftType('afternoon');
+    }
+    // If 'both', keep current selection
+  }, [yearbookShiftSelection]);
 
   // Apply quick assignment for yearbook
   const applyQuickAssignment = () => {
@@ -232,8 +249,9 @@ export function EventDaysManager({
           : {},
       });
 
-      // Add morning shift if needed
-      if (quickAssignShiftType === 'morning' || quickAssignShiftType === 'both') {
+      // Add morning shift if needed (only if yearbookShiftSelection allows it)
+      const canAddMorning = yearbookShiftSelection === 'morning' || yearbookShiftSelection === 'both';
+      if (canAddMorning && (quickAssignShiftType === 'morning' || quickAssignShiftType === 'both')) {
         const existingMorning = existingShifts.findIndex((s) => s.shiftType === 'morning');
         if (existingMorning === -1) {
           shiftsToAdd.push(createShift('morning'));
@@ -246,8 +264,9 @@ export function EventDaysManager({
         }
       }
 
-      // Add afternoon shift if needed
-      if (quickAssignShiftType === 'afternoon' || quickAssignShiftType === 'both') {
+      // Add afternoon shift if needed (only if yearbookShiftSelection allows it)
+      const canAddAfternoon = yearbookShiftSelection === 'afternoon' || yearbookShiftSelection === 'both';
+      if (canAddAfternoon && (quickAssignShiftType === 'afternoon' || quickAssignShiftType === 'both')) {
         const existingAfternoon = existingShifts.findIndex((s) => s.shiftType === 'afternoon');
         if (existingAfternoon === -1) {
           shiftsToAdd.push(createShift('afternoon'));
@@ -355,9 +374,15 @@ export function EventDaysManager({
                 value={quickAssignShiftType}
                 onChange={(e) => setQuickAssignShiftType(e.target.value as 'morning' | 'afternoon' | 'both')}
                 options={[
-                  { value: 'morning', label: '☀️ Mañana' },
-                  { value: 'afternoon', label: '🌅 Tarde' },
-                  { value: 'both', label: '📅 Ambos' },
+                  ...(yearbookShiftSelection === 'morning' || yearbookShiftSelection === 'both'
+                    ? [{ value: 'morning', label: '☀️ Mañana' }]
+                    : []),
+                  ...(yearbookShiftSelection === 'afternoon' || yearbookShiftSelection === 'both'
+                    ? [{ value: 'afternoon', label: '🌅 Tarde' }]
+                    : []),
+                  ...(yearbookShiftSelection === 'both'
+                    ? [{ value: 'both', label: '📅 Ambos' }]
+                    : []),
                 ]}
                 className="text-sm"
               />
@@ -473,6 +498,7 @@ export function EventDaysManager({
                   presetEquipment={presetEquipment}
                   defaultShiftStart={defaultShiftStart}
                   defaultShiftEnd={defaultShiftEnd}
+                  yearbookShiftSelection={yearbookShiftSelection}
                 />
               </div>
             </div>

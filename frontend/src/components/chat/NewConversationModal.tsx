@@ -4,7 +4,6 @@ import { Search, Check } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Avatar } from '../ui/Avatar';
 import { userService } from '../../services/user.service';
-import { useAuthContext } from '../../stores/auth.store.tsx';
 
 interface NewConversationModalProps {
   isOpen: boolean;
@@ -19,23 +18,18 @@ export function NewConversationModal({
   onCreateConversation,
   isCreating,
 }: NewConversationModalProps) {
-  const { user: currentUser } = useAuthContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // Fetch all users
-  const { data: usersResponse, isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => userService.getAll(),
+  // Fetch users available for chat (all authenticated users can access)
+  const { data: users, isLoading } = useQuery({
+    queryKey: ['chat-users'],
+    queryFn: () => userService.getChatList(),
     enabled: isOpen,
   });
 
-  const users = usersResponse?.data || [];
-
-  // Filter users (exclude current user and filter by search)
-  const filteredUsers = users.filter((u) => {
-    if (u.id === currentUser?.id) return false;
-    if (!u.isActive) return false;
+  // Filter users by search query (current user is already excluded by backend)
+  const filteredUsers = (users || []).filter((u) => {
     if (!searchQuery) return true;
     return (
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -100,7 +94,9 @@ export function NewConversationModal({
                   <Avatar name={u.name} profileImage={u.profileImage} size="sm" />
                   <div className="min-w-0 flex-1 text-left">
                     <p className="truncate text-sm font-medium text-gray-900">{u.name}</p>
-                    <p className="truncate text-xs text-gray-500">{u.email}</p>
+                    <p className="truncate text-xs text-gray-500">
+                      {u.role === 'admin' ? 'Administrador' : u.role === 'supervisor' ? 'Supervisor' : 'Becario'}
+                    </p>
                   </div>
                   {selectedUserId === u.id && (
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600">

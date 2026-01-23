@@ -10,6 +10,24 @@ interface DateRangeQuery {
   userId?: string;
 }
 
+// Interface for hours breakdown by day of week
+interface HoursByDay {
+  monday: number;
+  tuesday: number;
+  wednesday: number;
+  thursday: number;
+  friday: number;
+  saturday: number;
+  sunday: number;
+}
+
+// Get day of week key from date (0=Sun, 1=Mon, ..., 6=Sat)
+function getDayOfWeek(date: Date): keyof HoursByDay {
+  const day = date.getDay();
+  const days: (keyof HoursByDay)[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return days[day];
+}
+
 function getDateRange(query: DateRangeQuery): { gte?: Date; lte?: Date } {
   const range: { gte?: Date; lte?: Date } = {};
   if (query.dateFrom) range.gte = query.dateFrom;
@@ -25,19 +43,22 @@ export const reportService = {
   async getHoursByUser(query: DateRangeQuery) {
     const dateRange = getDateRange(query);
 
-    // First, get all active becarios (or specific user if filtered)
+    // First, get all active users who track hours OR are supervisors (or specific user if filtered)
     const usersWhere: Record<string, unknown> = {
       isActive: true,
-      role: 'becario',
+      OR: [
+        { tracksHours: true },
+        { role: 'supervisor' }
+      ]
     };
 
     if (query.userId) {
       usersWhere.id = query.userId;
     }
 
-    const allBecarios = await prisma.user.findMany({
+    const usersWhoTrackHours = await prisma.user.findMany({
       where: usersWhere,
-      select: { id: true, name: true, email: true, profileImage: true },
+      select: { id: true, name: true, email: true, profileImage: true, role: true },
     });
 
     // Get all time entries to separate weekday vs weekend hours
@@ -52,7 +73,7 @@ export const reportService = {
     if (query.userId) {
       entriesWhereClause.userId = query.userId;
     } else {
-      entriesWhereClause.userId = { in: allBecarios.map((u) => u.id) };
+      entriesWhereClause.userId = { in: usersWhoTrackHours.map((u) => u.id) };
     }
 
     const allEntries = await prisma.timeEntry.findMany({
@@ -64,57 +85,84 @@ export const reportService = {
       },
     });
 
-    // Calculate hours by user, separating weekday vs weekend
+    // Calculate hours by user, by day of week, and weekday vs weekend
     const userHoursMap = new Map<string, {
+      hoursByDay: HoursByDay;
       weekdayHours: number;
       weekendHours: number;
       weekdaySessions: number;
       weekendSessions: number;
     }>();
 
-    for (const entry of allEntries) {
-      const existing = userHoursMap.get(entry.userId) || {
+    // Initialize map for all users
+    usersWhoTrackHours.forEach((user) => {
+      userHoursMap.set(user.id, {
+        hoursByDay: {
+          monday: 0,
+          tuesday: 0,
+          wednesday: 0,
+          thursday: 0,
+          friday: 0,
+          saturday: 0,
+          sunday: 0,
+        },
         weekdayHours: 0,
         weekendHours: 0,
         weekdaySessions: 0,
         weekendSessions: 0,
-      };
+      });
+    });
+
+    // Process entries
+    for (const entry of allEntries) {
+      const userData = userHoursMap.get(entry.userId);
+      if (!userData) continue;
 
       const hours = Number(entry.totalHours) || 0;
       const entryDate = new Date(entry.clockIn);
+      const dayOfWeek = getDayOfWeek(entryDate);
 
+      // Add hours to specific day
+      userData.hoursByDay[dayOfWeek] += hours;
+
+      // Also track weekday vs weekend
       if (isWeekend(entryDate)) {
-        existing.weekendHours += hours;
-        existing.weekendSessions += 1;
+        userData.weekendHours += hours;
+        userData.weekendSessions += 1;
       } else {
-        existing.weekdayHours += hours;
-        existing.weekdaySessions += 1;
+        userData.weekdayHours += hours;
+        userData.weekdaySessions += 1;
       }
-
-      userHoursMap.set(entry.userId, existing);
     }
 
-    // Combine all becarios with their hours (including those with 0 hours)
-    const data = allBecarios.map((user) => {
-      const hours = userHoursMap.get(user.id);
-      const weekdayHours = hours?.weekdayHours || 0;
-      const weekendHours = hours?.weekendHours || 0;
-      const weekdaySessions = hours?.weekdaySessions || 0;
-      const weekendSessions = hours?.weekendSessions || 0;
+    // Combine all users who track hours with their hours (including those with 0 hours)
+    const data = usersWhoTrackHours.map((user) => {
+      const userData = userHoursMap.get(user.id)!;
 
       return {
         userId: user.id,
         userName: user.name,
         userEmail: user.email,
+        userRole: user.role,
         userProfileImage: user.profileImage || null,
+        // Hours by day of week (rounded to 1 decimal)
+        hoursByDay: {
+          monday: Math.round(userData.hoursByDay.monday * 10) / 10,
+          tuesday: Math.round(userData.hoursByDay.tuesday * 10) / 10,
+          wednesday: Math.round(userData.hoursByDay.wednesday * 10) / 10,
+          thursday: Math.round(userData.hoursByDay.thursday * 10) / 10,
+          friday: Math.round(userData.hoursByDay.friday * 10) / 10,
+          saturday: Math.round(userData.hoursByDay.saturday * 10) / 10,
+          sunday: Math.round(userData.hoursByDay.sunday * 10) / 10,
+        },
         // Total hours (for backwards compatibility)
-        totalHours: weekdayHours + weekendHours,
-        totalSessions: weekdaySessions + weekendSessions,
+        totalHours: Math.round((userData.weekdayHours + userData.weekendHours) * 10) / 10,
+        totalSessions: userData.weekdaySessions + userData.weekendSessions,
         // Separated hours
-        weekdayHours,
-        weekendHours,
-        weekdaySessions,
-        weekendSessions,
+        weekdayHours: Math.round(userData.weekdayHours * 10) / 10,
+        weekendHours: Math.round(userData.weekendHours * 10) / 10,
+        weekdaySessions: userData.weekdaySessions,
+        weekendSessions: userData.weekendSessions,
       };
     });
 
@@ -122,10 +170,19 @@ export const reportService = {
     data.sort((a, b) => b.weekdayHours - a.weekdayHours);
 
     const totals = {
-      totalHours: data.reduce((sum, d) => sum + d.totalHours, 0),
+      hoursByDay: {
+        monday: Math.round(data.reduce((sum, d) => sum + d.hoursByDay.monday, 0) * 10) / 10,
+        tuesday: Math.round(data.reduce((sum, d) => sum + d.hoursByDay.tuesday, 0) * 10) / 10,
+        wednesday: Math.round(data.reduce((sum, d) => sum + d.hoursByDay.wednesday, 0) * 10) / 10,
+        thursday: Math.round(data.reduce((sum, d) => sum + d.hoursByDay.thursday, 0) * 10) / 10,
+        friday: Math.round(data.reduce((sum, d) => sum + d.hoursByDay.friday, 0) * 10) / 10,
+        saturday: Math.round(data.reduce((sum, d) => sum + d.hoursByDay.saturday, 0) * 10) / 10,
+        sunday: Math.round(data.reduce((sum, d) => sum + d.hoursByDay.sunday, 0) * 10) / 10,
+      },
+      totalHours: Math.round(data.reduce((sum, d) => sum + d.totalHours, 0) * 10) / 10,
       totalSessions: data.reduce((sum, d) => sum + d.totalSessions, 0),
-      weekdayHours: data.reduce((sum, d) => sum + d.weekdayHours, 0),
-      weekendHours: data.reduce((sum, d) => sum + d.weekendHours, 0),
+      weekdayHours: Math.round(data.reduce((sum, d) => sum + d.weekdayHours, 0) * 10) / 10,
+      weekendHours: Math.round(data.reduce((sum, d) => sum + d.weekendHours, 0) * 10) / 10,
       weekdaySessions: data.reduce((sum, d) => sum + d.weekdaySessions, 0),
       weekendSessions: data.reduce((sum, d) => sum + d.weekendSessions, 0),
     };
@@ -368,34 +425,125 @@ export const reportService = {
         const { data, totals } = await this.getHoursByUser(query);
         const sheet = workbook.addWorksheet('Horas por Usuario');
 
+        // Define columns with day breakdown
         sheet.columns = [
-          { header: 'Usuario', key: 'userName', width: 30 },
-          { header: 'Email', key: 'userEmail', width: 35 },
-          { header: 'Horas Totales', key: 'totalHours', width: 15 },
-          { header: 'Sesiones', key: 'totalSessions', width: 12 },
+          { header: 'Usuario', key: 'userName', width: 25 },
+          { header: 'Email', key: 'userEmail', width: 30 },
+          { header: 'Rol', key: 'userRole', width: 12 },
+          { header: 'Lun', key: 'monday', width: 8 },
+          { header: 'Mar', key: 'tuesday', width: 8 },
+          { header: 'Mie', key: 'wednesday', width: 8 },
+          { header: 'Jue', key: 'thursday', width: 8 },
+          { header: 'Vie', key: 'friday', width: 8 },
+          { header: 'Sab', key: 'saturday', width: 8 },
+          { header: 'Dom', key: 'sunday', width: 8 },
+          { header: 'Total L-V', key: 'weekdayHours', width: 10 },
+          { header: 'Total S-D', key: 'weekendHours', width: 10 },
+          { header: 'Total', key: 'totalHours', width: 10 },
+          { header: 'Sesiones', key: 'totalSessions', width: 10 },
         ];
 
         // Style header
-        sheet.getRow(1).font = { bold: true };
-        sheet.getRow(1).fill = {
+        const headerRow = sheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = {
           type: 'pattern',
           pattern: 'solid',
           fgColor: { argb: 'FFCC0000' },
         };
-        sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.alignment = { horizontal: 'center' };
 
+        // Role labels mapping
+        const roleLabels: Record<string, string> = {
+          admin: 'Admin',
+          supervisor: 'Supervisor',
+          becario: 'Becario',
+        };
+
+        // Add data rows
         data.forEach((row) => {
-          sheet.addRow(row);
+          const dataRow = sheet.addRow({
+            userName: row.userName,
+            userEmail: row.userEmail,
+            userRole: roleLabels[row.userRole] || row.userRole,
+            monday: row.hoursByDay.monday || 0,
+            tuesday: row.hoursByDay.tuesday || 0,
+            wednesday: row.hoursByDay.wednesday || 0,
+            thursday: row.hoursByDay.thursday || 0,
+            friday: row.hoursByDay.friday || 0,
+            saturday: row.hoursByDay.saturday || 0,
+            sunday: row.hoursByDay.sunday || 0,
+            weekdayHours: row.weekdayHours,
+            weekendHours: row.weekendHours,
+            totalHours: row.totalHours,
+            totalSessions: row.totalSessions,
+          });
+
+          // Center day and total columns (4-14)
+          for (let col = 4; col <= 14; col++) {
+            dataRow.getCell(col).alignment = { horizontal: 'center' };
+          }
         });
 
         // Add totals row
         const totalsRow = sheet.addRow({
           userName: 'TOTAL',
           userEmail: '',
+          userRole: '',
+          monday: totals.hoursByDay.monday,
+          tuesday: totals.hoursByDay.tuesday,
+          wednesday: totals.hoursByDay.wednesday,
+          thursday: totals.hoursByDay.thursday,
+          friday: totals.hoursByDay.friday,
+          saturday: totals.hoursByDay.saturday,
+          sunday: totals.hoursByDay.sunday,
+          weekdayHours: totals.weekdayHours,
+          weekendHours: totals.weekendHours,
           totalHours: totals.totalHours,
           totalSessions: totals.totalSessions,
         });
+
+        // Style totals row
         totalsRow.font = { bold: true };
+        totalsRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF3F4F6' },
+        };
+        for (let col = 4; col <= 14; col++) {
+          totalsRow.getCell(col).alignment = { horizontal: 'center' };
+        }
+
+        // Apply borders to all cells
+        sheet.eachRow((row) => {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' },
+            };
+          });
+        });
+
+        // Highlight weekend columns (Sab=9, Dom=10) with soft yellow background
+        const weekendColumns = [9, 10];
+        sheet.eachRow((row, rowNumber) => {
+          if (rowNumber > 1) {
+            weekendColumns.forEach((colIndex) => {
+              const cell = row.getCell(colIndex);
+              // Don't override totals row fill
+              if (rowNumber < sheet.rowCount) {
+                cell.fill = {
+                  type: 'pattern',
+                  pattern: 'solid',
+                  fgColor: { argb: 'FFFFF3CD' },
+                };
+              }
+            });
+          }
+        });
+
         break;
       }
 

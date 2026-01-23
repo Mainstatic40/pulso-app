@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, Calendar, Clock, Settings, Camera, Package } from 'lucide-react';
+import { ChevronLeft, Calendar, Settings, Camera, Package, Sun, Sunset } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Button } from '../ui/Button';
@@ -90,6 +90,18 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
   const [usePresetEquipment, setUsePresetEquipment] = useState(
     event?.usePresetEquipment || false
   );
+
+  // Yearbook shift selection (morning only, afternoon only, or both)
+  const [yearbookShiftSelection, setYearbookShiftSelection] = useState<'morning' | 'afternoon' | 'both'>(() => {
+    if (event?.eventType === 'yearbook') {
+      const hasMorning = event.morningStartTime && event.morningEndTime;
+      const hasAfternoon = event.afternoonStartTime && event.afternoonEndTime;
+      if (hasMorning && hasAfternoon) return 'both';
+      if (hasMorning) return 'morning';
+      if (hasAfternoon) return 'afternoon';
+    }
+    return 'both';
+  });
 
   // Preset equipment IDs (configurable)
   const [presetCameraId, setPresetCameraId] = useState<string>('');
@@ -271,10 +283,12 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
       endDatetime: effectiveEndDate,
       // Yearbook fields
       ...(eventType === 'yearbook' && {
-        morningStartTime,
-        morningEndTime,
-        afternoonStartTime,
-        afternoonEndTime,
+        // Send morning times only if morning or both is selected
+        morningStartTime: yearbookShiftSelection === 'morning' || yearbookShiftSelection === 'both' ? morningStartTime : undefined,
+        morningEndTime: yearbookShiftSelection === 'morning' || yearbookShiftSelection === 'both' ? morningEndTime : undefined,
+        // Send afternoon times only if afternoon or both is selected
+        afternoonStartTime: yearbookShiftSelection === 'afternoon' || yearbookShiftSelection === 'both' ? afternoonStartTime : undefined,
+        afternoonEndTime: yearbookShiftSelection === 'afternoon' || yearbookShiftSelection === 'both' ? afternoonEndTime : undefined,
         usePresetEquipment,
         // Include preset equipment IDs if using preset
         ...(usePresetEquipment && {
@@ -425,46 +439,99 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
             Configuración de Anuario
           </div>
 
-          {/* Time presets */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
-            <div>
-              <label className="mb-1 flex items-center gap-1 text-[10px] text-gray-600 sm:text-xs">
-                <Clock className="h-3 w-3" />
-                Mañana inicio
-              </label>
-              <Input
-                type="time"
-                value={morningStartTime}
-                onChange={(e) => setMorningStartTime(e.target.value)}
-              />
+          {/* Shift Selection */}
+          <div>
+            <label className="mb-2 block text-xs font-medium text-gray-700">Turnos a usar</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setYearbookShiftSelection('morning')}
+                className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  yearbookShiftSelection === 'morning'
+                    ? 'border-amber-500 bg-amber-100 text-amber-800'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-amber-300 hover:bg-amber-50'
+                }`}
+              >
+                <Sun className="h-4 w-4" />
+                Solo Mañana
+              </button>
+              <button
+                type="button"
+                onClick={() => setYearbookShiftSelection('afternoon')}
+                className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  yearbookShiftSelection === 'afternoon'
+                    ? 'border-orange-500 bg-orange-100 text-orange-800'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-orange-300 hover:bg-orange-50'
+                }`}
+              >
+                <Sunset className="h-4 w-4" />
+                Solo Tarde
+              </button>
+              <button
+                type="button"
+                onClick={() => setYearbookShiftSelection('both')}
+                className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  yearbookShiftSelection === 'both'
+                    ? 'border-blue-500 bg-blue-100 text-blue-800'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                }`}
+              >
+                <Calendar className="h-4 w-4" />
+                Ambos
+              </button>
             </div>
-            <div>
-              <label className="mb-1 text-[10px] text-gray-600 sm:text-xs">Mañana fin</label>
-              <Input
-                type="time"
-                value={morningEndTime}
-                onChange={(e) => setMorningEndTime(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 flex items-center gap-1 text-[10px] text-gray-600 sm:text-xs">
-                <Clock className="h-3 w-3" />
-                Tarde inicio
-              </label>
-              <Input
-                type="time"
-                value={afternoonStartTime}
-                onChange={(e) => setAfternoonStartTime(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 text-[10px] text-gray-600 sm:text-xs">Tarde fin</label>
-              <Input
-                type="time"
-                value={afternoonEndTime}
-                onChange={(e) => setAfternoonEndTime(e.target.value)}
-              />
-            </div>
+          </div>
+
+          {/* Time presets - conditional based on shift selection */}
+          <div className={`grid gap-2 sm:gap-4 ${yearbookShiftSelection === 'both' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
+            {/* Morning times - show if morning or both */}
+            {(yearbookShiftSelection === 'morning' || yearbookShiftSelection === 'both') && (
+              <>
+                <div>
+                  <label className="mb-1 flex items-center gap-1 text-[10px] text-amber-700 sm:text-xs">
+                    <Sun className="h-3 w-3" />
+                    Mañana inicio
+                  </label>
+                  <Input
+                    type="time"
+                    value={morningStartTime}
+                    onChange={(e) => setMorningStartTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 text-[10px] text-amber-700 sm:text-xs">Mañana fin</label>
+                  <Input
+                    type="time"
+                    value={morningEndTime}
+                    onChange={(e) => setMorningEndTime(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+            {/* Afternoon times - show if afternoon or both */}
+            {(yearbookShiftSelection === 'afternoon' || yearbookShiftSelection === 'both') && (
+              <>
+                <div>
+                  <label className="mb-1 flex items-center gap-1 text-[10px] text-orange-700 sm:text-xs">
+                    <Sunset className="h-3 w-3" />
+                    Tarde inicio
+                  </label>
+                  <Input
+                    type="time"
+                    value={afternoonStartTime}
+                    onChange={(e) => setAfternoonStartTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 text-[10px] text-orange-700 sm:text-xs">Tarde fin</label>
+                  <Input
+                    type="time"
+                    value={afternoonEndTime}
+                    onChange={(e) => setAfternoonEndTime(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Preset equipment toggle and config */}
@@ -607,6 +674,7 @@ export function EventForm({ event, onSubmit, onCancel, isLoading }: EventFormPro
           presetEquipment={presetEquipment}
           defaultShiftStart={defaultShiftStart}
           defaultShiftEnd={defaultShiftEnd}
+          yearbookShiftSelection={yearbookShiftSelection}
         />
         {errors.days && (
           <p className="text-sm text-red-600">{errors.days}</p>

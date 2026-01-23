@@ -650,16 +650,16 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               Fechas
             </h3>
             <div className="mt-2 grid grid-cols-2 gap-3 sm:mt-3 sm:gap-4">
-              <div>
-                <p className="text-xs text-gray-500">Fecha límite</p>
-                <p className="mt-1 text-sm font-medium text-gray-900 sm:text-base">{formatDateShort(task.dueDate)}</p>
-              </div>
               {task.executionDate && (
                 <div>
                   <p className="text-xs text-gray-500">Fecha de ejecución</p>
                   <p className="mt-1 text-sm font-medium text-gray-900 sm:text-base">{formatDateShort(task.executionDate)}</p>
                 </div>
               )}
+              <div>
+                <p className="text-xs text-gray-500">Fecha límite</p>
+                <p className="mt-1 text-sm font-medium text-gray-900 sm:text-base">{formatDateShort(task.dueDate)}</p>
+              </div>
             </div>
           </div>
 

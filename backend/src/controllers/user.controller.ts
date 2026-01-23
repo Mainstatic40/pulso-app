@@ -1,11 +1,45 @@
 import type { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { PrismaClient } from '@prisma/client';
 import { userService } from '../services/user.service';
+
+const prisma = new PrismaClient();
 import { ValidationError } from '../utils/app-error';
 import type { CreateUserInput, UpdateUserInput, ListUsersQuery } from '../schemas/user.schema';
 
 export const userController = {
+  // Get users available for chat (all authenticated users can access)
+  async getChatList(req: Request, res: Response, next: NextFunction) {
+    try {
+      const currentUserId = req.user!.userId;
+
+      // Get all active users except the current one
+      const users = await prisma.user.findMany({
+        where: {
+          isActive: true,
+          id: { not: currentUserId },
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          profileImage: true,
+          isActive: true,
+        },
+        orderBy: { name: 'asc' },
+      });
+
+      res.json({
+        success: true,
+        data: users,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getMe(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.userId;

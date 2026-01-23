@@ -11,7 +11,18 @@ export interface HoursByUserData {
   userId: string;
   userName: string;
   userEmail: string;
+  userRole: 'admin' | 'supervisor' | 'becario';
   userProfileImage?: string | null;
+  // Hours by day of week
+  hoursByDay: {
+    monday: number;
+    tuesday: number;
+    wednesday: number;
+    thursday: number;
+    friday: number;
+    saturday: number;
+    sunday: number;
+  };
   totalHours: number;
   totalSessions: number;
   // Separated hours (L-V vs S-D)

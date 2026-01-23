@@ -65,6 +65,12 @@ export const userService = {
     return response.data.data!;
   },
 
+  // Get users available for chat (accessible by all authenticated users)
+  async getChatList() {
+    const response = await api.get<ApiResponse<User[]>>('/users/chat-list');
+    return response.data.data!;
+  },
+
   async updateMe(data: { name?: string; email?: string; password?: string }) {
     const response = await api.put<ApiResponse<User>>('/users/me', data);
     return response.data.data!;

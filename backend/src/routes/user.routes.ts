@@ -19,6 +19,10 @@ router.use(authenticate);
 // Note: This must be before /:id to avoid conflict
 router.get('/me', userController.getMe);
 
+// GET /api/users/chat-list - List users for chat (all authenticated users)
+// Note: This must be before /:id to avoid conflict
+router.get('/chat-list', userController.getChatList);
+
 // GET /api/users - List users (requires canManageUsers or canManageTimeEntries permission)
 // canManageTimeEntries needs to see becarios to assign hours
 router.get(

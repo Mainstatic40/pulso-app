@@ -443,15 +443,15 @@ export function TaskForm({ task, existingAssignments, onSubmit, onCancel, isLoad
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <Input
           type="date"
-          label="Fecha límite"
-          error={errors.dueDate?.message}
-          {...register('dueDate')}
+          label="Fecha de ejecución"
+          {...register('executionDate')}
         />
 
         <Input
           type="date"
-          label="Fecha de realización"
-          {...register('executionDate')}
+          label="Fecha límite"
+          error={errors.dueDate?.message}
+          {...register('dueDate')}
         />
 
         <Select
