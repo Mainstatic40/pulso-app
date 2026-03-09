@@ -504,11 +504,12 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
 
   const becarios: HoursByUserData[] = hoursData || [];
 
-  // Calculate team totals (using weekday hours for progress)
+  // Calculate team totals
   const teamWeekdayHours = becarios.reduce((sum, b) => sum + (b.weekdayHours || 0), 0);
   const teamWeekendHours = becarios.reduce((sum, b) => sum + (b.weekendHours || 0), 0);
+  const teamTotalHours = teamWeekdayHours + teamWeekendHours;
   const teamTarget = becarios.length * targetHours;
-  const teamPercentage = teamTarget > 0 ? (teamWeekdayHours / teamTarget) * 100 : 0;
+  const teamPercentage = teamTarget > 0 ? (teamTotalHours / teamTarget) * 100 : 0;
 
   const handleMonthChange = (newYear: number, newMonth: number) => {
     setYear(newYear);
@@ -614,8 +615,8 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
                 <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{teamWeekdayHours.toFixed(1)}</p>
-                <p className="truncate text-xs text-gray-500 sm:text-sm">Horas L-V</p>
+                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{teamTotalHours.toFixed(1)}</p>
+                <p className="truncate text-xs text-gray-500 sm:text-sm">Horas totales</p>
               </div>
             </div>
           </CardContent>
@@ -628,8 +629,8 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
                 <Star className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{teamWeekendHours.toFixed(1)}</p>
-                <p className="truncate text-xs text-gray-500 sm:text-sm">Horas extra (S-D)</p>
+                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{teamWeekdayHours.toFixed(1)} / {teamWeekendHours.toFixed(1)}</p>
+                <p className="truncate text-xs text-gray-500 sm:text-sm">L-V / S-D</p>
               </div>
             </div>
           </CardContent>
@@ -659,14 +660,14 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
         <Card className="overflow-hidden">
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-xs font-medium text-gray-700 sm:text-sm">Progreso del equipo (horas L-V)</span>
+              <span className="text-xs font-medium text-gray-700 sm:text-sm">Progreso del equipo</span>
               <span className="text-xs text-gray-500 sm:text-sm">
-                {teamWeekdayHours.toFixed(1)} / {teamTarget} horas ({teamPercentage.toFixed(0)}%)
+                {teamTotalHours.toFixed(1)} / {teamTarget} horas ({teamPercentage.toFixed(0)}%)
               </span>
             </div>
             <div className="mt-2">
               <ProgressBar
-                value={teamWeekdayHours}
+                value={teamTotalHours}
                 max={teamTarget}
                 size="lg"
                 variant={teamPercentage >= 100 ? 'success' : teamPercentage >= 50 ? 'warning' : 'danger'}

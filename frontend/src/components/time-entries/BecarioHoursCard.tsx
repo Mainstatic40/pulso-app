@@ -14,12 +14,12 @@ interface BecarioHoursCardProps {
 type ProgressStatus = 'completed' | 'on_track' | 'behind';
 
 function getProgressStatus(
-  weekdayHours: number,
+  totalHours: number,
   workdaysElapsed: number,
   totalWorkdays: number,
   targetHours: number
 ): ProgressStatus {
-  if (weekdayHours >= targetHours) {
+  if (totalHours >= targetHours) {
     return 'completed';
   }
 
@@ -29,7 +29,7 @@ function getProgressStatus(
     : 0;
 
   // Allow 10% margin before marking as behind
-  if (weekdayHours >= expectedHours * 0.9) {
+  if (totalHours >= expectedHours * 0.9) {
     return 'on_track';
   }
 
@@ -61,12 +61,12 @@ export function BecarioHoursCard({
   targetHours = 88,
   onClick,
 }: BecarioHoursCardProps) {
-  // Use weekday hours for progress calculation
   const weekdayHours = data.weekdayHours || 0;
   const weekendHours = data.weekendHours || 0;
+  const totalHours = weekdayHours + weekendHours;
 
-  const percentage = Math.min((weekdayHours / targetHours) * 100, 100);
-  const status = getProgressStatus(weekdayHours, workdaysElapsed, totalWorkdays, targetHours);
+  const percentage = Math.min((totalHours / targetHours) * 100, 100);
+  const status = getProgressStatus(totalHours, workdaysElapsed, totalWorkdays, targetHours);
   const config = statusConfig[status];
 
   return (
@@ -99,7 +99,7 @@ export function BecarioHoursCard({
       <div className="mt-3 sm:mt-4">
         <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
           <span className="text-gray-600">
-            {weekdayHours.toFixed(1)} / {targetHours} hrs
+            {totalHours.toFixed(1)} / {targetHours} hrs
           </span>
           <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
             {config.label}
@@ -108,7 +108,7 @@ export function BecarioHoursCard({
 
         <div className="mt-2">
           <ProgressBar
-            value={weekdayHours}
+            value={totalHours}
             max={targetHours}
             variant={config.variant}
             size="md"
@@ -120,8 +120,8 @@ export function BecarioHoursCard({
           <div className="flex items-center gap-1 sm:gap-2">
             <span>{data.totalSessions} sesiones</span>
             {weekendHours > 0 && (
-              <span className="rounded bg-purple-100 px-1 py-0.5 text-purple-700 sm:px-1.5">
-                +{weekendHours.toFixed(1)}h
+              <span className="rounded bg-purple-100 px-1 py-0.5 text-purple-700 sm:px-1.5" title="Horas fin de semana incluidas en el total">
+                S-D: {weekendHours.toFixed(1)}h
               </span>
             )}
           </div>
