@@ -5,6 +5,7 @@ export interface ReportFilters {
   dateFrom?: string;
   dateTo?: string;
   userId?: string;
+  includeCarryOver?: boolean;
 }
 
 export interface HoursByUserData {
@@ -30,6 +31,7 @@ export interface HoursByUserData {
   weekendHours: number;
   weekdaySessions: number;
   weekendSessions: number;
+  carryOverHours: number;
 }
 
 export interface HoursByEventData {
@@ -68,6 +70,7 @@ export const reportService = {
     if (filters.dateFrom) params.dateFrom = filters.dateFrom;
     if (filters.dateTo) params.dateTo = filters.dateTo;
     if (filters.userId) params.userId = filters.userId;
+    if (filters.includeCarryOver) params.includeCarryOver = 'true';
 
     const response = await api.get<ApiResponse<HoursByUserData[]>>('/reports/hours-by-user', { params });
     return response.data.data || [];

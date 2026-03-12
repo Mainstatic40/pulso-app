@@ -25,6 +25,7 @@ import rfidRoutes from './routes/rfid.routes';
 import equipmentLoanRoutes from './routes/equipment-loan.routes';
 import eventRequestRoutes from './routes/event-request.routes';
 import kioskRoutes from './routes/kiosk.routes';
+import hoursCarryOverRoutes from './routes/hours-carry-over.routes';
 
 const app = express();
 
@@ -126,6 +127,7 @@ app.use('/api/rfid', rfidRoutes);
 app.use('/api/equipment-loans', equipmentLoanRoutes);
 app.use('/api/event-requests', eventRequestRoutes);
 app.use('/api/kiosk', kioskRoutes);
+app.use('/api/hours-carry-over', hoursCarryOverRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

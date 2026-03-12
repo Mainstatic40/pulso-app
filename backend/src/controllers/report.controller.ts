@@ -20,7 +20,8 @@ export const reportController = {
   async getHoursByUser(req: Request, res: Response, next: NextFunction) {
     try {
       const query = parseQuery(req.query as ReportQuery);
-      const result = await reportService.getHoursByUser(query);
+      const includeCarryOver = req.query.includeCarryOver === 'true';
+      const result = await reportService.getHoursByUser({ ...query, includeCarryOver });
 
       res.json({
         success: true,

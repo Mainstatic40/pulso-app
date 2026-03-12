@@ -63,10 +63,12 @@ export function BecarioHoursCard({
 }: BecarioHoursCardProps) {
   const weekdayHours = data.weekdayHours || 0;
   const weekendHours = data.weekendHours || 0;
+  const carryOverHours = data.carryOverHours || 0;
   const totalHours = weekdayHours + weekendHours;
+  const effectiveHours = totalHours + carryOverHours;
 
-  const percentage = Math.min((totalHours / targetHours) * 100, 100);
-  const status = getProgressStatus(totalHours, workdaysElapsed, totalWorkdays, targetHours);
+  const percentage = Math.min((effectiveHours / targetHours) * 100, 100);
+  const status = getProgressStatus(effectiveHours, workdaysElapsed, totalWorkdays, targetHours);
   const config = statusConfig[status];
 
   return (
@@ -99,7 +101,12 @@ export function BecarioHoursCard({
       <div className="mt-3 sm:mt-4">
         <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
           <span className="text-gray-600">
-            {totalHours.toFixed(1)} / {targetHours} hrs
+            {effectiveHours.toFixed(1)} / {targetHours} hrs
+            {carryOverHours > 0 && (
+              <span className="ml-1 text-orange-600" title="Incluye horas de arrastre del mes anterior">
+                (+{carryOverHours.toFixed(1)} arrastre)
+              </span>
+            )}
           </span>
           <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
             {config.label}
@@ -108,7 +115,7 @@ export function BecarioHoursCard({
 
         <div className="mt-2">
           <ProgressBar
-            value={totalHours}
+            value={effectiveHours}
             max={targetHours}
             variant={config.variant}
             size="md"

@@ -71,6 +71,7 @@ model User {
   equipmentAssignments     EquipmentAssignment[]       @relation("EquipmentUser")
   createdAssignments       EquipmentAssignment[]       @relation("AssignmentCreator")
   monthlyHoursConfigs      MonthlyHoursConfig[]
+  hoursCarryOvers          HoursCarryOver[]
   attachments              Attachment[]
   conversationParticipants ConversationParticipant[]
   messages                 Message[]
@@ -357,6 +358,23 @@ model MonthlyHoursConfig {
   @@unique([year, month])
   @@index([year])
   @@map("monthly_hours_config")
+}
+
+model HoursCarryOver {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  month     Int      // 1-12 (mes que RECIBE el arrastre)
+  year      Int      // año del mes que recibe el arrastre
+  hours     Decimal  @db.Decimal(5, 2) // Horas transferidas del mes anterior
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, month, year])
+  @@index([userId])
+  @@index([year, month])
+  @@map("hours_carry_over")
 }
 
 model Attachment {

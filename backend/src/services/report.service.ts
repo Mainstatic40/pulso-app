@@ -1,6 +1,7 @@
 import { PrismaClient, TaskStatus, TaskPriority } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { isWeekend } from '../utils/workdays';
+import { hoursCarryOverService } from './hours-carry-over.service';
 
 const prisma = new PrismaClient();
 
@@ -8,6 +9,7 @@ interface DateRangeQuery {
   dateFrom?: Date;
   dateTo?: Date;
   userId?: string;
+  includeCarryOver?: boolean; // If true, include carry-over hours from previous month
 }
 
 // Interface for hours breakdown by day of week
@@ -135,9 +137,32 @@ export const reportService = {
       }
     }
 
+    // Determine month/year from dateFrom for carry-over calculation
+    let carryOverMap = new Map<string, number>();
+    if (query.includeCarryOver && query.dateFrom) {
+      const fromDate = query.dateFrom;
+      const monthForCarryOver = fromDate.getUTCMonth() + 1; // 1-12
+      const yearForCarryOver = fromDate.getUTCFullYear();
+
+      // Calculate carry-over for all relevant users in parallel
+      const carryOverResults = await Promise.all(
+        usersWhoTrackHours.map(async (user) => {
+          const hours = await hoursCarryOverService.getCarryOver(user.id, monthForCarryOver, yearForCarryOver);
+          return { userId: user.id, hours };
+        })
+      );
+
+      for (const result of carryOverResults) {
+        if (result.hours > 0) {
+          carryOverMap.set(result.userId, result.hours);
+        }
+      }
+    }
+
     // Combine all users who track hours with their hours (including those with 0 hours)
     const data = usersWhoTrackHours.map((user) => {
       const userData = userHoursMap.get(user.id)!;
+      const carryOverHours = carryOverMap.get(user.id) || 0;
 
       return {
         userId: user.id,
@@ -163,11 +188,15 @@ export const reportService = {
         weekendHours: Math.round(userData.weekendHours * 10) / 10,
         weekdaySessions: userData.weekdaySessions,
         weekendSessions: userData.weekendSessions,
+        // Carry-over hours from previous month
+        carryOverHours: Math.round(carryOverHours * 10) / 10,
       };
     });
 
     // Sort by weekday hours descending (primary metric for progress)
     data.sort((a, b) => b.weekdayHours - a.weekdayHours);
+
+    const totalCarryOver = Math.round(data.reduce((sum, d) => sum + d.carryOverHours, 0) * 10) / 10;
 
     const totals = {
       hoursByDay: {
@@ -185,6 +214,7 @@ export const reportService = {
       weekendHours: Math.round(data.reduce((sum, d) => sum + d.weekendHours, 0) * 10) / 10,
       weekdaySessions: data.reduce((sum, d) => sum + d.weekdaySessions, 0),
       weekendSessions: data.reduce((sum, d) => sum + d.weekendSessions, 0),
+      carryOverHours: totalCarryOver,
     };
 
     return { data, totals };

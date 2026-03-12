@@ -93,7 +93,7 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
     <Modal isOpen={isOpen} onClose={onClose} title={`Detalle - ${becario.userName}`} size="lg">
       <div className="space-y-4 sm:space-y-6">
         {/* Summary */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+        <div className={`grid grid-cols-2 gap-2 sm:gap-4 ${(becario.carryOverHours || 0) > 0 ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`}>
           <div className="rounded-lg bg-blue-50 p-3 text-center sm:p-4">
             <p className="text-lg font-bold text-blue-700 sm:text-2xl">{becario.weekdayHours.toFixed(1)}</p>
             <p className="text-xs text-blue-600">Horas L-V</p>
@@ -102,6 +102,12 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
             <p className="text-lg font-bold text-purple-700 sm:text-2xl">{becario.weekendHours.toFixed(1)}</p>
             <p className="text-xs text-purple-600">Horas S-D</p>
           </div>
+          {(becario.carryOverHours || 0) > 0 && (
+            <div className="rounded-lg bg-orange-50 p-3 text-center sm:p-4">
+              <p className="text-lg font-bold text-orange-700 sm:text-2xl">{becario.carryOverHours.toFixed(1)}</p>
+              <p className="text-xs text-orange-600">Arrastre</p>
+            </div>
+          )}
           <div className="rounded-lg bg-gray-50 p-3 text-center sm:p-4">
             <p className="text-lg font-bold text-gray-900 sm:text-2xl">{becario.totalSessions}</p>
             <p className="text-xs text-gray-500">Sesiones</p>
@@ -236,7 +242,7 @@ function BecarioDetailModal({ becario, isOpen, onClose, year, month, onEditEntry
             </div>
           )}
           <p className="mt-2 text-xs text-gray-400">
-            <span className="text-purple-500">*</span> Fin de semana (no cuenta para la meta)
+            <span className="text-purple-500">*</span> Fin de semana
           </p>
         </div>
       </div>
@@ -499,6 +505,7 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
       reportService.getHoursByUser({
         dateFrom: effectiveDateFrom,
         dateTo: formatDateForApi(end),
+        includeCarryOver: true,
       }),
   });
 
@@ -507,9 +514,11 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
   // Calculate team totals
   const teamWeekdayHours = becarios.reduce((sum, b) => sum + (b.weekdayHours || 0), 0);
   const teamWeekendHours = becarios.reduce((sum, b) => sum + (b.weekendHours || 0), 0);
+  const teamCarryOver = becarios.reduce((sum, b) => sum + (b.carryOverHours || 0), 0);
   const teamTotalHours = teamWeekdayHours + teamWeekendHours;
+  const teamEffectiveHours = teamTotalHours + teamCarryOver;
   const teamTarget = becarios.length * targetHours;
-  const teamPercentage = teamTarget > 0 ? (teamTotalHours / teamTarget) * 100 : 0;
+  const teamPercentage = teamTarget > 0 ? (teamEffectiveHours / teamTarget) * 100 : 0;
 
   const handleMonthChange = (newYear: number, newMonth: number) => {
     setYear(newYear);
@@ -615,8 +624,10 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
                 <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{teamTotalHours.toFixed(1)}</p>
-                <p className="truncate text-xs text-gray-500 sm:text-sm">Horas totales</p>
+                <p className="text-xl font-bold text-gray-900 sm:text-2xl">{teamEffectiveHours.toFixed(1)}</p>
+                <p className="truncate text-xs text-gray-500 sm:text-sm">
+                  {teamCarryOver > 0 ? `Horas totales (${teamCarryOver.toFixed(1)} arrastre)` : 'Horas totales'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -662,12 +673,15 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-xs font-medium text-gray-700 sm:text-sm">Progreso del equipo</span>
               <span className="text-xs text-gray-500 sm:text-sm">
-                {teamTotalHours.toFixed(1)} / {teamTarget} horas ({teamPercentage.toFixed(0)}%)
+                {teamEffectiveHours.toFixed(1)} / {teamTarget} horas ({teamPercentage.toFixed(0)}%)
+                {teamCarryOver > 0 && (
+                  <span className="ml-1 text-orange-600">(+{teamCarryOver.toFixed(1)} arrastre)</span>
+                )}
               </span>
             </div>
             <div className="mt-2">
               <ProgressBar
-                value={teamTotalHours}
+                value={teamEffectiveHours}
                 max={teamTarget}
                 size="lg"
                 variant={teamPercentage >= 100 ? 'success' : teamPercentage >= 50 ? 'warning' : 'danger'}
