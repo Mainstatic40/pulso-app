@@ -68,10 +68,16 @@ export function AddTimeEntryModal({ isOpen, onClose, editingEntry, preselectedUs
     },
   });
 
-  // Load users (only becarios)
+  // Load users (becarios and supervisors)
   const { data: usersData } = useQuery({
-    queryKey: ['users', 'becarios'],
-    queryFn: () => userService.getAll({ role: 'becario', isActive: true }),
+    queryKey: ['users', 'becarios-supervisors'],
+    queryFn: async () => {
+      const response = await userService.getAll({ isActive: true });
+      return {
+        ...response,
+        data: response.data?.filter(u => u.role === 'becario' || u.role === 'supervisor'),
+      };
+    },
     enabled: isOpen,
   });
 
