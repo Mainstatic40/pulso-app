@@ -81,19 +81,24 @@ export const hoursCarryOverService = {
   ): Promise<number> {
     const hours = await this.calculateCarryOver(userId, month, year);
 
-    if (hours > 0) {
-      await prisma.hoursCarryOver.upsert({
-        where: {
-          userId_month_year: { userId, month, year },
-        },
-        create: { userId, month, year, hours },
-        update: { hours },
-      });
-    } else {
-      // If no carry-over, delete any existing record
-      await prisma.hoursCarryOver.deleteMany({
-        where: { userId, month, year },
-      });
+    try {
+      if (hours > 0) {
+        await prisma.hoursCarryOver.upsert({
+          where: {
+            userId_month_year: { userId, month, year },
+          },
+          create: { userId, month, year, hours },
+          update: { hours },
+        });
+      } else {
+        // If no carry-over, delete any existing record
+        await prisma.hoursCarryOver.deleteMany({
+          where: { userId, month, year },
+        });
+      }
+    } catch (error) {
+      // Don't let DB write failures prevent returning the calculated value
+      console.error(`[hoursCarryOver] Error storing carry-over for user ${userId} (${month}/${year}):`, error);
     }
 
     return hours;

@@ -138,17 +138,23 @@ export const reportService = {
     }
 
     // Determine month/year from dateFrom for carry-over calculation
-    let carryOverMap = new Map<string, number>();
+    const carryOverMap = new Map<string, number>();
     if (query.includeCarryOver && query.dateFrom) {
       const fromDate = query.dateFrom;
       const monthForCarryOver = fromDate.getUTCMonth() + 1; // 1-12
       const yearForCarryOver = fromDate.getUTCFullYear();
 
       // Calculate carry-over for all relevant users in parallel
+      // Each calculation is wrapped in try-catch so a single failure doesn't break the entire report
       const carryOverResults = await Promise.all(
         usersWhoTrackHours.map(async (user) => {
-          const hours = await hoursCarryOverService.getCarryOver(user.id, monthForCarryOver, yearForCarryOver);
-          return { userId: user.id, hours };
+          try {
+            const hours = await hoursCarryOverService.getCarryOver(user.id, monthForCarryOver, yearForCarryOver);
+            return { userId: user.id, hours };
+          } catch (error) {
+            console.error(`[reportService] Error calculating carry-over for user ${user.id} (${monthForCarryOver}/${yearForCarryOver}):`, error);
+            return { userId: user.id, hours: 0 };
+          }
         })
       );
 

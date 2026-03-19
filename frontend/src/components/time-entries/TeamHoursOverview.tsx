@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Clock, Plus, Pencil, Trash2, Settings, Calendar, Star } from 'lucide-react';
+import { Users, Clock, Plus, Pencil, Trash2, Settings, Calendar, Star, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -499,7 +499,7 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
   // Use the configured start date for filtering hours, or the start of the month
   const effectiveDateFrom = configStartDate || formatDateForApi(start);
 
-  const { data: hoursData, isLoading } = useQuery({
+  const { data: hoursData, isLoading, error: hoursError } = useQuery({
     queryKey: ['hours-by-user', year, month, configStartDate],
     queryFn: () =>
       reportService.getHoursByUser({
@@ -507,6 +507,7 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
         dateTo: formatDateForApi(end),
         includeCarryOver: true,
       }),
+    retry: 1,
   });
 
   const becarios: HoursByUserData[] = hoursData || [];
@@ -699,6 +700,16 @@ export function TeamHoursOverview({ hideHeader = false }: TeamHoursOverviewProps
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
+      ) : hoursError ? (
+        <Card className="overflow-hidden">
+          <CardContent className="py-8 text-center sm:py-12">
+            <AlertTriangle className="mx-auto h-10 w-10 text-red-400 sm:h-12 sm:w-12" />
+            <h3 className="mt-3 text-base font-medium text-gray-900 sm:mt-4 sm:text-lg">Error al cargar horas</h3>
+            <p className="mt-1 text-sm text-gray-500 sm:mt-2">
+              No se pudieron cargar las horas del equipo. Intenta recargar la pagina.
+            </p>
+          </CardContent>
+        </Card>
       ) : becarios.length === 0 ? (
         <Card className="overflow-hidden">
           <CardContent className="py-8 text-center sm:py-12">
